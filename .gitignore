@@ -1,0 +1,21 @@
+# Data & artifacts are NEVER committed (playbook §3). Day-one rule.
+data/
+*.rds
+*.csv
+!config.yaml
+# models / caches
+*.pkl
+*.joblib
+.cache/
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+# os / editor
+.DS_Store
+.idea/
+.vscode/

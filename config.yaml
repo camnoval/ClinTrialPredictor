@@ -1,0 +1,7 @@
+# Source registry. Add a source = one file in sources/ + one block here.
+temporal_boundary: "2014-01-01"
+
+sources:
+  top:  { role: primary_benchmark, labels: measured, enabled: true,  glob: "data/top/*.csv" }
+  cto:  { role: recent_eval,       labels: mixed,    enabled: false }
+  aact: { role: enrichment,        labels: none,     enabled: false }
