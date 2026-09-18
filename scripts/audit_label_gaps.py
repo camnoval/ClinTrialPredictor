@@ -30,8 +30,17 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+
+# Make src/ importable without depending on PYTHONPATH being set in the session.
+# `pip install -e .` is the durable fix and makes this a no-op; this guard means the
+# script still runs in a fresh shell, or in a conda env where the package was never
+# installed. Matches validate_reconstruction.py and pull_aact_results.py.
+_SRC = Path(__file__).resolve().parents[1] / "src"
+if _SRC.is_dir() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
 from trial_pos.services.endpoint_label import (
     DEFAULT_ALPHA, TIER_D, classify_analysis, classify_stop_reason, met_from_ci,

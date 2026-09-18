@@ -88,6 +88,10 @@ LABEL_DERIVED_FIELDS = (
     "why_stopped", "overall_status", "why_stopped_class",
     "termination_score", "safety_termination",
     "results_first_posted_date", "results_first_submitted_date", "results_posted",
+    # AACT's own results-posted flag (calculated_values.were_results_reported). Pulled by
+    # the population step because the posting-bias audit needs it as the OUTCOME it is
+    # analysing; registered here so it can never cross into a feature matrix.
+    "were_results_reported",
 )
 
 DEFAULT_ALPHA = 0.05
