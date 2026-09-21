@@ -1145,33 +1145,45 @@ two together would attribute the whole effect to whichever step is larger.
 
 | stratifier | posting rate spread | analysis rate spread | CLIFF spread (conditional) |
 | --- | --- | --- | --- |
-| **phase** | **35.3%** (P1 16.9% → P3 52.2%) | **24.6%** (3.2% → 27.9%) | **41.9%** (11.5% → 53.4%) |
-| **is_fda_regulated_drug** | **51.1%** (10.6% → 61.8%) | **15.5%** | 3.1% |
-| **has_us_facility** | **40.9%** (17.1% → 58.0%) | **11.6%** | **10.7%** |
-| has_expanded_access | **36.3%** | **22.7%** | **19.2%** (n=725 true) |
-| era | **23.1%** (pre 20.5% → fdaaa 43.6%) | 6.1% | 7.9% |
-| is_fda_regulated_device | **19.5%** | 0.9% | **10.1%** |
-| is_us_export | **20.4%** | 7.4% | 7.2% |
+| **phase** | **35.3%** (P1 16.9% → P3 52.2%) | **23.4%** (2.0% → 25.4%) | **37.4%** (11.3% → 48.7%) |
+| **lead_sponsor_class** | **51.0%** (other_gov 5.8% → fed 56.8%) | **14.4%** (1.7% → 16.1%) | **17.4%** (other 19.5% → industry 36.9%) |
+| **is_fda_regulated_drug** | **51.1%** (10.6% → 61.8%) | **14.6%** | 0.8% |
+| **has_us_facility** | **40.9%** (17.1% → 58.0%) | **11.4%** | 8.8% |
+| has_expanded_access | **36.3%** | **21.3%** | **18.2%** (n=725 true) |
+| responsible_party_type | **29.6%** | 8.4% | **16.5%** |
+| era | **23.1%** (pre 20.5% → fdaaa 43.6%) | 6.5% | 2.6% |
+| is_us_export | **20.4%** | 6.5% | 5.8% |
+| is_fda_regulated_device | **19.5%** | 1.2% | 8.4% |
 
 **Every stratifier is notable on the posting rate. The endpoint-met slice is not a random
 sample of drug trials and cannot be treated as one.** The handoff has asserted this since
 rev 2; it is now measured.
 
 **THE DECOMPOSITION IS THE FINDING.** The two steps are driven by different things:
-- `is_fda_regulated_drug` moves the posting rate by 51.1 points and the CLIFF by 3.1.
-  **Regulatory obligation decides whether you post at all, and has almost no effect on
+- `is_fda_regulated_drug` moves the posting rate by 51.1 points and the CLIFF by **0.8**.
+  **Regulatory obligation decides whether you post at all, and has essentially no effect on
   whether statistics accompany it.**
-- `phase` moves the posting rate by 35.3 points and the CLIFF by **41.9** — the largest
+- `phase` moves the posting rate by 35.3 points and the CLIFF by **37.4** — the largest
   cliff effect of any variable. **Design maturity decides whether an analysis is posted,
-  conditional on posting.** A phase 1/2 trial that discloses posts an analysis 11.5% of the
-  time; a phase 3 trial that discloses does so 53.4% of the time.
+  conditional on posting.** A phase 1/2 trial that discloses posts an analysis 11.3% of the
+  time; a phase 3 trial that discloses does so 48.7% of the time.
+- `lead_sponsor_class` acts on BOTH: posting 51.0 points, cliff 17.4. NIH posts MORE than
+  industry (53.8% vs 43.6%) and posts analyses LESS (cliff 21.4% vs 36.9%), so the
+  conventional "industry discloses least" framing is inverted for the step this label
+  depends on. Lead sponsor beats responsible party as a selector on the analysis rate
+  (14.4% vs 8.4%), which settles §8.1b's open question about which entity to bin by.
 
 That matters because most published disclosure research measures the FIRST step. **The
 selection acting on THIS project's label is mostly the second**, and it is phase-driven.
 A model fit on the labelled slice is fit overwhelmingly on phase 3 trials — analysis rate
-27.9% against 3.9% for phase 1 — and the product invites users to paste phase 1 trials.
-**That is a transportability problem the reweighting question cannot fix, because at a 3.9%
+25.4% against **2.0%** for phase 1 — and the product invites users to paste phase 1 trials.
+**That is a transportability problem the reweighting question cannot fix, because at a 2.0%
 analysis rate the phase 1 stratum has almost no observations to reweight TOWARD.**
+
+Restated as representation, which is what the applicability domain needs: phase 3 is 17.5%
+of the eligible population and **40.3%** of the labelled slice (2.31x); phase 1 is 23.2%
+and **4.2%** (0.18x). By sponsor: industry 46.6% → 68.0% (1.46x), other 47.0% → 26.5%
+(0.56x), other_gov 1.4% → 0.2% (0.15x).
 
 **Consequence for the applicability domain, stated plainly:** the endpoint-met model speaks
 for pivotal-phase, FDA-regulated, US-sited drug trials that posted a statistical analysis.
@@ -1184,11 +1196,8 @@ non-phase effect. It is also the only jurisdictional hook with usable coverage f
 pre-2017 trials (9.1% unknown against 37.9% for the sponsor declarations), so it is both
 the best-measured selection axis and a strong one.
 
-**Still open in slice two:** `lead_sponsor_class` and `responsible_party_type` read
-`unknown` for the whole denominator on the assistant's local copy, because that copy
-predates the widened pull. On the operator's current `trial_labels.csv` they are populated
-and those two rows of the table are the ones still to be read. The "not measurable (too few
-strata)" path degraded correctly rather than printing a fabricated spread.
+**`other_gov` posts at 5.8%**, the lowest rate of any stratum in the audit, on n=1,981.
+That stratum is one the model will not be able to speak for at all.
 
 ### 8.1f SLICE THREE: THE FDAAA RULE IS WRITTEN. IT IS ONE-DIRECTIONAL, AND IT COMPLETES THE DECOMPOSITION.
 
@@ -1231,20 +1240,21 @@ postdating 2017 rather than sponsors refusing to answer.
 
 | verdict | n | posted | analysis | CLIFF |
 | --- | --- | --- | --- | --- |
-| applicable | 18,730 | **80.8%** | 26.3% | 32.5% |
-| undeterminable | 52,330 | 51.0% | 16.6% | 32.6% |
-| not applicable | 69,225 | **16.1%** | 4.8% | 29.9% |
+| applicable | 18,730 | **80.8%** | 25.1% | 31.0% |
+| undeterminable | 52,330 | 51.0% | 15.7% | 30.7% |
+| not applicable | 69,225 | **16.1%** | 3.7% | 23.0% |
 
 **Posting-rate spread 64.8% — the largest of any stratifier in the entire audit. Cliff
-spread 2.7% — among the smallest.**
+spread 8.0%**, which is below the 10% notable threshold but NOT negligible, and the
+assistant first wrote 2.7% here from a stale local file (see lesson 47).
 
-Set beside phase (posting spread 35.3%, cliff spread 37.4%), the decomposition is complete
-and the two mechanisms are essentially orthogonal:
+Set beside phase (posting 35.3%, cliff 37.4%), the decomposition holds with a ratio of
+about 8:1 for obligation and about 1:1 for phase:
 
 - **Step one, whether anything is posted, is driven by LEGAL OBLIGATION.** 80.8% against
-  16.1%. Nothing else comes close.
+  16.1%. Nothing else in the audit comes close.
 - **Step two, whether a statistical analysis accompanies it, is driven by TRIAL DESIGN.**
-  The obligation moves it by 2.7 points; phase moves it by 37.4.
+  The obligation moves it 8.0 points; phase moves it 37.4.
 
 **This project's label depends on step two.** So the selection acting on it is design-driven,
 not compliance-driven — and most published disclosure research measures step one, where the
@@ -1506,13 +1516,13 @@ per model, per §1.1 point 3.
     means the trials a user is most likely to paste are the least matchable, which the
     average conceals entirely. Stratify every coverage figure by era before quoting it.
 41. **A SELECTED SLICE CANNOT BE REWEIGHTED TOWARD A STRATUM THAT IS NEARLY EMPTY.** The
-    phase 1 analysis rate is 3.9% against phase 3's 27.9%. Inverse-probability weights
+    phase 1 analysis rate is 2.0% against phase 3's 25.4%. Inverse-probability weights
     would multiply a handful of phase 1 observations up to represent a huge population, and
     the resulting variance is not a correction, it is a guess with a standard error. Measure
     the selection, state the domain, and decline the extrapolation.
 42. **A TWO-STEP SELECTION MUST BE DECOMPOSED OR IT IS ATTRIBUTED TO THE WRONG CAUSE.**
     Regulatory obligation drives posting (51.1-point spread) and barely touches the cliff
-    (3.1). Phase barely beats it on posting (35.3) and dominates the cliff (41.9). Measured
+    (8.0). Phase barely beats it on posting (35.3) and dominates the cliff (37.4). Measured
     as one combined rate, the whole effect would have been credited to whichever step was
     larger, and the label's actual selection mechanism -- the second step -- is the one most
     published disclosure work does not measure.
@@ -1523,7 +1533,7 @@ per model, per §1.1 point 3.
     55.4% of the population. When a rule's inputs are incomplete, work out which DIRECTION
     survives the gap and return undeterminable in the other.
 44. **TWO MECHANISMS CAN LOOK LIKE ONE UNTIL THE STEPS ARE SPLIT.** Legal obligation moves
-    the posting rate 64.8 points and the analysis-conditional-on-posting rate 2.7. Phase
+    the posting rate 64.8 points and the analysis-conditional-on-posting rate 8.0. Phase
     moves them 35.3 and 37.4. Measured as a single disclosure rate, the answer would have
     been "obligation explains it" -- and this project's label depends on the OTHER step,
     the one obligation does not touch. Most published disclosure research measures the step
@@ -1532,7 +1542,16 @@ per model, per §1.1 point 3.
     among confirmed-applicable trials is compliance among trials that could be CONFIRMED
     applicable -- documented, recent, mostly industry. Quoted without that, it is an FDAAA
     compliance rate, and it would be wrong.
-46. **A refusal must be counted or it vanishes.** 439,157 trials sit in tier D; 1,843 more
+46. **NEVER WRITE A NUMBER INTO THE HANDOFF THAT HAS NOT COME OUT OF THE OPERATOR'S RUN.**
+    Slices two and three were first recorded here using figures from the assistant's local
+    `trial_labels.csv`, which predated the scale / coverage / NI refusals. The posting-rate
+    column was unaffected and correct; every analysis-rate and cliff figure was wrong by a
+    few points, and two cells were flagged NOTABLE that are not (`has_us_facility` cliff
+    10.7 -> 8.8, `is_fda_regulated_device` cliff 10.1 -> 8.4). The handoff is the durable
+    artefact and rev 2 sat in the repo for two revisions teaching a dead argument, which is
+    exactly how a stale number becomes a decision. Numbers enter this document only after
+    they appear in a run output, and the source file must be the current one.
+47. **A refusal must be counted or it vanishes.** 439,157 trials sit in tier D; 1,843 more
     would disappear into it without trace. `refusal_kind`, the per-kind counts and
     `endpoint_na_reason` exist so each refusal is a number and a stateable sentence, not an
     absence. Tier E goes further: non-inferiority trials rely on a different test, so they
