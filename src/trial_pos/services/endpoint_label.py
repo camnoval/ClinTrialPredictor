@@ -71,15 +71,24 @@ from typing import Iterable, Optional
 TIER_A = "A_superiority_p"
 TIER_B = "B_noninferiority_p"
 TIER_C = "C_interval_only"
+TIER_E = "E_ni_interval"
 TIER_D = "D_no_analysis"
 
-TIER_ORDER = (TIER_A, TIER_B, TIER_C, TIER_D)          # strongest -> weakest
+# strongest -> weakest. E sits between C and D because such a row carries MORE information
+# than tier D (there is a real interval) but no applicable decision rule. Position is
+# otherwise cosmetic: tier E never yields a verdict, so it never reaches _best_tier or
+# tier_min/tier_max, both of which see only decidable outcomes.
+TIER_ORDER = (TIER_A, TIER_B, TIER_C, TIER_E, TIER_D)
 HEADLINE_TIERS = (TIER_A, TIER_B)
 
 TIER_DOC = {
     TIER_A: "superiority analysis, p-value present; met := p <= alpha",
     TIER_B: "non-inferiority/equivalence analysis, p-value present; met := p <= alpha",
-    TIER_C: "no p-value; CI excludes null (0 for differences, 1 for ratios). NOT headline",
+    TIER_C: ("no p-value; CI at matching coverage excludes null (0 for differences, 1 for "
+             "ratios), superiority or unstated design only. NOT headline"),
+    TIER_E: ("no p-value; non-inferiority or equivalence design, so the decision rule is "
+             "the margin and not the null. Margin is not a structured AACT field, so NO "
+             "verdict is produced. Counted separately, never pooled with tier C"),
     TIER_D: "no decidable analysis (single-arm / descriptive-only); endpoint_met UNKNOWN",
 }
 
@@ -205,13 +214,24 @@ _SINGLE_ARM_RX = tuple(re.compile(r, re.I) for r in (
 ))
 
 
-def null_value_for(param_type) -> Optional[float]:
-    """Value of no effect for an AACT param_type: 1 for ratios, 0 for differences.
+CONTRAST_RATIO = "ratio"
+CONTRAST_DIFFERENCE = "difference"
 
-    Returns None when the type names no contrast (single-arm quantities), when it is
-    unrecognised, or when it is a ratio expressed as a percentage (null 100 vs 1 is not
-    determinable from the field). Either way the analysis falls to tier D rather than
-    being labelled on a meaningless or mis-centred interval test.
+# The value of no effect, per contrast family, on the UNIT scale. Ratios centred on a
+# percentage scale are handled by `ratio_scale` below, not by a second entry here --
+# there is no null that makes the exclusion test answer a bioequivalence question.
+NULL_FOR_CONTRAST = {CONTRAST_RATIO: 1.0, CONTRAST_DIFFERENCE: 0.0}
+
+
+def contrast_family(param_type) -> Optional[str]:
+    """AACT param_type -> 'ratio' | 'difference' | None. Names only, no numbers.
+
+    This is the primitive: it answers what the FIELD can tell you, which is the shape of
+    the comparison. It cannot tell you the scale the sponsor used, and therefore cannot
+    on its own decide the null -- see `ratio_scale`.
+
+    None means no contrast is named: a single-arm quantity, an unrecognised type, or a
+    ratio the field itself flags as a percentage (where null 100 vs 1 is undeterminable).
     """
     s = str(param_type or "").strip()
     if not s:
@@ -219,12 +239,27 @@ def null_value_for(param_type) -> Optional[float]:
     if _PERCENT_RATIO_RX.search(s):
         return None
     if any(rx.search(s) for rx in _CONTRAST_RATIO_RX):
-        return 1.0
+        return CONTRAST_RATIO
     if any(rx.search(s) for rx in _CONTRAST_DIFF_RX):
-        return 0.0
+        return CONTRAST_DIFFERENCE
     if any(rx.search(s) for rx in _SINGLE_ARM_RX):
+        # Deliberately explicit though the fallthrough agrees: lesson 3's ordering lives
+        # here, and a reader needs to see that single-arm refusal is a decision taken
+        # AFTER the contrast checks, not a default.
         return None
     return None
+
+
+def null_value_for(param_type) -> Optional[float]:
+    """Unit-scale value of no effect for an AACT param_type: 1 for ratios, 0 for
+    differences, None when no contrast is named.
+
+    Kept as the NAME-ONLY answer, and expressed through `contrast_family` so the two
+    cannot drift apart. Callers labelling a real analysis row must use
+    `resolve_null_value`, which also reads the interval's scale.
+    """
+    family = contrast_family(param_type)
+    return NULL_FOR_CONTRAST.get(family) if family is not None else None
 
 
 def _as_float(x) -> Optional[float]:
@@ -238,6 +273,114 @@ def _as_float(x) -> Optional[float]:
         return float(m.group(1)) if m else None
     except ValueError:
         return None
+
+
+# ---- ratio SCALE: the null a ratio sits on is not in the param_type --------
+# MEASURED, not argued. Analysis rows carrying BOTH a decidable p-value and a full
+# interval form a labelled validation set for the tier-C rule, because the p-value is the
+# sponsor's own verdict on the same comparison. Against the 8,061 such ratio rows in the
+# 2026-09-19 dump (reproduce with scripts/validate_interval_rule.py):
+#
+#   unit-scaled ratios     n=7518   raw agreement 92.5%   kappa 0.849
+#   percent-scaled ratios  n= 543   raw agreement 66.1%   kappa 0.000
+#
+# The percent-scaled 2x2 is [0,0]=0 [0,1]=184 [1,0]=0 [1,1]=359. The interval rule
+# returns "met" on 543 of 543 rows: it is a CONSTANT, not a test, which is why kappa is
+# exactly zero, and its disagreement with the sponsor is 100% one-directional --
+# disqualifying on the same criterion Step 1b uses. Re-centring on 100 does not rescue it
+# (50.5% raw agreement, kappa 0.000): bioequivalence inverts the hypothesis, testing
+# whether the interval lies INSIDE 80-125% to demonstrate sameness, so no choice of null
+# makes an exclusion test answer the question being asked.
+#
+# Therefore the scale is read from the INTERVAL and a percent-scaled ratio is REFUSED.
+# Naming reaches only 130 of the 534 affected trials -- 1,868 rows say nothing more than
+# 'Geometric mean ratio' -- so a regex on the param_type cannot do this job.
+RATIO_SCALE_UNIT = "unit"
+RATIO_SCALE_PERCENT = "percent"
+
+# A ratio interval lying ENTIRELY at or above this floor is on a percentage scale: a
+# ratio of no effect is 1, so a lower bound of 10 or more cannot be a unit-scale interval
+# near the null. Exposed as a CLI flag because it produces verdicts. On the validation
+# set it partitions cleanly (kappa 0.849 above it, 0.000 below); move it and watch kappa
+# respond rather than trusting the default.
+DEFAULT_RATIO_SCALE_FLOOR = 10.0
+
+REFUSAL_PERCENT_SCALED_RATIO = ("ratio interval is percent-scaled; no null makes the "
+                                "exclusion test meaningful (likely bioequivalence)")
+
+# Why a trial can have NO endpoint estimate. Empty means "it has one". These are for the
+# USER-facing one-line explanation, and they distinguish not-applicable from unknown:
+# a bioequivalence study's endpoint verdict is not missing, it answers a different
+# question. Per the standing discipline, "unknown" and "not applicable" never merge.
+NA_REASON_NONE = ""
+NA_REASON_PERCENT_SCALED = "percent_scaled_ratio_only"
+NA_REASON_COVERAGE_MISMATCH = "ci_coverage_mismatch_only"
+NA_REASON_NI_DESIGN = "ni_design_margin_unavailable"
+
+NA_REASON_DOC = {
+    NA_REASON_PERCENT_SCALED: (
+        "every posted primary analysis was a percent-scaled ratio interval. Almost "
+        "always a bioequivalence study, which tests formulation sameness rather than "
+        "efficacy -- a different question, not a missing answer."
+    ),
+    NA_REASON_COVERAGE_MISMATCH: (
+        "the posted intervals do not have the coverage needed to decide the endpoint at "
+        "this alpha, and their coverage does not imply the verdict either way."
+    ),
+    NA_REASON_NI_DESIGN: (
+        "this trial tested non-inferiority or equivalence, so success is defined against "
+        "a margin rather than against no effect. The margin is not recorded in a "
+        "structured field, so no endpoint verdict is produced."
+    ),
+}
+
+
+def ratio_scale(ci_lower, ci_upper,
+                floor: float = DEFAULT_RATIO_SCALE_FLOOR) -> Optional[str]:
+    """Interval bounds -> 'unit' | 'percent' | None(no interval to read).
+
+    Reads the NUMBERS, because the param_type does not carry the scale. None when either
+    bound is absent or unparseable, which is not a refusal -- an analysis with no usable
+    interval already falls to tier D on that ground alone.
+    """
+    lo, hi = _as_float(ci_lower), _as_float(ci_upper)
+    if lo is None or hi is None:
+        return None
+    if lo > hi:
+        lo, hi = hi, lo
+    return RATIO_SCALE_PERCENT if lo >= floor else RATIO_SCALE_UNIT
+
+
+def is_percent_scaled_ratio(param_type, ci_lower, ci_upper,
+                            floor: float = DEFAULT_RATIO_SCALE_FLOOR) -> bool:
+    """True when this row is a ratio on a percentage scale, i.e. a refused row.
+
+    Separate from `resolve_null_value` so the refusals can be COUNTED without parsing a
+    reason string. 437,545 trials already sit in tier D; without a count these rows would
+    disappear into it with no trace, which is the failure lesson 17 exists to prevent.
+    """
+    return (contrast_family(param_type) == CONTRAST_RATIO
+            and ratio_scale(ci_lower, ci_upper, floor) == RATIO_SCALE_PERCENT)
+
+
+def resolve_null_value(param_type, ci_lower, ci_upper,
+                       floor: float = DEFAULT_RATIO_SCALE_FLOOR
+                       ) -> tuple[Optional[float], str]:
+    """(null, reason) for one real analysis row. The row-level counterpart of
+    `null_value_for`, which sees only the name.
+
+    Returns (None, reason) to REFUSE rather than guessing a null, and the reason travels
+    so the tier-D verdict says which refusal it was.
+    """
+    family = contrast_family(param_type)
+    if family is None:
+        return None, "param_type names no usable contrast"
+    if family == CONTRAST_DIFFERENCE:
+        return 0.0, "difference; null=0"
+    scale = ratio_scale(ci_lower, ci_upper, floor)
+    if scale == RATIO_SCALE_PERCENT:
+        return None, REFUSAL_PERCENT_SCALED_RATIO
+    return 1.0, "unit-scaled ratio; null=1"
 
 
 def met_from_ci(lower, upper, null: Optional[float]) -> tuple[Optional[int], str]:
@@ -277,29 +420,278 @@ def analysis_design(non_inferiority_type) -> str:
     return "unstated"
 
 
-def classify_analysis(row: dict, alpha: float = DEFAULT_ALPHA) -> tuple[str, Optional[int], str]:
+# ---- CI COVERAGE: an interval test is only the alpha test at matching coverage -------
+# MEASURED, not assumed. `analysis_ci_percent` is in the dump and the engine never read
+# it. Splitting the validation set of section 3.1 by coverage, with alpha = 0.05:
+#
+#   coverage        n        kappa   over-calls met   under-calls
+#   matched (95%)   22,938   0.896   239              954
+#   tighter (>95%)     555   0.616     2              107
+#   looser  (<95%)   1,624   0.747   151               45
+#
+# The ASYMMETRY FLIPS with the band, which is what makes this a finding and not noise: a
+# 90% interval excluding the null is two-sided p < 0.10, so it over-calls; a 97.5%
+# interval is a higher bar, so it under-calls and almost never over-calls (2 in 555).
+#
+# The required coverage is 100*(1-alpha) for a two-sided test, and that relation was
+# checked against the data rather than taken from convention. kappa over an
+# alpha x coverage grid, superiority/unstated rows only:
+#
+#            ci=99    ci=95    ci=90    ci=80
+#   a=0.05   0.647    0.944    0.856    0.730      <- peaks exactly at 95
+#   a=0.10   0.580    0.849    0.876    0.933
+#   a=0.20   0.511    0.714    0.702    0.934
+#
+# At alpha 0.05, where there is enough data to tell, agreement peaks sharply at 95 and
+# degrades in both directions. The other rows are thin (99% coverage is 51 rows in total)
+# and are reported rather than relied on.
+#
+# ONE-WAY IMPLICATION, which is better than refusing the row outright:
+#   matched  -> this IS the alpha test; both verdicts stand
+#   tighter  -> excluding the null at higher confidence implies a 95% interval would too,
+#               so "met" is sound; "not met" is NOT (a 95% interval might have excluded it)
+#   looser   -> failing to exclude at lower confidence implies failing at 95%, so
+#               "not met" is sound; "met" is NOT
+COVERAGE_MATCHED = "matched"
+COVERAGE_TIGHTER = "tighter"
+COVERAGE_LOOSER = "looser"
+COVERAGE_UNKNOWN = "unknown"
+
+# Tolerance in COVERAGE POINTS for calling a posted coverage equal to the required one.
+# A flag because it produces verdicts. 0.5 admits '95.0' and rejects '95.8' and '94.0';
+# the registry carries 137 distinct ci_percent values, so a whitelist is not viable and
+# a numeric tolerance is.
+DEFAULT_COVERAGE_TOLERANCE_POINTS = 0.5
+
+# A ci_percent at or below this is a PROPORTION, not a percentage -- AACT carries 30 rows
+# reading '0.95'. The same scale error as the ratio bug, one level up, so it is refused
+# rather than multiplied by 100 on an assumption about what the sponsor meant.
+CI_PERCENT_PROPORTION_MAX = 1.0
+
+REFUSAL_COVERAGE_MISMATCH = ("interval coverage does not support this verdict at the "
+                             "configured alpha")
+REFUSAL_NI_MARGIN_UNAVAILABLE = ("non-inferiority or equivalence design: the decision "
+                                 "rule is the margin, not the null, and the margin is "
+                                 "not a structured AACT field")
+
+# The refusal kinds, for counting. Order is the PRECEDENCE used when a trial has no
+# decidable analysis and more than one kind of refusal: the NI reason comes first because
+# it is a statement about what the STUDY ASKED, which is more informative to a reader than
+# a statement about how the result was posted.
+REFUSAL_PERCENT_SCALED = "percent_scaled_ratio"
+REFUSAL_COVERAGE = "coverage_mismatch"
+REFUSAL_NI_DESIGN = "ni_design"
+REFUSAL_KINDS = (REFUSAL_NI_DESIGN, REFUSAL_PERCENT_SCALED, REFUSAL_COVERAGE)
+
+
+def required_ci_percent(alpha: float = DEFAULT_ALPHA) -> float:
+    """Coverage a two-sided interval needs to be equivalent to a test at `alpha`."""
+    return 100.0 * (1.0 - alpha)
+
+
+def normalize_ci_percent(raw) -> Optional[float]:
+    """AACT ci_percent -> coverage in percentage points, or None when unusable.
+
+    None for absent, unparseable, and for values at or below
+    CI_PERCENT_PROPORTION_MAX. A blank is benign rather than suspicious: all 3,457 blank
+    ci_percent rows in the dump have no readable interval either, so they were already
+    going to tier D on that ground.
+    """
+    value = _as_float(raw)
+    if value is None or value <= CI_PERCENT_PROPORTION_MAX:
+        return None
+    return value
+
+
+def coverage_band(raw, alpha: float = DEFAULT_ALPHA,
+                  tolerance: float = DEFAULT_COVERAGE_TOLERANCE_POINTS) -> str:
+    """ci_percent -> 'matched' | 'tighter' | 'looser' | 'unknown', relative to alpha."""
+    coverage = normalize_ci_percent(raw)
+    if coverage is None:
+        return COVERAGE_UNKNOWN
+    required = required_ci_percent(alpha)
+    if abs(coverage - required) <= tolerance:
+        return COVERAGE_MATCHED
+    return COVERAGE_TIGHTER if coverage > required else COVERAGE_LOOSER
+
+
+def coverage_supports(band: str, met: Optional[int]) -> bool:
+    """Does an interval at this coverage justify THIS verdict? The one-way implication.
+
+    Unknown coverage supports nothing: without knowing the coverage there is no implication
+    to lean on in either direction, and guessing 95% would be the same class of assumption
+    that produced the ratio-scale bug.
+    """
+    if met is None:
+        return False
+    if band == COVERAGE_MATCHED:
+        return True
+    if band == COVERAGE_TIGHTER:
+        return met == 1
+    if band == COVERAGE_LOOSER:
+        return met == 0
+    return False
+
+
+# ---- non-inferiority and equivalence are DIFFERENT TESTS ------------------------------
+# MEASURED. Splitting matched-coverage tier-C rows by design:
+#
+#   design            n        kappa   under-calls   over-calls   ratio
+#   superiority       18,386   0.942   356           180          2.0
+#   NI / equivalence   2,049   0.434   563            45         12.5
+#   unstated           2,503   0.960    35            14          2.5
+#
+# The interval rule asks the superiority question. An NI trial succeeds when the interval
+# lies inside the margin, which routinely INCLUDES the null, so the rule under-calls it
+# 12.5 to 1 -- the direction theory predicts. Stripping NI rows lifts superiority to 0.942
+# and unstated to 0.960, well above the 0.896 pooled figure, so the refusal buys accuracy
+# on what remains as well as correctness on what leaves.
+#
+# The margin is not recoverable today, and that was checked rather than assumed: of 11,513
+# NI/equivalence primary analysis rows, 11,486 carry a description and 10,177 contain SOME
+# number -- but only 2,031 (17.6%) contain the word "margin" at all and 1,877 (16.3%) have
+# a number adjacent to it. The other numbers are alpha levels, power and sample sizes. So
+# a text parse could reach roughly a sixth of these rows, and would itself need validating.
+# Tier E exists so that sixth stays findable instead of being dissolved into tier D.
+DESIGN_SUPERIORITY = "superiority"
+DESIGN_NI = "ni"
+DESIGN_UNSTATED = "unstated"
+
+# Finer reading of the same field, CARRIED not decided. Equivalence is a third test --
+# two-sided containment within +/- margin, against non-inferiority's one-sided bound --
+# and the two differ sharply in how often a margin is even stated (26.4% for
+# NON_INFERIORITY, 6.7% for EQUIVALENCE), so collapsing them would hide that. Nothing in
+# the label branches on this yet; it exists so the decision can be made on evidence.
+DESIGN_DETAIL_SUPERIORITY = "superiority"
+DESIGN_DETAIL_NON_INFERIORITY = "non_inferiority"
+DESIGN_DETAIL_EQUIVALENCE = "equivalence"
+DESIGN_DETAIL_NI_OR_EQUIVALENCE = "ni_or_equivalence_unspecified"
+DESIGN_DETAIL_UNSTATED = "unstated"
+
+
+def analysis_design_detail(non_inferiority_type) -> str:
+    """AACT non_inferiority_type -> the FINER design reading.
+
+    Separate from `analysis_design` rather than replacing it: tier B's definition rests on
+    the coarse 'ni' bucket, and changing that function's return values would move tier B
+    counts as a side effect of adding a carried signal.
+
+    The observed AACT vocabulary is nine values. 'NON_INFERIORITY_OR_EQUIVALENCE' names
+    two different tests and cannot be resolved to one, so it gets its own value rather
+    than being assigned to whichever is more common.
+    """
+    text = str(non_inferiority_type or "").strip().lower()
+    if not text:
+        return DESIGN_DETAIL_UNSTATED
+    text = re.sub(r"[^a-z]+", " ", text)
+    ni = "non inferiority" in text or "noninferiority" in text
+    equivalence = "equivalence" in text
+    if ni and equivalence:
+        return DESIGN_DETAIL_NI_OR_EQUIVALENCE
+    if ni:
+        return DESIGN_DETAIL_NON_INFERIORITY
+    if equivalence:
+        return DESIGN_DETAIL_EQUIVALENCE
+    if "superiority" in text:
+        return DESIGN_DETAIL_SUPERIORITY
+    return DESIGN_DETAIL_UNSTATED
+
+
+def refusal_kind(row: dict, alpha: float = DEFAULT_ALPHA,
+                 ratio_scale_floor: float = DEFAULT_RATIO_SCALE_FLOOR,
+                 coverage_tolerance: float = DEFAULT_COVERAGE_TOLERANCE_POINTS
+                 ) -> Optional[str]:
+    """Which refusal, if any, withheld an interval verdict from this row. None otherwise.
+
+    A separate function from `classify_analysis` so refusals can be COUNTED without
+    parsing reason strings, and so the two cannot disagree: both delegate to the same
+    helpers rather than re-implementing the decision.
+
+    Returns None for rows a refusal never reached -- a row decided on its p-value, or one
+    with no interval at all, which is tier D on its own ground.
+    """
+    operator, value = parse_p_value(row.get("p_value"), row.get("p_value_modifier"))
+    if met_from_p(operator, value, alpha)[0] is not None:
+        return None                                   # p-value decided it; no interval used
+    if analysis_design(row.get("non_inferiority_type")) == DESIGN_NI:
+        return REFUSAL_NI_DESIGN
+    if is_percent_scaled_ratio(row.get("param_type"), row.get("ci_lower_limit"),
+                               row.get("ci_upper_limit"), ratio_scale_floor):
+        return REFUSAL_PERCENT_SCALED
+    null, _ = resolve_null_value(row.get("param_type"), row.get("ci_lower_limit"),
+                                 row.get("ci_upper_limit"), ratio_scale_floor)
+    met, _ = met_from_ci(row.get("ci_lower_limit"), row.get("ci_upper_limit"), null)
+    if met is None:
+        return None                                   # nothing to refuse
+    band = coverage_band(row.get("ci_percent"), alpha, coverage_tolerance)
+    return None if coverage_supports(band, met) else REFUSAL_COVERAGE
+
+
+def classify_analysis(row: dict, alpha: float = DEFAULT_ALPHA,
+                      ratio_scale_floor: float = DEFAULT_RATIO_SCALE_FLOOR,
+                      coverage_tolerance: float = DEFAULT_COVERAGE_TOLERANCE_POINTS
+                      ) -> tuple[str, Optional[int], str]:
     """One outcome_analyses row -> (tier, met, reason).
 
     Precedence is p-value before interval, and design type decides A vs B. An unstated
     design with a p-value is treated as superiority and the reason records that
     assumption, so it can be counted later rather than disappearing.
+
+    The interval branch goes through `resolve_null_value`, so a percent-scaled ratio is
+    refused to tier D with the refusal named, rather than tested against a null it is not
+    centred on.
     """
     design = analysis_design(row.get("non_inferiority_type"))
     op, val = parse_p_value(row.get("p_value"), row.get("p_value_modifier"))
     met, reason = met_from_p(op, val, alpha)
     if met is not None:
-        tier = TIER_B if design == "ni" else TIER_A
-        if design == "unstated":
+        tier = TIER_B if design == DESIGN_NI else TIER_A
+        if design == DESIGN_UNSTATED:
             reason += "; design unstated, assumed superiority"
         return tier, met, reason
-    null = null_value_for(row.get("param_type"))
+    # NI and equivalence designs leave here BEFORE the interval is consulted: the interval
+    # answers the superiority question, which is not the question these trials asked.
+    if design == DESIGN_NI:
+        return TIER_E, None, f"{reason}; {REFUSAL_NI_MARGIN_UNAVAILABLE}"
+    null, null_reason = resolve_null_value(row.get("param_type"),
+                                           row.get("ci_lower_limit"),
+                                           row.get("ci_upper_limit"),
+                                           ratio_scale_floor)
     met_ci, reason_ci = met_from_ci(row.get("ci_lower_limit"), row.get("ci_upper_limit"), null)
     if met_ci is not None:
-        return TIER_C, met_ci, reason_ci
-    return TIER_D, None, f"{reason}; {reason_ci}"
+        band = coverage_band(row.get("ci_percent"), alpha, coverage_tolerance)
+        if coverage_supports(band, met_ci):
+            return TIER_C, met_ci, f"{reason_ci}; coverage {band} at alpha {alpha}"
+        return TIER_D, None, (f"{reason}; {REFUSAL_COVERAGE_MISMATCH} "
+                              f"(coverage {band}, verdict would have been {met_ci})")
+    # Name the null refusal when that is what blocked the row; met_from_ci's own reason
+    # would otherwise report "null value unavailable", which hides WHY it was withheld.
+    return TIER_D, None, (f"{reason}; {null_reason}" if null is None
+                          else f"{reason}; {reason_ci}")
 
 
 # ---- outcome- and trial-level aggregation ---------------------------------
+# Refusal kind -> the user-facing reason. Separate mappings because a refusal is a fact
+# about one analysis row while an NA reason is a claim about the whole trial.
+NA_REASON_FOR_REFUSAL = {
+    REFUSAL_NI_DESIGN: NA_REASON_NI_DESIGN,
+    REFUSAL_PERCENT_SCALED: NA_REASON_PERCENT_SCALED,
+    REFUSAL_COVERAGE: NA_REASON_COVERAGE_MISMATCH,
+}
+
+
+def _na_reason_for(refusals: dict) -> str:
+    """Refusal counts -> one NA reason, by REFUSAL_KINDS precedence.
+
+    Iterates REFUSAL_KINDS rather than the dict, so the precedence is the declared tuple
+    and not whatever order the counts happened to be built in.
+    """
+    for kind in REFUSAL_KINDS:
+        if refusals.get(kind):
+            return NA_REASON_FOR_REFUSAL[kind]
+    return NA_REASON_NONE
+
+
 def _best_tier(tiers: Iterable[str]) -> Optional[str]:
     # materialise first: `tiers` may be a generator, and re-consuming it inside the
     # comprehension would silently yield an empty set after the first iteration
@@ -308,7 +700,9 @@ def _best_tier(tiers: Iterable[str]) -> Optional[str]:
     return present[0] if present else None
 
 
-def aggregate_outcome(analyses: list[dict], alpha: float = DEFAULT_ALPHA) -> dict:
+def aggregate_outcome(analyses: list[dict], alpha: float = DEFAULT_ALPHA,
+                      ratio_scale_floor: float = DEFAULT_RATIO_SCALE_FLOOR,
+                      coverage_tolerance: float = DEFAULT_COVERAGE_TOLERANCE_POINTS) -> dict:
     """All analysis rows for ONE primary outcome -> one verdict for that outcome.
 
     A single outcome often carries several analyses (timepoints, subgroups, alternative
@@ -317,20 +711,34 @@ def aggregate_outcome(analyses: list[dict], alpha: float = DEFAULT_ALPHA) -> dic
     why n_analyses is carried through -- an outcome resting on 1 of 9 analyses is visible
     downstream rather than indistinguishable from a clean single result.
     """
-    graded = [classify_analysis(a, alpha) for a in analyses]
+    graded = [classify_analysis(a, alpha, ratio_scale_floor, coverage_tolerance)
+              for a in analyses]
+    # Counted through `refusal_kind` rather than by inspecting reason strings, so the
+    # count and the tier assignment delegate to the same helpers and cannot disagree.
+    refusals = {kind: 0 for kind in REFUSAL_KINDS}
+    for a in analyses:
+        kind = refusal_kind(a, alpha, ratio_scale_floor, coverage_tolerance)
+        if kind is not None:
+            refusals[kind] += 1
     decidable = [(t, m, r) for t, m, r in graded if m is not None]
+    base = {"n_analyses": len(analyses), "refusals": refusals,
+            # retained for callers written against the earlier single-refusal shape
+            "n_scale_refused": refusals[REFUSAL_PERCENT_SCALED]}
     if not decidable:
-        return {"tier": TIER_D, "met": None, "n_analyses": len(analyses),
-                "n_decidable": 0, "reason": graded[0][2] if graded else "no analysis rows"}
+        return {"tier": _best_tier(t for t, _, _ in graded) or TIER_D, "met": None,
+                "n_decidable": 0,
+                "reason": graded[0][2] if graded else "no analysis rows", **base}
     tier = _best_tier(t for t, _, _ in decidable)
     in_tier = [(m, r) for t, m, r in decidable if t == tier]
     met = 1 if any(m == 1 for m, _ in in_tier) else 0
     reason = next(r for m, r in in_tier if m == met)
-    return {"tier": tier, "met": met, "n_analyses": len(analyses),
-            "n_decidable": len(decidable), "reason": reason}
+    return {"tier": tier, "met": met, "n_decidable": len(decidable),
+            "reason": reason, **base}
 
 
-def aggregate_trial(outcomes: dict[str, list[dict]], alpha: float = DEFAULT_ALPHA) -> dict:
+def aggregate_trial(outcomes: dict[str, list[dict]], alpha: float = DEFAULT_ALPHA,
+                    ratio_scale_floor: float = DEFAULT_RATIO_SCALE_FLOOR,
+                    coverage_tolerance: float = DEFAULT_COVERAGE_TOLERANCE_POINTS) -> dict:
     """{outcome_id: [analysis rows]} for one trial -> the multi-endpoint label family.
 
     All four representations are carried, per the decision to keep every reading rather
@@ -341,13 +749,30 @@ def aggregate_trial(outcomes: dict[str, list[dict]], alpha: float = DEFAULT_ALPH
     filter for headline analyses: a trial whose all_primary_met depends on a tier-C
     outcome is a tier-C trial no matter how clean its other outcomes were.
     """
-    verdicts = {oid: aggregate_outcome(rows, alpha) for oid, rows in outcomes.items()}
+    verdicts = {oid: aggregate_outcome(rows, alpha, ratio_scale_floor, coverage_tolerance)
+                for oid, rows in outcomes.items()}
     counted = {oid: v for oid, v in verdicts.items() if v["met"] is not None}
     n_primary = len(verdicts)
     n_analyzed = len(counted)
     n_met = sum(v["met"] for v in counted.values())
+    refusals = {kind: sum(v["refusals"][kind] for v in verdicts.values())
+                for kind in REFUSAL_KINDS}
+    n_scale_refused = refusals[REFUSAL_PERCENT_SCALED]
     tiers = [v["tier"] for v in counted.values()]
     ranked = [t for t in TIER_ORDER if t in set(tiers)]
+    # When NOTHING was counted, tier_min/tier_max fall back to the weakest tier any
+    # outcome reached, not to TIER_D by default. Otherwise a trial whose every primary
+    # analysis was a non-inferiority interval reports as D_no_analysis -- indistinguishable
+    # from a single-arm descriptive posting -- and tier E, which exists precisely so those
+    # studies stay visible, would read 0 in every tier distribution while the refusal
+    # counts said 1,820 trials. That contradiction was in the first widened pull's output.
+    #
+    # This only affects trials with NO verdict. A trial with an A outcome and an E outcome
+    # keeps tier_min = A, because tier_min describes what the LABEL rests on and the label
+    # rests only on the counted outcomes.
+    if not ranked:
+        uncounted = {v["tier"] for v in verdicts.values()}
+        ranked = [t for t in TIER_ORDER if t in uncounted]
     mix = "|".join(f"{t.split('_')[0]}:{tiers.count(t)}" for t in ranked)
     out = {
         "n_primary_outcomes": n_primary,
@@ -357,6 +782,15 @@ def aggregate_trial(outcomes: dict[str, list[dict]], alpha: float = DEFAULT_ALPH
         "any_primary_met": (1 if n_met > 0 else 0) if n_analyzed else None,
         "all_primary_met": (1 if n_met == n_analyzed else 0) if n_analyzed else None,
         "n_analyses_total": sum(v["n_analyses"] for v in verdicts.values()),
+        "n_analyses_scale_refused": n_scale_refused,
+        "n_analyses_coverage_refused": refusals[REFUSAL_COVERAGE],
+        "n_analyses_ni_design": refusals[REFUSAL_NI_DESIGN],
+        # A trial with no verdict has a STATEABLE reason whenever a refusal took one away,
+        # which is different from having had nothing to begin with. Precedence is
+        # REFUSAL_KINDS order: the NI reason first, because it describes what the study
+        # asked rather than how the result was posted.
+        "endpoint_na_reason": (_na_reason_for(refusals) if n_analyzed == 0
+                               else NA_REASON_NONE),
         "tier_max": ranked[0] if ranked else TIER_D,
         "tier_min": ranked[-1] if ranked else TIER_D,
         "tier_mix": mix or "D:0",
@@ -540,7 +974,9 @@ def broad_label(strict_value: Optional[int], stop_class: str,
 
 def label_row(trial: dict, outcomes: dict[str, list[dict]],
               alpha: float = DEFAULT_ALPHA,
-              broad_includes_safety: bool = False) -> dict:
+              broad_includes_safety: bool = False,
+              ratio_scale_floor: float = DEFAULT_RATIO_SCALE_FLOOR,
+              coverage_tolerance: float = DEFAULT_COVERAGE_TOLERANCE_POINTS) -> dict:
     """One trial's studies row + its primary-outcome analyses -> one label record.
 
     `strict` uses any_primary_met, which is the most permissive of the four multi-endpoint
@@ -548,7 +984,7 @@ def label_row(trial: dict, outcomes: dict[str, list[dict]],
     filters by tier -- filtering is the caller's decision and has to be stated in the
     result, not buried in the label build.
     """
-    agg = aggregate_trial(outcomes, alpha)
+    agg = aggregate_trial(outcomes, alpha, ratio_scale_floor, coverage_tolerance)
     stop_class = classify_stop_reason(trial.get("why_stopped"))
     strict = agg["any_primary_met"]
     broad, broad_src = broad_label(strict, stop_class, broad_includes_safety)
@@ -560,6 +996,12 @@ def label_row(trial: dict, outcomes: dict[str, list[dict]],
         "label_source_strict": "analysis" if strict is not None else "unknown",
         "label_source_broad": broad_src,
         "alpha_used": alpha,
+        # Carried per row for the same reason alpha is: a threshold that produced a
+        # verdict must travel with the verdict, or an offline re-derive can silently use
+        # a different one and disagree with the live pull.
+        "ratio_scale_floor_used": ratio_scale_floor,
+        "coverage_tolerance_used": coverage_tolerance,
+        "required_ci_percent_used": required_ci_percent(alpha),
     }
     rec.update(agg)
     return rec

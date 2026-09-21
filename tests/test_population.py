@@ -18,11 +18,26 @@ from trial_pos.services.population import (
     FDAAA_RESULTS_EFFECTIVE, FINAL_RULE_COMPLIANCE, FINAL_RULE_EFFECTIVE,
     KNOWN_STUDY_TYPES, NOT_APPLICABLE, POSTING_OUTCOME_FIELDS,
     STUDY_TYPE_EXPANDED_ACCESS, STUDY_TYPE_INTERVENTIONAL, STUDY_TYPE_OBSERVATIONAL,
+    DAYS_PER_YEAR_NOMINAL, DATE_OK, DATE_QUALITIES, DATE_QUALITY_DOC, DATE_TOO_EARLY,
+    DATE_TOO_LATE, DATE_TYPES, DATE_TYPE_ACTUAL, DATE_TYPE_ANTICIPATED,
+    DATE_TYPE_DOC, DATE_TYPE_ESTIMATED, DATE_UNPARSEABLE, PLANNED_DATE_TYPES,
+    is_planned_date,
+    DEFAULT_MIN_TRIAL_DATE, DRUG_INTERVENTION_TYPES, DRUG_SIGNALS, DRUG_SIGNAL_DOC,
+    INTERVENTION_TYPE_SEP, date_quality, date_quality_coverage, drug_signal_agreement,
+    drug_trial_signals, has_drug_intervention, is_actual_date, normalize_date_type,
+    parse_intervention_types,
     ERA_DATE_ABSENT, ERA_DATE_FALLBACK, ERA_DATE_PRIMARY, ERA_DATE_SOURCES,
     ERA_DATE_SOURCE_DOC, UNKNOWN, completion_gap_days, component_coverage,
     components_for_row, era_coverage, era_coverage_by_source, era_date_for_row,
     era_for_date, era_for_row, gap_summary, is_interventional, is_not_applicable,
     normalize_study_type, parse_date, parse_year, quantile, tribool,
+    ADVANCED_THERAPY_TYPES, AGENCY_CLASSES, COMBINATION_PRODUCT_TYPES,
+    MODALITY_SIGNALS, SPONSOR_COLS, entity_coverage, has_advanced_therapy,
+    is_drug_like_modality, is_known_agency_class, is_known_responsible_party_type,
+    modality_signals, normalize_agency_class, normalize_responsible_party_type,
+    parse_agency_classes, sponsor_agreement, sponsor_signals,
+    CONDITION_FIELDS, DRUG_NAME_FIELDS, ENTITY_COVERAGE_FIELDS, JOINT_MESH_FIELDS,
+    empty_entity_coverage, merge_entity_coverage,
 )
 
 ONE_DAY = timedelta(days=1)
@@ -510,3 +525,532 @@ def test_gap_summary_of_empty_is_shaped_not_missing():
     assert s["n_comparable"] == 0
     assert s["min"] is None and s["max"] is None
     assert "q50" in s
+
+
+# ---- date type ----------------------------------------------------------
+def test_date_type_recognised_in_any_casing():
+    assert is_actual_date("Actual") is True
+    assert is_actual_date("ACTUAL") is True
+    assert is_actual_date("Anticipated") is False
+    assert normalize_date_type("anticipated") == DATE_TYPE_ANTICIPATED
+
+
+def test_unknown_date_type_is_none_not_anticipated():
+    # A gap in an old record is not a positive statement that the date has not happened.
+    # Treating the two alike would either leak unfinished trials into training or discard
+    # usable ones.
+    for raw in (None, "", "   ", float("nan")):
+        assert is_actual_date(raw) is None, repr(raw)
+
+
+def test_every_date_type_is_a_fixed_point_and_documented():
+    for known in DATE_TYPES:
+        assert normalize_date_type(known) == known, known
+    assert set(DATE_TYPE_DOC) == set(DATE_TYPES)
+    assert all(DATE_TYPE_DOC[t].strip() for t in DATE_TYPES)
+
+
+def test_unrecognised_date_type_survives_for_the_audit():
+    assert normalize_date_type("Estimated") == "estimated"
+
+
+# ---- date plausibility --------------------------------------------------
+def test_date_quality_accepts_a_date_inside_the_window():
+    as_of = FINAL_RULE_COMPLIANCE
+    assert date_quality(as_of.isoformat(), as_of) == DATE_OK
+
+
+def test_the_floor_separates_the_day_before_from_the_day_of():
+    # Derived from the constant, not a transcribed year.
+    as_of = FINAL_RULE_COMPLIANCE
+    floor = DEFAULT_MIN_TRIAL_DATE
+    assert date_quality(floor.isoformat(), as_of, min_date=floor) == DATE_OK
+    assert date_quality((floor - ONE_DAY).isoformat(), as_of,
+                        min_date=floor) == DATE_TOO_EARLY
+
+
+def test_the_future_horizon_separates_the_last_allowed_day_from_the_next():
+    # Built by adding the bound to as_of, so the test tracks whatever the bound is.
+    as_of = FINAL_RULE_COMPLIANCE
+    horizon = 30
+    last_ok = as_of + timedelta(days=horizon)
+    assert date_quality(last_ok.isoformat(), as_of,
+                        max_future_days=horizon) == DATE_OK
+    assert date_quality((last_ok + ONE_DAY).isoformat(), as_of,
+                        max_future_days=horizon) == DATE_TOO_LATE
+
+
+def test_the_87_year_gap_from_the_live_run_is_caught():
+    # The concrete failure that motivated these bounds: a real pulled row whose date sat
+    # 31,777 days out. Derived from the default horizon, not hardcoded as "2100".
+    as_of = FINAL_RULE_COMPLIANCE
+    absurd = as_of + timedelta(days=31777)
+    assert date_quality(absurd.isoformat(), as_of) == DATE_TOO_LATE
+
+
+def test_a_plausible_anticipated_date_is_not_rejected():
+    # Anticipated dates legitimately sit in the future; only absurd ones are errors.
+    as_of = FINAL_RULE_COMPLIANCE
+    soon = as_of + timedelta(days=DAYS_PER_YEAR_NOMINAL)
+    assert date_quality(soon.isoformat(), as_of) == DATE_OK
+
+
+def test_unparseable_is_its_own_quality_not_an_implausible_one():
+    as_of = FINAL_RULE_COMPLIANCE
+    for bad in (None, "", "not a date"):
+        assert date_quality(bad, as_of) == DATE_UNPARSEABLE, repr(bad)
+
+
+def test_date_quality_does_not_read_the_clock():
+    # Same input, two different as_of values, different verdicts -> the function depends
+    # on the injected date and nothing else. A date.today() call would make this pass by
+    # accident on some days and fail on others.
+    target = FINAL_RULE_COMPLIANCE + timedelta(days=1000)
+    near = FINAL_RULE_COMPLIANCE + timedelta(days=999)
+    assert date_quality(target.isoformat(), near, max_future_days=1) == DATE_OK
+    assert date_quality(target.isoformat(), FINAL_RULE_COMPLIANCE,
+                        max_future_days=1) == DATE_TOO_LATE
+
+
+def test_every_quality_is_documented():
+    assert set(DATE_QUALITY_DOC) == set(DATE_QUALITIES)
+    assert all(DATE_QUALITY_DOC[q].strip() for q in DATE_QUALITIES)
+
+
+def test_date_quality_coverage_counts_sum_per_field():
+    as_of = FINAL_RULE_COMPLIANCE
+    fields = ["d1", "d2"]
+    rows = [{"d1": as_of.isoformat(), "d2": None},
+            {"d1": "not a date", "d2": (as_of - ONE_DAY).isoformat()},
+            {}]
+    cov = date_quality_coverage(rows, fields, as_of)
+    assert set(cov) == set(fields)
+    for f in fields:
+        assert sum(cov[f].values()) == len(rows), f
+        assert set(cov[f]) == set(DATE_QUALITIES), f
+
+
+# ---- drug-trial signals -------------------------------------------------
+def test_drug_and_biological_both_count_as_drug_trials():
+    for t in sorted(DRUG_INTERVENTION_TYPES):
+        assert has_drug_intervention(t) is True, t
+
+
+def test_a_mixed_trial_counts_as_a_drug_trial():
+    # Any drug-like member is enough; a drug-plus-device trial still has a mechanism.
+    mixed = INTERVENTION_TYPE_SEP.join(["Device", sorted(DRUG_INTERVENTION_TYPES)[0]])
+    assert has_drug_intervention(mixed) is True
+
+
+def test_a_purely_non_drug_trial_is_false():
+    assert has_drug_intervention(
+        INTERVENTION_TYPE_SEP.join(["Device", "Behavioral"])) is False
+
+
+def test_no_recorded_interventions_is_unknown_not_false():
+    # An incomplete registration is not a declared non-drug trial.
+    for raw in (None, "", "   ", float("nan"), INTERVENTION_TYPE_SEP):
+        assert has_drug_intervention(raw) is None, repr(raw)
+
+
+def test_intervention_types_are_normalised_deduplicated_and_ordered():
+    raw = INTERVENTION_TYPE_SEP.join([" Drug ", "DRUG", "Device"])
+    parsed = parse_intervention_types(raw)
+    assert parsed == tuple(sorted(set(parsed)))
+    assert len(parsed) == 2
+
+
+def test_phase_na_reads_as_not_drug_like_while_absent_phase_reads_unknown():
+    # The distinction the NA fix restored, now load-bearing for scoping.
+    assert drug_trial_signals({"phase": "NA"})["phase_is_drug_like"] is False
+    assert drug_trial_signals({"phase": "PHASE2"})["phase_is_drug_like"] is True
+    assert drug_trial_signals({"phase": None})["phase_is_drug_like"] is None
+
+
+def test_every_drug_signal_is_produced_and_documented():
+    sig = drug_trial_signals({})
+    assert set(sig) == set(DRUG_SIGNALS)
+    assert set(DRUG_SIGNAL_DOC) == set(DRUG_SIGNALS)
+    assert all(DRUG_SIGNAL_DOC[s].strip() for s in DRUG_SIGNALS)
+    assert all(v is None for v in sig.values()), "empty row must be all-unknown"
+
+
+def test_is_drug_trial_uses_only_the_authoritative_signal():
+    # It must NOT be a blend. A row whose phase and FDA flag both say drug, but whose
+    # interventions say device only, is False -- one stated meaning, re-derivable.
+    row = drug_trial_signals({
+        "intervention_types": "Device",
+        "phase": "PHASE3",
+        "is_fda_regulated_drug": "t",
+    })
+    assert row["is_drug_trial"] is False
+    assert row["phase_is_drug_like"] is True
+    assert row["is_fda_regulated_drug"] is True
+
+
+def test_signal_agreement_counts_partition_the_rows():
+    rows = [drug_trial_signals(r) for r in (
+        {"intervention_types": "Drug", "phase": "PHASE1", "is_fda_regulated_drug": "t"},
+        {"intervention_types": "Device", "phase": "NA", "is_fda_regulated_drug": "f"},
+        {},
+    )]
+    out = drug_signal_agreement(rows)
+    for s in DRUG_SIGNALS:
+        assert sum(out["counts"][s].values()) == len(rows), s
+    for key, buckets in out["pairs"].items():
+        assert sum(buckets.values()) == len(rows), key
+
+
+def test_signal_agreement_detects_a_real_disagreement():
+    rows = [drug_trial_signals({"intervention_types": "Device", "phase": "PHASE3",
+                                "is_fda_regulated_drug": "t"})]
+    out = drug_signal_agreement(rows)
+    key = "is_drug_trial__vs__phase_is_drug_like"
+    assert out["pairs"][key]["disagree"] == 1
+    assert out["pairs"][key]["agree"] == 0
+
+
+def test_unknown_signals_are_not_comparable_rather_than_disagreeing():
+    rows = [drug_trial_signals({"phase": "PHASE3"})]      # interventions unknown
+    out = drug_signal_agreement(rows)
+    key = "is_drug_trial__vs__phase_is_drug_like"
+    assert out["pairs"][key]["not_comparable"] == 1
+    assert out["pairs"][key]["disagree"] == 0
+
+
+# ---- date type vocabulary, corrected from real data ---------------------
+def test_estimated_is_recognised_because_it_is_what_the_server_reports():
+    # The live AACT server reports 'Estimated' and never 'Anticipated'. The first version
+    # of DATE_TYPES omitted it.
+    assert normalize_date_type("Estimated") == DATE_TYPE_ESTIMATED
+    assert is_actual_date("Estimated") is False
+    assert is_planned_date("Estimated") is True
+
+
+def test_every_planned_type_is_a_known_type_and_is_not_actual():
+    # Structural: the planned set must be a subset of the vocabulary, and no member of it
+    # may read as actual.
+    assert PLANNED_DATE_TYPES <= set(DATE_TYPES)
+    for planned in sorted(PLANNED_DATE_TYPES):
+        assert is_actual_date(planned) is False, planned
+        assert is_planned_date(planned) is True, planned
+
+
+def test_actual_is_the_only_non_planned_known_type():
+    non_planned = set(DATE_TYPES) - PLANNED_DATE_TYPES
+    assert non_planned == {DATE_TYPE_ACTUAL}
+
+
+def test_is_actual_is_not_the_negation_of_is_planned():
+    # The asymmetry that protects the split from a vocabulary gap: an unrecognised type is
+    # not actual (so it can never be trained on as a completed event) and also not
+    # confirmed planned (so it is not discarded on a guess).
+    novel = "Provisional"
+    assert normalize_date_type(novel) == novel.lower()
+    assert is_actual_date(novel) is False
+    assert is_planned_date(novel) is None
+
+
+def test_unknown_type_is_none_for_both_predicates():
+    for raw in (None, "", "   ", float("nan")):
+        assert is_actual_date(raw) is None, repr(raw)
+        assert is_planned_date(raw) is None, repr(raw)
+
+# ===========================================================================
+# MODALITY signals -- carried beside is_drug_trial, never folded into it
+# ===========================================================================
+def test_advanced_therapy_detected_without_a_drug_row():
+    # the case that matters: 3,629 trials carry genetic with no drug or biological, and
+    # under is_drug_trial they read False and vanish from the population
+    assert has_advanced_therapy("genetic") is True
+    assert has_drug_intervention("genetic") is False
+
+
+def test_modality_signals_do_not_change_is_drug_trial():
+    # structural: the whole point of carrying these separately is that the definition
+    # everything else rests on does not move
+    for raw in ("genetic", "combination_product", "genetic|combination_product",
+                "device", "drug", "biological"):
+        expected = bool(set(parse_intervention_types(raw)) & DRUG_INTERVENTION_TYPES)
+        assert has_drug_intervention(raw) == expected, raw
+
+
+def test_drug_intervention_types_was_not_widened():
+    # if a future edit folds the edge cases in, this fails loudly rather than silently
+    # moving the scoping decision, the agreement cross-tabs and the population count
+    assert not (DRUG_INTERVENTION_TYPES
+                & (ADVANCED_THERAPY_TYPES | COMBINATION_PRODUCT_TYPES))
+
+
+def test_wider_modality_is_the_union_of_the_three_sets():
+    # derived from the constants, so changing any set cannot leave this asserting a
+    # stale membership list
+    for member in (DRUG_INTERVENTION_TYPES | ADVANCED_THERAPY_TYPES
+                   | COMBINATION_PRODUCT_TYPES):
+        assert is_drug_like_modality(member) is True
+    assert is_drug_like_modality("device") is False
+
+
+def test_modality_signals_are_tristate():
+    # no intervention rows at all is UNKNOWN, not False: absent is not a claim
+    for signal in modality_signals({"intervention_types": None}).values():
+        assert signal is None
+    for signal in modality_signals({}).values():
+        assert signal is None
+
+
+def test_modality_signals_cover_every_declared_column():
+    assert set(modality_signals({"intervention_types": "drug"})) == set(MODALITY_SIGNALS)
+
+
+# ===========================================================================
+# SPONSOR CLASS and RESPONSIBLE PARTY
+# ===========================================================================
+def test_agency_class_normalised_to_a_token():
+    assert normalize_agency_class("INDUSTRY") == "industry"
+    assert normalize_agency_class("Other gov") == "other_gov"
+
+
+def test_unrecognised_agency_class_passes_through_as_itself():
+    # lesson 17: mapping it to None would hide a registry vocabulary change, exactly as
+    # 'Estimated' would have been hidden had normalize_date_type returned None
+    token = normalize_agency_class("SOVEREIGN_WEALTH_FUND")
+    assert token == "sovereign_wealth_fund"
+    assert token not in AGENCY_CLASSES
+
+
+def test_unrecognised_class_is_flagged_rather_than_dropped():
+    assert is_known_agency_class("INDUSTRY") is True
+    assert is_known_agency_class("SOVEREIGN_WEALTH_FUND") is False
+    assert is_known_agency_class("") is None          # absent makes no claim
+
+
+def test_collaborator_classes_are_a_set_not_a_single_value():
+    # a trial can have several collaborators of different classes
+    assert parse_agency_classes("NIH|INDUSTRY|NIH") == ("industry", "nih")
+
+
+def test_empty_collaborators_and_absent_lead_are_both_empty_tuples():
+    # the two mean different things ("no collaborators" vs "lead not recorded") and are
+    # distinguished by WHICH column is empty, not by this function
+    assert parse_agency_classes(None) == ()
+    assert parse_agency_classes("") == ()
+
+
+def test_sponsor_signals_cover_every_declared_column():
+    row = {"lead_sponsor_class": "INDUSTRY", "collaborator_classes": "NIH",
+           "responsible_party_type": "Sponsor"}
+    assert set(sponsor_signals(row)) == set(SPONSOR_COLS)
+
+
+def test_multiple_leads_are_kept_not_silently_reduced_to_one():
+    # picking one would hide the multiplicity; keeping both makes it visible in the audit
+    out = sponsor_signals({"lead_sponsor_class": "INDUSTRY|NIH"})
+    assert out["lead_sponsor_class"] == "industry|nih"
+
+
+def test_responsible_party_type_normalised_and_flagged():
+    assert (normalize_responsible_party_type("Principal Investigator")
+            == "principal investigator")
+    assert is_known_responsible_party_type("Sponsor") is True
+    assert is_known_responsible_party_type("Data Monitoring Committee") is False
+    assert is_known_responsible_party_type(None) is None
+
+
+def test_sponsor_agreement_is_paired_not_marginal():
+    # lesson 19: two fields whose totals match can still disagree on every row. Only the
+    # joint distribution shows it, so this must return pairs.
+    rows = [{"lead_sponsor_class": "industry", "responsible_party_type": "sponsor"},
+            {"lead_sponsor_class": "nih", "responsible_party_type": "principal investigator"},
+            {"lead_sponsor_class": "industry", "responsible_party_type": "principal investigator"}]
+    out = sponsor_agreement(rows)
+    assert sum(out["joint"].values()) == len(rows)
+    assert out["joint"][("industry", "sponsor")] == 1
+    assert out["joint"][("industry", "principal investigator")] == 1
+    # the marginals would have been industry:2 / nih:1 either way; the pairing is the point
+    assert len(out["joint"]) == 3
+
+
+def test_sponsor_agreement_separates_the_four_coverage_cases():
+    rows = [{"lead_sponsor_class": "industry", "responsible_party_type": "sponsor"},
+            {"lead_sponsor_class": "industry"},
+            {"responsible_party_type": "sponsor"},
+            {}]
+    out = sponsor_agreement(rows)
+    assert out["coverage"] == {"both": 1, "lead_only": 1, "party_only": 1, "neither": 1}
+    assert sum(out["coverage"].values()) == len(rows)
+
+
+# ---- entity coverage ------------------------------------------------------
+def test_entity_coverage_reports_each_source_separately():
+    # pooling them would hide that one source covers 90% of trials and another 12%, which
+    # is exactly the mistake of picking one name source and finding out later
+    rows = [{"intervention_names": "Drug A"},
+            {"intervention_other_names": "ABC-123"},
+            {"intervention_names": "Drug B", "intervention_mesh_terms": "Aspirin"},
+            {}]
+    out = entity_coverage(rows)
+    assert out["total"] == len(rows)
+    assert out["present"]["intervention_names"] == 2
+    assert out["present"]["intervention_other_names"] == 1
+    assert out["present"]["intervention_mesh_terms"] == 1
+
+
+def test_entity_coverage_any_drug_source_is_a_union_not_a_sum():
+    # a trial with two name sources must count ONCE toward the union, or the reported
+    # feasibility ceiling for the market target is inflated
+    rows = [{"intervention_names": "Drug B", "intervention_mesh_terms": "Aspirin"}]
+    out = entity_coverage(rows)
+    assert out["any_drug_name_source"] == 1
+    assert sum(out["present"][f] for f in
+               ("intervention_names", "intervention_other_names",
+                "intervention_mesh_terms")) == 2
+
+
+def test_entity_coverage_blank_is_absent_not_present():
+    out = entity_coverage([{"intervention_names": ""}, {"intervention_names": None}])
+    assert out["present"]["intervention_names"] == 0
+
+
+# ---- entity coverage must be mergeable across chunks ----------------------
+# The pull streams to bound memory, so coverage is tallied per chunk. Addition therefore
+# has to be defined in tested code rather than done inline in the script.
+def test_merge_is_additive_on_every_field():
+    a = entity_coverage([{"intervention_names": "x"}, {}])
+    b = entity_coverage([{"intervention_names": "y", "condition_mesh_terms": "z"}])
+    merged = merge_entity_coverage(a, b)
+    assert merged["total"] == a["total"] + b["total"]
+    for field in a["present"]:
+        assert merged["present"][field] == a["present"][field] + b["present"][field]
+    assert merged["any_drug_name_source"] == (a["any_drug_name_source"]
+                                              + b["any_drug_name_source"])
+
+
+def test_empty_is_the_additive_identity():
+    one = entity_coverage([{"intervention_mesh_terms": "Aspirin"}])
+    assert merge_entity_coverage(empty_entity_coverage(), one) == one
+
+
+def test_empty_field_set_comes_from_the_declaration_not_the_first_chunk():
+    # otherwise a first chunk missing a column would fix a short field set for the run
+    assert set(empty_entity_coverage()["present"]) == set(ENTITY_COVERAGE_FIELDS)
+
+
+def test_merging_mismatched_field_sets_raises_rather_than_unioning():
+    # a silent union would give one column a different denominator from its neighbours,
+    # making two percentages in the same table incomparable
+    good = empty_entity_coverage()
+    bad = {"total": 1, "present": {"intervention_names": 1}, "any_drug_name_source": 1}
+    try:
+        merge_entity_coverage(good, bad)
+    except ValueError:
+        return
+    raise AssertionError("mismatched field sets must raise")
+
+
+def test_chunked_merge_equals_the_whole_in_one_go():
+    # the property that makes per-chunk tallying safe at all
+    rows = [{"intervention_names": "a"}, {"condition_mesh_terms": "b"},
+            {"intervention_other_names": "c", "intervention_names": "d"}, {}]
+    whole = entity_coverage(rows)
+    chunked = empty_entity_coverage()
+    for i in range(0, len(rows), 2):
+        chunked = merge_entity_coverage(chunked, entity_coverage(rows[i:i + 2]))
+    assert chunked == whole
+
+
+def test_drug_name_union_uses_the_declared_source_list():
+    # the union was hand-listed at first; deriving it means a fourth source cannot be
+    # added to the per-source table and forgotten in the ceiling figure
+    row = {f: "value" for f in DRUG_NAME_FIELDS}
+    out = entity_coverage([row])
+    assert out["any_drug_name_source"] == 1
+    assert all(out["present"][f] == 1 for f in DRUG_NAME_FIELDS)
+    assert all(out["present"][f] == 0 for f in CONDITION_FIELDS)
+
+
+# ---- entity coverage: the DRUG-TRIAL stratum and the joint MeSH ceiling ---
+# The first widened pull reported "ANY drug-name source present: 100.0%" and that number
+# carried no information: intervention_names is free text present on essentially every
+# trial, including 'Placebo' and 'Standard of care'. Presence is not resolvability, and a
+# percentage over a population that is half device and behavioural trials answers a
+# question nobody asked once scoping is drug-only.
+def test_coverage_is_reported_for_the_drug_trial_stratum():
+    rows = [{"intervention_names": "a", "is_drug_trial": True},
+            {"intervention_names": "b", "is_drug_trial": False},
+            {"intervention_names": "c", "is_drug_trial": None}]
+    out = entity_coverage(rows)
+    assert out["total"] == 3
+    assert out["drug_total"] == 1
+    assert out["present"]["intervention_names"] == 3
+    assert out["drug_present"]["intervention_names"] == 1
+
+
+def test_unknown_is_drug_trial_is_not_counted_as_a_drug_trial():
+    # tri-state discipline: absent is not a claim, so it must not inflate the denominator
+    # the market gate is read against
+    out = entity_coverage([{"intervention_names": "a", "is_drug_trial": None},
+                           {"intervention_names": "b"}])
+    assert out["drug_total"] == 0
+
+
+def test_joint_mesh_is_an_intersection_not_a_minimum_of_two_rates():
+    # two trials each carrying ONE MeSH side means the join can reach neither, even though
+    # each side individually reads 50%. Inferring the joint from two percentages would
+    # have said 50%.
+    rows = [{"intervention_mesh_terms": "m", "is_drug_trial": True},
+            {"condition_mesh_terms": "c", "is_drug_trial": True}]
+    out = entity_coverage(rows)
+    assert out["present"]["intervention_mesh_terms"] == 1
+    assert out["present"]["condition_mesh_terms"] == 1
+    assert out["both_mesh"] == 0
+    assert out["drug_both_mesh"] == 0
+
+
+def test_joint_mesh_counts_a_trial_carrying_both_sides():
+    out = entity_coverage([{f: "v" for f in JOINT_MESH_FIELDS} | {"is_drug_trial": True}])
+    assert out["both_mesh"] == 1 and out["drug_both_mesh"] == 1
+
+
+def test_joint_mesh_never_exceeds_either_side():
+    # structural: an intersection is bounded by both of its parts, in each stratum
+    rows = [{"intervention_mesh_terms": "m", "condition_mesh_terms": "c",
+             "is_drug_trial": True},
+            {"intervention_mesh_terms": "m", "is_drug_trial": True},
+            {"condition_mesh_terms": "c", "is_drug_trial": False}]
+    out = entity_coverage(rows)
+    for side in JOINT_MESH_FIELDS:
+        assert out["both_mesh"] <= out["present"][side]
+        assert out["drug_both_mesh"] <= out["drug_present"][side]
+
+
+def test_drug_stratum_never_exceeds_the_whole():
+    rows = [{f: "v" for f in ENTITY_COVERAGE_FIELDS} | {"is_drug_trial": True},
+            {f: "v" for f in ENTITY_COVERAGE_FIELDS} | {"is_drug_trial": False}]
+    out = entity_coverage(rows)
+    assert out["drug_total"] <= out["total"]
+    for field in ENTITY_COVERAGE_FIELDS:
+        assert out["drug_present"][field] <= out["present"][field]
+    assert out["drug_any_drug_name_source"] <= out["any_drug_name_source"]
+    assert out["drug_both_mesh"] <= out["both_mesh"]
+
+
+def test_chunked_merge_still_equals_the_whole_with_strata():
+    rows = [{"intervention_names": "a", "is_drug_trial": True},
+            {"intervention_mesh_terms": "m", "condition_mesh_terms": "c",
+             "is_drug_trial": True},
+            {"condition_mesh_terms": "c", "is_drug_trial": False},
+            {"is_drug_trial": None}]
+    whole = entity_coverage(rows)
+    chunked = empty_entity_coverage()
+    for i in range(0, len(rows), 3):
+        chunked = merge_entity_coverage(chunked, entity_coverage(rows[i:i + 3]))
+    assert chunked == whole
+
+
+def test_empty_carries_every_stratified_key():
+    # otherwise the first chunk fixes the shape and a later merge raises or drops a key
+    empty = empty_entity_coverage()
+    populated = entity_coverage([{"is_drug_trial": True}])
+    assert set(empty) == set(populated)
+    assert set(empty["drug_present"]) == set(ENTITY_COVERAGE_FIELDS)

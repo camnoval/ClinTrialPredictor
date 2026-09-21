@@ -380,6 +380,255 @@ def gap_summary(rows: Iterable[dict], quantiles=(0.5, 0.9)) -> dict:
     return out
 
 
+# ---- date TYPE: actual event vs stated plan ------------------------------
+# AACT carries a `*_date_type` beside each date: 'Actual' or 'Anticipated'.
+# This was missed in the first full pull and it matters twice over.
+#
+# For ERA binning it is a nuance: an anticipated date still says roughly when.
+# For the TEMPORAL SPLIT it is decisive. The split is "train on trials that COMPLETED
+# before the boundary, so their outcome was determined by then". An anticipated
+# completion is a plan, not an event -- splitting on it would put unfinished trials in
+# the training set, which is the exact leak the split was designed to prevent.
+#
+# Consistent with the FDAAA handling: the type is CARRIED and REPORTED, never used to
+# filter here. The split will filter on it; the pull only has to preserve it.
+# VOCABULARY NOTE, learned from real data: the live AACT server reports 'Estimated',
+# NOT 'Anticipated' -- 153,288 primary completion dates were 'Estimated' and ZERO were
+# 'Anticipated'. 'Anticipated' is the older registry wording and is kept because a
+# historical dump may still carry it.
+#
+# This was caught only because `normalize_date_type` passes an unrecognised value through
+# as itself instead of returning None, so 'estimated' appeared in the audit as its own
+# bucket rather than vanishing into 'unknown'. `is_actual_date` was also right by
+# construction -- anything that is not 'actual' is not actual -- so nothing was
+# mislabelled. The vocabulary was merely incomplete, which is the cheap version of this
+# mistake.
+DATE_TYPE_ACTUAL = "actual"
+DATE_TYPE_ANTICIPATED = "anticipated"
+DATE_TYPE_ESTIMATED = "estimated"
+DATE_TYPES = (DATE_TYPE_ACTUAL, DATE_TYPE_ANTICIPATED, DATE_TYPE_ESTIMATED)
+
+# Types that describe a PLAN rather than an event. The temporal split must exclude these:
+# "train on trials that completed before the boundary" is meaningless if the completion
+# has not happened. Grouped rather than merged, because the two words are different
+# registry vocabularies and collapsing them would lose which era a record came from.
+PLANNED_DATE_TYPES = frozenset({DATE_TYPE_ANTICIPATED, DATE_TYPE_ESTIMATED})
+
+DATE_TYPE_DOC = {
+    DATE_TYPE_ACTUAL: "the event happened; safe for a temporal split",
+    DATE_TYPE_ANTICIPATED: ("a stated plan, not an event; NEVER safe for a temporal "
+                            "split. Older registry wording, absent from the current "
+                            "server but retained for historical dumps"),
+    DATE_TYPE_ESTIMATED: ("a stated plan, not an event; NEVER safe for a temporal split. "
+                          "This is what the live server actually reports"),
+}
+
+
+def normalize_date_type(raw) -> Optional[str]:
+    """AACT *_date_type -> 'actual' | 'anticipated' | None(unknown).
+
+    None is not 'anticipated'. An unknown type on an old record is a gap in the registry,
+    while 'anticipated' is a positive statement that the date has not happened yet, and a
+    split that treated the two alike would either leak or discard needlessly.
+    """
+    s = _text(raw)
+    if s is None:
+        return None
+    low = s.lower()
+    for known in DATE_TYPES:
+        if low.startswith(known):
+            return known
+    return low
+
+
+def is_actual_date(raw) -> Optional[bool]:
+    """True / False / None(unknown) for whether a date describes a completed event.
+
+    Defined as "is 'actual'", not "is not planned", deliberately: an unrecognised type is
+    not actual, so a vocabulary gap can never promote a plan into an event. That is what
+    kept 'Estimated' harmless before it was a named constant.
+    """
+    norm = normalize_date_type(raw)
+    if norm is None:
+        return None
+    return norm == DATE_TYPE_ACTUAL
+
+
+def is_planned_date(raw) -> Optional[bool]:
+    """True when the type explicitly says the date has not happened yet.
+
+    NOT the negation of `is_actual_date`: an unrecognised or absent type is neither
+    confirmed-actual nor confirmed-planned, so this returns None there. The temporal split
+    needs the positive statement -- excluding merely-unknown types would discard 32% of
+    start dates on this server.
+    """
+    norm = normalize_date_type(raw)
+    if norm is None:
+        return None
+    if norm == DATE_TYPE_ACTUAL:
+        return False
+    if norm in PLANNED_DATE_TYPES:
+        return True
+    return None          # a type we do not recognise makes no claim either way
+
+
+# ---- date plausibility ---------------------------------------------------
+# The first full pull reported a primary-to-overall completion gap with a MAXIMUM of
+# 31,777 days -- 87 years -- and 484 negative gaps. Those are registry errors and absurd
+# anticipated dates, and an era binned on them is binned on noise.
+#
+# Bounds are parameters, not constants: the floor depends on how far back retrospective
+# registration goes, and the future horizon depends on what counts as a credible plan.
+# Both are exposed as CLI flags and printed, per the rule that a threshold producing a
+# verdict must be visible.
+DEFAULT_MIN_TRIAL_DATE = date(1900, 1, 1)
+DEFAULT_MAX_FUTURE_YEARS = 20
+
+# A nominal year, used only to turn a years-flag into a days bound. Exactness is
+# irrelevant at a twenty-year horizon and leap-year handling would be false precision.
+DAYS_PER_YEAR_NOMINAL = 365
+
+DATE_OK = "ok"
+DATE_UNPARSEABLE = "unparseable"
+DATE_TOO_EARLY = "implausible_past"
+DATE_TOO_LATE = "implausible_future"
+DATE_QUALITIES = (DATE_OK, DATE_TOO_EARLY, DATE_TOO_LATE, DATE_UNPARSEABLE)
+
+DATE_QUALITY_DOC = {
+    DATE_OK: "parses and falls inside the plausible window",
+    DATE_TOO_EARLY: "before the floor; a typo rather than a retrospective registration",
+    DATE_TOO_LATE: "further ahead than any credible plan; a data-entry error",
+    DATE_UNPARSEABLE: "absent or not a date at all",
+}
+
+
+def date_quality(raw, as_of: date, min_date: date = DEFAULT_MIN_TRIAL_DATE,
+                 max_future_days: int = DEFAULT_MAX_FUTURE_YEARS * DAYS_PER_YEAR_NOMINAL
+                 ) -> str:
+    """Classify one date. `as_of` is INJECTED, never read from the clock.
+
+    A function that called date.today() would give different answers on different days and
+    could not be tested deterministically, which for something that decides what enters a
+    training set is unacceptable.
+    """
+    d = parse_date(raw)
+    if d is None:
+        return DATE_UNPARSEABLE
+    if d < min_date:
+        return DATE_TOO_EARLY
+    if (d - as_of).days > max_future_days:
+        return DATE_TOO_LATE
+    return DATE_OK
+
+
+def date_quality_coverage(rows: Iterable[dict], fields: Iterable[str], as_of: date,
+                          min_date: date = DEFAULT_MIN_TRIAL_DATE,
+                          max_future_days: int = (DEFAULT_MAX_FUTURE_YEARS
+                                                  * DAYS_PER_YEAR_NOMINAL)) -> dict:
+    """-> {field: {quality: count}}, every quality present even at zero."""
+    fields = list(fields)
+    out = {f: {q: 0 for q in DATE_QUALITIES} for f in fields}
+    for row in rows:
+        for f in fields:
+            out[f][date_quality(row.get(f), as_of, min_date, max_future_days)] += 1
+    return out
+
+
+# ---- is this a drug trial? ----------------------------------------------
+# The first full pull found `phase` explicitly not-applicable for 51.1% of interventional
+# trials: over half of ClinicalTrials.gov's interventional population is device,
+# behavioural, surgical or dietary. Those trials have no mechanism, so they cannot carry
+# the mechanism attribution the product promises.
+#
+# The scoping decision -- whether to train on them -- is DEFERRED. Three signals are
+# carried instead, because they disagree and collapsing them is the judgment being
+# deferred:
+#   intervention_type   authoritative; what the trial actually administers
+#   phase               a drug concept; 'NA' is strong evidence of a non-drug trial
+#   is_fda_regulated_drug  sponsor's declaration, but mostly absent before 2017
+#
+# `is_drug_trial` is defined on the authoritative signal ALONE, so it has one stated
+# meaning rather than being a blend. The other two travel beside it and the audit reports
+# how often they agree.
+DRUG_INTERVENTION_TYPES = frozenset({"drug", "biological"})
+
+INTERVENTION_TYPE_SEP = "|"
+
+
+def parse_intervention_types(raw) -> tuple:
+    """Pipe-joined aggregate -> a tuple of normalised type names.
+
+    A trial may administer several types at once (a drug AND a device), so this is a set
+    rather than a single value, and any drug-like member makes it a drug trial.
+    """
+    s = _text(raw)
+    if s is None:
+        return ()
+    parts = (p.strip().lower() for p in s.split(INTERVENTION_TYPE_SEP))
+    return tuple(sorted({p for p in parts if p}))
+
+
+def has_drug_intervention(raw) -> Optional[bool]:
+    """True / False / None(unknown). None means no interventions were recorded at all.
+
+    That third state is real and must not read as False: a trial with no intervention rows
+    is an incomplete registration, not a declared non-drug trial.
+    """
+    types = parse_intervention_types(raw)
+    if not types:
+        return None
+    return any(t in DRUG_INTERVENTION_TYPES for t in types)
+
+
+DRUG_SIGNALS = ("is_drug_trial", "phase_is_drug_like", "is_fda_regulated_drug")
+
+DRUG_SIGNAL_DOC = {
+    "is_drug_trial": "intervention_type includes drug or biological -- authoritative",
+    "phase_is_drug_like": "phase is stated rather than 'NA'; phases are a drug concept",
+    "is_fda_regulated_drug": "sponsor declaration; mostly absent before the 2017 form",
+}
+
+
+def drug_trial_signals(row: dict) -> dict:
+    """-> the three tri-state drug signals for one row. No verdict is blended."""
+    return {
+        "is_drug_trial": has_drug_intervention(row.get("intervention_types")),
+        "phase_is_drug_like": (None if _text(row.get("phase")) is None
+                               else not is_not_applicable(row.get("phase"))),
+        "is_fda_regulated_drug": tribool(row.get("is_fda_regulated_drug")),
+    }
+
+
+def drug_signal_agreement(rows: Iterable[dict]) -> dict:
+    """-> {signal: {'true'|'false'|'unknown': n}} plus pairwise agreement counts.
+
+    The cross-tab that the scoping decision needs. If the authoritative signal and the
+    phase proxy agree almost always, the proxy is usable where interventions are missing;
+    if they diverge, the scoping question is harder than it looks and must be decided on
+    the authoritative signal alone.
+    """
+    counts = {s: {"true": 0, "false": 0, UNKNOWN: 0} for s in DRUG_SIGNALS}
+    pairs: dict = {}
+    for i, a in enumerate(DRUG_SIGNALS):
+        for b in DRUG_SIGNALS[i + 1:]:
+            pairs[f"{a}__vs__{b}"] = {"agree": 0, "disagree": 0, "not_comparable": 0}
+    for row in rows:
+        sig = {s: row.get(s) for s in DRUG_SIGNALS}
+        for s in DRUG_SIGNALS:
+            v = sig[s]
+            counts[s]["true" if v is True else "false" if v is False else UNKNOWN] += 1
+        for key in pairs:
+            a, b = key.split("__vs__")
+            va, vb = sig[a], sig[b]
+            if va is None or vb is None:
+                pairs[key]["not_comparable"] += 1
+            elif bool(va) == bool(vb):
+                pairs[key]["agree"] += 1
+            else:
+                pairs[key]["disagree"] += 1
+    return {"counts": counts, "pairs": pairs}
+
+
 # ---- FDAAA component carriage --------------------------------------------
 # Each entry: (output field name, AACT table, AACT column, kind, why it matters).
 # `kind` drives parsing only: 'tribool' | 'text' | 'date'.
@@ -494,3 +743,287 @@ def era_coverage(rows: Iterable[dict], date_field: str = "primary_completion_dat
         era = era_for_date(row.get(date_field))
         out[era if era is not None else UNKNOWN] += 1
     return out
+
+# ---- MODALITY signals: carried beside is_drug_trial, never folded into it -------------
+# 3,629 trials carry `genetic` or `combination_product` with NO `drug` or `biological`
+# (71 of them headline-labelled). Under `is_drug_trial` they read False and drop out of the
+# drug-only population entirely -- yet cell and gene therapies receive BLAs, and they are
+# exactly the modality a 10-year market window cannot see.
+#
+# DRUG_INTERVENTION_TYPES is deliberately NOT widened to include them. `is_drug_trial` has
+# one stated meaning and everything else rests on it; changing that definition to fix a
+# 0.8% edge case would move the scoping decision, the agreement cross-tabs and the
+# population count all at once. These signals travel alongside instead, so the 3,629 stay
+# countable and re-scopable. Same carry-don't-blend discipline as the three drug signals.
+ADVANCED_THERAPY_TYPES = frozenset({"genetic"})
+COMBINATION_PRODUCT_TYPES = frozenset({"combination_product"})
+
+MODALITY_SIGNALS = ("has_advanced_therapy", "has_combination_product",
+                    "is_drug_like_modality")
+
+
+def has_advanced_therapy(raw) -> Optional[bool]:
+    """Does this trial administer a gene or cell therapy intervention?
+
+    None when no intervention rows were recorded at all -- absent is not false. Tri-state
+    by default, because collapsing never-collected into False manufactures findings.
+    """
+    types = parse_intervention_types(raw)
+    if not types:
+        return None
+    return bool(set(types) & ADVANCED_THERAPY_TYPES)
+
+
+def has_combination_product(raw) -> Optional[bool]:
+    """Does this trial administer a combination product (drug-device, drug-biologic)?"""
+    types = parse_intervention_types(raw)
+    if not types:
+        return None
+    return bool(set(types) & COMBINATION_PRODUCT_TYPES)
+
+
+def is_drug_like_modality(raw) -> Optional[bool]:
+    """The WIDER reading: drug, biological, genetic or combination product.
+
+    Offered as a named alternative scope, NOT as the definition. The market target has a
+    live argument for using this reading (a gene therapy gets a BLA) while endpoint-met
+    has a weaker one. Carrying both means that decision can be made on measured coverage
+    instead of being baked into `is_drug_trial` now.
+    """
+    types = parse_intervention_types(raw)
+    if not types:
+        return None
+    wider = DRUG_INTERVENTION_TYPES | ADVANCED_THERAPY_TYPES | COMBINATION_PRODUCT_TYPES
+    return bool(set(types) & wider)
+
+
+def modality_signals(row: dict) -> dict:
+    """One studies row -> the modality signal columns. Reads `intervention_types` only."""
+    raw = row.get("intervention_types")
+    return {"has_advanced_therapy": has_advanced_therapy(raw),
+            "has_combination_product": has_combination_product(raw),
+            "is_drug_like_modality": is_drug_like_modality(raw)}
+
+
+# ---- SPONSOR CLASS and RESPONSIBLE PARTY ---------------------------------------------
+# §8.2 requires posting rate by sponsor class and no pulled column supported it. Two
+# entities can bear the obligation and they do not always agree: convention (and most
+# published posting-rate work) bins by LEAD SPONSOR, while the FDAAA obligation falls on
+# the RESPONSIBLE PARTY. Both are carried so the disagreement is measurable rather than
+# assumed away.
+#
+# The vocabularies are normalised but NOT validated against these sets: an unrecognised
+# value passes through as itself, lowercased, so a registry vocabulary change shows up in
+# the audit as its own bucket instead of disappearing into 'unknown'. That is lesson 17,
+# and it is the reason the 'Estimated' / 'Anticipated' gap was visible within one run.
+AGENCY_CLASSES = frozenset({"nih", "industry", "other", "fed", "other_gov", "indiv",
+                            "network", "ambig", "unknown"})
+
+RESPONSIBLE_PARTY_TYPES = frozenset({"sponsor", "principal investigator",
+                                     "sponsor-investigator"})
+
+SPONSOR_COLS = ("lead_sponsor_class", "collaborator_classes", "responsible_party_type",
+                "lead_sponsor_class_known", "responsible_party_type_known")
+
+
+def normalize_agency_class(raw) -> Optional[str]:
+    """AACT agency_class -> a lowercased token, or None when absent.
+
+    Passes unrecognised values through as themselves. AACT's 'N/A' is handled the same way
+    `study_type` handles it -- locally, not by a global blank-token list -- because whether
+    'N/A' means not-applicable or unknown is field-specific (lesson 7).
+    """
+    text = _text(raw)
+    if text is None:
+        return None
+    token = text.strip().lower().replace(" ", "_")
+    return token or None
+
+
+def parse_agency_classes(raw) -> tuple:
+    """Pipe-joined aggregate of agency classes -> a sorted tuple of tokens.
+
+    A trial can have several collaborators of different classes, so this is a set. Empty
+    tuple means the aggregate was absent, which for collaborators legitimately means "no
+    collaborators" and for the lead means "not recorded" -- the two are distinguished by
+    WHICH column is empty, not by this function.
+    """
+    text = _text(raw)
+    if text is None:
+        return ()
+    parts = (normalize_agency_class(p) for p in text.split(INTERVENTION_TYPE_SEP))
+    return tuple(sorted({p for p in parts if p}))
+
+
+def normalize_responsible_party_type(raw) -> Optional[str]:
+    """AACT responsible_party_type -> a lowercased token, or None when absent.
+
+    Same passthrough discipline as `normalize_agency_class`: an unrecognised party type is
+    a finding about the registry, not a value to discard.
+    """
+    text = _text(raw)
+    if text is None:
+        return None
+    return text.strip().lower() or None
+
+
+def is_known_agency_class(raw) -> Optional[bool]:
+    """Is this value in the vocabulary we expected? None when absent.
+
+    Carried as its own column so the audit can report vocabulary drift as a COUNT rather
+    than requiring someone to eyeball the class distribution. False does not mean bad
+    data; it means this run saw something the constant does not list.
+    """
+    token = normalize_agency_class(raw)
+    if token is None:
+        return None
+    return token in AGENCY_CLASSES
+
+
+def is_known_responsible_party_type(raw) -> Optional[bool]:
+    token = normalize_responsible_party_type(raw)
+    if token is None:
+        return None
+    return token in RESPONSIBLE_PARTY_TYPES
+
+
+def sponsor_signals(row: dict) -> dict:
+    """One studies row -> the sponsor and responsible-party columns.
+
+    `lead_sponsor_class` is joined back to a single string because the lead is normally
+    one entity; when a trial records several, all of them are kept pipe-joined rather than
+    one being picked, so the multiplicity is visible in the audit.
+    """
+    lead = parse_agency_classes(row.get("lead_sponsor_class"))
+    collaborators = parse_agency_classes(row.get("collaborator_classes"))
+    return {
+        "lead_sponsor_class": INTERVENTION_TYPE_SEP.join(lead) or None,
+        "collaborator_classes": INTERVENTION_TYPE_SEP.join(collaborators) or None,
+        "responsible_party_type":
+            normalize_responsible_party_type(row.get("responsible_party_type")),
+        "lead_sponsor_class_known":
+            all(c in AGENCY_CLASSES for c in lead) if lead else None,
+        "responsible_party_type_known":
+            is_known_responsible_party_type(row.get("responsible_party_type")),
+    }
+
+
+def sponsor_agreement(rows) -> dict:
+    """Cross-tab lead sponsor class against responsible party type. PAIRED, not marginal.
+
+    Lesson 19: matching marginal totals do not mean two fields agree. `is_drug_trial` and
+    `phase_is_drug_like` had totals within 1% and disagreed on 49,759 trials because the
+    errors ran both ways and cancelled. The only way to see that is the paired cross-tab,
+    so this returns the joint distribution rather than two summaries.
+    """
+    joint: dict = {}
+    coverage = {"both": 0, "lead_only": 0, "party_only": 0, "neither": 0}
+    for row in rows:
+        lead = row.get("lead_sponsor_class") or None
+        party = row.get("responsible_party_type") or None
+        if lead and party:
+            coverage["both"] += 1
+        elif lead:
+            coverage["lead_only"] += 1
+        elif party:
+            coverage["party_only"] += 1
+        else:
+            coverage["neither"] += 1
+        key = (lead or UNKNOWN, party or UNKNOWN)
+        joint[key] = joint.get(key, 0) + 1
+    return {"joint": joint, "coverage": coverage}
+
+
+# The name sources, declared once so `entity_coverage` and the union count cannot drift
+# apart -- the union was hand-listed at first and would have silently stopped matching the
+# per-source list as soon as a fourth source was added.
+DRUG_NAME_FIELDS = ("intervention_names", "intervention_other_names",
+                    "intervention_mesh_terms")
+CONDITION_FIELDS = ("condition_mesh_terms", "condition_mesh_ancestors")
+ENTITY_COVERAGE_FIELDS = DRUG_NAME_FIELDS + CONDITION_FIELDS
+
+
+# The two MeSH fields whose INTERSECTION is the ceiling on code-to-code indication
+# matching: a curated drug term on one side, a curated condition term on the other. Either
+# alone overstates what the join can reach, which is why `both_mesh` is counted rather than
+# left to be inferred from two percentages.
+JOINT_MESH_FIELDS = ("intervention_mesh_terms", "condition_mesh_terms")
+
+
+def entity_coverage(rows) -> dict:
+    """Coverage of each drug-name and condition source, reported SEPARATELY.
+
+    Three name sources are pulled rather than one, because picking one and discovering
+    later that it was the weak source is the expensive mistake. Resolution rate has to be
+    reported per source, so coverage is too: a source present on 90% of trials and a source
+    present on 12% are not interchangeable inputs to the same match step.
+
+    Counts trials with a NON-EMPTY aggregate. It says nothing about whether the value
+    resolves to a drug -- that is §8.1c's job and needs DrugCentral.
+    """
+    fields = ENTITY_COVERAGE_FIELDS
+    out = {"total": 0, "present": {f: 0 for f in fields}, "any_drug_name_source": 0,
+           "both_mesh": 0,
+           # The same four quantities restricted to trials where is_drug_trial is TRUE.
+           # Overall coverage is nearly useless for the market target: the population is
+           # half device and behavioural trials, so a percentage over all 460,569 answers
+           # a question nobody asked. Scoping is drug-only, so the drug-only stratum is
+           # the denominator every market figure has to use.
+           "drug_total": 0, "drug_present": {f: 0 for f in fields},
+           "drug_any_drug_name_source": 0, "drug_both_mesh": 0}
+    for row in rows:
+        is_drug = tribool(row.get("is_drug_trial")) is True
+        out["total"] += 1
+        if is_drug:
+            out["drug_total"] += 1
+        for field in fields:
+            if _text(row.get(field)) is not None:
+                out["present"][field] += 1
+                if is_drug:
+                    out["drug_present"][field] += 1
+        if any(_text(row.get(f)) is not None for f in DRUG_NAME_FIELDS):
+            out["any_drug_name_source"] += 1
+            if is_drug:
+                out["drug_any_drug_name_source"] += 1
+        if all(_text(row.get(f)) is not None for f in JOINT_MESH_FIELDS):
+            out["both_mesh"] += 1
+            if is_drug:
+                out["drug_both_mesh"] += 1
+    return out
+
+
+def merge_entity_coverage(left: dict, right: dict) -> dict:
+    """Add two `entity_coverage` results. Lets the pull accumulate per CHUNK.
+
+    The pull streams to bound memory and only keeps the small label records in RAM; the
+    entity aggregates are free text and holding 460k of them would undo that. So coverage
+    is tallied per chunk and merged, which needs addition to be defined somewhere pure
+    rather than done inline in the script.
+
+    Field sets must match. A silent union would let a chunk that happened to lack a column
+    shrink the denominator for that column alone, which is the kind of per-column
+    denominator difference that makes two percentages in the same table incomparable.
+    """
+    if set(left["present"]) != set(right["present"]):
+        raise ValueError("entity coverage field sets differ: "
+                         f"{sorted(left['present'])} vs {sorted(right['present'])}")
+    merged = {}
+    for key in ("total", "any_drug_name_source", "both_mesh",
+                "drug_total", "drug_any_drug_name_source", "drug_both_mesh"):
+        merged[key] = left[key] + right[key]
+    for key in ("present", "drug_present"):
+        merged[key] = {f: left[key][f] + right[key][f] for f in left[key]}
+    return merged
+
+
+def empty_entity_coverage() -> dict:
+    """The additive identity for `merge_entity_coverage`.
+
+    Explicit rather than relying on `entity_coverage([])`, so the accumulator starts from
+    a value whose field set is fixed by the declaration and not by whatever the first
+    chunk happened to contain.
+    """
+    return {"total": 0, "present": {f: 0 for f in ENTITY_COVERAGE_FIELDS},
+            "any_drug_name_source": 0, "both_mesh": 0,
+            "drug_total": 0, "drug_present": {f: 0 for f in ENTITY_COVERAGE_FIELDS},
+            "drug_any_drug_name_source": 0, "drug_both_mesh": 0}

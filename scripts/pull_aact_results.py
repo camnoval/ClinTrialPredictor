@@ -78,6 +78,7 @@ import json
 import os
 import re
 import sys
+from datetime import date as _date
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -92,17 +93,29 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 from trial_pos.services.endpoint_label import (
-    DEFAULT_ALPHA, HEADLINE_TIERS, LABEL_DERIVED_FIELDS, TIER_DOC, TIER_ORDER, label_row,
+    DEFAULT_ALPHA, DEFAULT_COVERAGE_TOLERANCE_POINTS, DEFAULT_RATIO_SCALE_FLOOR,
+    HEADLINE_TIERS, LABEL_DERIVED_FIELDS, NA_REASON_DOC, REFUSAL_KINDS, TIER_DOC,
+    TIER_ORDER, label_row, required_ci_percent,
 )
 from trial_pos.services.resume import (
     build_manifest, describe_conflicts, header_problems, ids_remaining,
     manifest_conflicts,
 )
 from trial_pos.services.population import (
-    ERA_DATE_SOURCE_DOC, ERA_DATE_SOURCES, ERA_DOC, ERAS, FDAAA_COMPONENT_DOC,
-    FDAAA_COMPONENTS, POSTING_OUTCOME_FIELDS, UNKNOWN, component_coverage,
-    components_for_row, era_coverage_by_source, era_for_row, gap_summary,
-    is_interventional, normalize_study_type, tribool,
+    DATE_QUALITIES, DATE_QUALITY_DOC, DAYS_PER_YEAR_NOMINAL, DEFAULT_MAX_FUTURE_YEARS,
+    DEFAULT_MIN_TRIAL_DATE, DRUG_SIGNALS, DRUG_SIGNAL_DOC, ERA_DATE_SOURCE_DOC,
+    ERA_DATE_SOURCES, ERA_DOC, ERAS, FDAAA_COMPONENT_DOC, FDAAA_COMPONENTS,
+    POSTING_OUTCOME_FIELDS, UNKNOWN, component_coverage, components_for_row,
+    date_quality_coverage, drug_signal_agreement, drug_trial_signals,
+    era_coverage_by_source, era_date_for_row, era_for_row, gap_summary,
+    is_actual_date, is_interventional, is_planned_date, normalize_date_type,
+    normalize_study_type, parse_date, tribool,
+    MODALITY_SIGNALS, SPONSOR_COLS, empty_entity_coverage, entity_coverage,
+    merge_entity_coverage, modality_signals, sponsor_agreement, sponsor_signals,
+)
+from trial_pos.services.aact_aggregates import (
+    AGGREGATE_SOURCES, ENTITY_FIELDS, aggregate_field_names, available_sources,
+    build_aggregate_sql,
 )
 
 # ---- columns wanted. The probe intersects these with what the server has, so a schema
@@ -112,6 +125,10 @@ STUDIES_WANT = [
     "enrollment_type", "number_of_arms", "number_of_groups", "start_date",
     "primary_completion_date", "completion_date", "results_first_submitted_date",
     "results_first_posted_date", "last_update_posted_date",
+    # Date TYPE columns, missed in the first full pull. 'Actual' vs 'Anticipated'.
+    # Decisive for the temporal split: an anticipated completion is a plan, not an
+    # event, and training on one would leak an unfinished trial.
+    "start_date_type", "primary_completion_date_type", "completion_date_type",
     # FDAAA component inputs living on `studies`. NOT required: several postdate the 2017
     # form, and measuring how often they are absent is the point of this step.
     "is_fda_regulated_drug", "is_fda_regulated_device", "is_us_export",
@@ -128,6 +145,12 @@ CALC_WANT = ["nct_id", "has_us_facility", "were_results_reported",
              "registered_in_calendar_year", "number_of_facilities"]
 CALC_NEED: list[str] = []          # entirely optional; absence is a finding, not an error
 
+# Probed so a missing table or column is caught by --probe-only rather than 20 minutes
+# into a pull. Not required: --no-interventions degrades is_drug_trial to unknown for
+# every row, which is a weaker pull but an honest one.
+INTERVENTIONS_WANT = ["nct_id", "intervention_type"]
+INTERVENTIONS_NEED: list[str] = []
+
 OUTCOMES_WANT = ["id", "nct_id", "outcome_type", "title", "time_frame", "population"]
 OUTCOMES_NEED = ["id", "nct_id", "outcome_type"]
 
@@ -137,6 +160,17 @@ ANALYSES_WANT = [
     "ci_lower_limit", "ci_upper_limit", "ci_percent", "method", "groups_desc",
 ]
 ANALYSES_NEED = ["outcome_id", "p_value"]
+
+# Dates whose plausibility is reported. Era and the temporal split both rest on these,
+# and the first full pull found a gap of 31,777 days between two of them.
+AUDITED_DATE_FIELDS = ("start_date", "primary_completion_date", "completion_date")
+
+# Date columns paired with their AACT type column, for the actual-vs-anticipated report.
+DATE_TYPE_PAIRS = (
+    ("start_date", "start_date_type"),
+    ("primary_completion_date", "primary_completion_date_type"),
+    ("completion_date", "completion_date_type"),
+)
 
 
 def _dedup(seq):
@@ -160,13 +194,27 @@ OUT_COLS = _dedup([
     "why_stopped_class",
     "results_posted", "results_first_posted_date", "start_date", "completion_date",
     "primary_completion_date", "enrollment", "number_of_arms",
-    *_COMPONENT_COLS, "fdaaa_era", "era_date_source", *POSTING_OUTCOME_FIELDS,
+    "start_date_type", "primary_completion_date_type", "completion_date_type",
+    "intervention_types", *DRUG_SIGNALS, *MODALITY_SIGNALS, *SPONSOR_COLS,
+    *_COMPONENT_COLS, "fdaaa_era", "era_date_source", "era_date_type",
+    *POSTING_OUTCOME_FIELDS,
     "n_primary_outcomes", "n_primary_analyzed", "n_primary_met", "frac_primary_met",
     "any_primary_met", "all_primary_met", "n_analyses_total",
     "tier_min", "tier_max", "tier_mix",
-    "endpoint_met_strict", "endpoint_met_broad",
-    "label_source_strict", "label_source_broad", "label_rule", "alpha_used",
+    "endpoint_met_strict", "endpoint_met_broad", "endpoint_na_reason",
+    "n_analyses_scale_refused", "n_analyses_coverage_refused", "n_analyses_ni_design",
+    "label_source_strict", "label_source_broad", "label_rule",
+    # Every threshold that produced a verdict travels WITH the verdict, or an offline
+    # re-derive can silently use a different one and disagree with the live pull.
+    "alpha_used", "ratio_scale_floor_used", "coverage_tolerance_used",
+    "required_ci_percent_used",
 ])
+
+# Written to a SEPARATE file keyed on nct_id rather than into the label CSV. Keeps the
+# label file's schema stable for the posting-bias audit while the market work iterates on
+# drug and indication matching, and keeps several hundred MB of free-text aggregates out
+# of a file that is read on every downstream step.
+ENTITY_COLS = _dedup(["nct_id", *ENTITY_FIELDS])
 
 # The events-per-variable floor the additive-model decision was argued from. Named here
 # because the audit prints it as the threshold the recount should be read against, and a
@@ -191,6 +239,11 @@ def _scalar(v):
     if not s or s.lower() in ("nan", "none", "null", "na", "nat"):
         return None
     return v
+
+
+def _text_or_blank(v) -> str:
+    s = _scalar(v)
+    return "" if s is None else str(s)
 
 
 def _rule(title):
@@ -218,6 +271,15 @@ def print_configuration(args):
     print(f"  max trials (0 = no cap)  : {args.max_trials}")
     print(f"  chunk size (ids/query)   : {args.chunk}")
     print(f"  resume                   : {args.resume}{' (FORCED)' if args.force_resume else ''}")
+    print(f"  min trial date           : {args.min_trial_date} (date plausibility floor)")
+    print(f"  max future years         : {args.max_future_years} "
+          f"(= {args.max_future_years * DAYS_PER_YEAR_NOMINAL} days ahead of as-of)")
+    print(f"  as-of date               : {args.as_of or 'today (not reproducible)'}")
+    print(f"  one-to-many aggregates pulled: {args.with_interventions}")
+    print(f"  entity file            : {args.entities}")
+    print(f"  ratio scale floor      : {args.ratio_scale_floor}")
+    print(f"  coverage tolerance     : +/- {args.coverage_tolerance} points "
+          f"(required coverage {required_ci_percent(args.alpha)}%)")
     print(f"  schema                   : {args.schema}")
     print(f"  output                   : {args.out}")
     print(f"  raw dumps                : {args.raw_prefix}_studies.csv, "
@@ -227,7 +289,11 @@ def print_configuration(args):
 # ---- schema probe ---------------------------------------------------------
 def probe_schema(conn, schema: str) -> dict[str, set[str]]:
     """{table: set(columns)} for the tables we touch. Empty set = table not visible."""
-    tables = ["studies", "outcomes", "outcome_analyses", "calculated_values"]
+    # Derived from AGGREGATE_SOURCES rather than listed by hand: a source added to the
+    # declaration and forgotten here would probe as absent and be silently disabled,
+    # which is the quietest possible way to lose a column the audit depends on.
+    tables = _dedup(["studies", "outcomes", "outcome_analyses", "calculated_values",
+                     *(a.table for a in AGGREGATE_SOURCES)])
     found: dict[str, set[str]] = {t: set() for t in tables}
     with conn.cursor() as c:
         c.execute(
@@ -325,7 +391,8 @@ def fetch_rows(conn, sql: str, ids: list[str]) -> list[dict]:
         return [dict(r) for r in c.fetchall()]
 
 
-def build_sql(schema: str, studies_cols, calc_cols, outcomes_cols, analyses_cols):
+def build_sql(schema: str, studies_cols, calc_cols, outcomes_cols, analyses_cols,
+              agg_sources=AGGREGATE_SOURCES):
     s_sel = ", ".join(f"s.{c}" for c in studies_cols)
     # calculated_values joins on nct_id -- a NATURAL key. AACT regenerates surrogate keys
     # on every nightly rebuild, so nct_id is the only id safe to join on at all, let alone
@@ -333,8 +400,16 @@ def build_sql(schema: str, studies_cols, calc_cols, outcomes_cols, analyses_cols
     c_sel = ", ".join(f"cv.{c} AS {c}" for c in calc_cols if c != "nct_id")
     join_calc = (f" LEFT JOIN {schema}.calculated_values cv ON cv.nct_id = s.nct_id"
                  if c_sel else "")
-    studies_sql = (f"SELECT {s_sel}{', ' + c_sel if c_sel else ''} "
-                   f"FROM {schema}.studies s{join_calc} "
+    # Every one-to-many source -- interventions, their other names, both MeSH browse
+    # tables, sponsors, responsible parties -- comes through aact_aggregates, which builds
+    # one grouped subquery per source. A plain join on any of them would multiply the
+    # studies rows and inflate every count in the audit WITHOUT ERRORING (lesson 14).
+    # That rule is now asserted by tests over the declaration rather than trusted to a
+    # comment repeated six times.
+    agg_sel, join_agg = build_aggregate_sql(schema, agg_sources)
+    studies_sql = (f"SELECT {s_sel}{', ' + c_sel if c_sel else ''}"
+                   f"{', ' + agg_sel if agg_sel else ''} "
+                   f"FROM {schema}.studies s{join_calc}{join_agg} "
                    f"WHERE s.nct_id = ANY(%(ids)s);")
     o_sel = ", ".join(f"o.{c} AS outcome_{c}" for c in outcomes_cols)
     a_sel = ", ".join(f"oa.{c} AS analysis_{c}" for c in analyses_cols)
@@ -350,8 +425,24 @@ def build_sql(schema: str, studies_cols, calc_cols, outcomes_cols, analyses_cols
 
 
 # ---- derivation -----------------------------------------------------------
+def entity_record(raw: dict) -> dict:
+    """One studies row -> its entity-file record. A projection, not a derivation.
+
+    The aggregates are carried VERBATIM. Drug-name and MeSH matching happens downstream
+    against DrugCentral, and normalising here would bake one matching strategy into the
+    pull -- exactly the mistake of picking a single name source before measuring which one
+    resolves.
+    """
+    rec = {"nct_id": str(raw.get("nct_id") or "").upper()}
+    for field in ENTITY_FIELDS:
+        rec[field] = _text_or_blank(raw.get(field))
+    return rec
+
+
 def derive(studies: list[dict], outcome_rows: list[dict], alpha: float,
-           broad_safety: bool, era_fallback: bool = True) -> list[dict]:
+           broad_safety: bool, era_fallback: bool = True,
+           ratio_scale_floor: float = DEFAULT_RATIO_SCALE_FLOOR,
+           coverage_tolerance: float = DEFAULT_COVERAGE_TOLERANCE_POINTS) -> list[dict]:
     """studies rows + flattened outcome/analysis rows -> one label record per trial.
 
     Correct per chunk as well as in aggregate: rows are filtered by nct_id, so a chunk
@@ -376,13 +467,16 @@ def derive(studies: list[dict], outcome_rows: list[dict], alpha: float,
     for raw in studies:
         nct = str(raw.get("nct_id") or "").upper()
         s = {k: _scalar(v) for k, v in raw.items()}
-        rec = label_row(s, dict(by_trial.get(nct, {})), alpha, broad_safety)
+        rec = label_row(s, dict(by_trial.get(nct, {})), alpha, broad_safety,
+                        ratio_scale_floor, coverage_tolerance)
         posted = (_scalar(s.get("results_first_posted_date"))
                   or _scalar(s.get("results_first_submitted_date")))
         # FDAAA components read from the RAW row, not the _scalar-cleaned one: tribool is
         # the tested parser for both the Postgres-native bool and the CSV 't'/'f' form,
         # and routing through _scalar first would add a second, untested coercion.
         components = components_for_row(raw)
+        modality = modality_signals(s)
+        sponsors = sponsor_signals(s)
         rec.update({
             "phase": _scalar(s.get("phase")) or "",
             "study_type": _scalar(s.get("study_type")) or "",
@@ -403,6 +497,32 @@ def derive(studies: list[dict], outcome_rows: list[dict], alpha: float,
         era, era_source = era_for_row(raw, era_fallback)
         rec["fdaaa_era"] = era or ""
         rec["era_date_source"] = era_source
+        # Whether the date the era rests on describes an event or a plan. Carried beside
+        # the era because an era binned on an anticipated date is a weaker claim, and the
+        # temporal split must be able to exclude those rows without re-deriving anything.
+        if era_source in ("primary_completion_date", "completion_date"):
+            rec["era_date_type"] = normalize_date_type(
+                raw.get(f"{era_source}_type")) or ""
+        else:
+            rec["era_date_type"] = ""        # no date was used, so it has no type
+        for field in ("start_date_type", "primary_completion_date_type",
+                      "completion_date_type"):
+            rec[field] = normalize_date_type(raw.get(field)) or ""
+        rec["intervention_types"] = _text_or_blank(raw.get("intervention_types"))
+        rec.update(drug_trial_signals({
+            "intervention_types": raw.get("intervention_types"),
+            "phase": raw.get("phase"),
+            "is_fda_regulated_drug": raw.get("is_fda_regulated_drug"),
+        }))
+        # Modality signals travel BESIDE is_drug_trial and never widen it: 3,629 trials
+        # carry `genetic` or `combination_product` with no drug or biological row, and
+        # cell and gene therapies do receive BLAs. Carried so that scope can be revisited
+        # on measured coverage instead of being decided by editing a constant now.
+        rec.update(modality_signals({"intervention_types": raw.get("intervention_types")}))
+        # Sponsor class and responsible party type. BOTH, because the FDAAA obligation
+        # falls on the responsible party while convention bins by lead sponsor, and the
+        # disagreement between them is a finding rather than something to assume away.
+        rec.update(sponsor_signals(raw))
         for field in POSTING_OUTCOME_FIELDS:
             rec[field] = tribool(raw.get(field))
         out.append(rec)
@@ -508,7 +628,8 @@ def save_manifest(out_path: Path, manifest: dict) -> None:
 
 # ---- audit ----------------------------------------------------------------
 def audit(records: list[dict], alpha: float, population: str, capped: bool,
-          era_fallback: bool) -> None:
+          era_fallback: bool, as_of, min_trial_date, max_future_days: int,
+          entity_cov: dict | None = None) -> None:
     import pandas as pd
     d = pd.DataFrame(records)
     n = len(d)
@@ -668,6 +789,159 @@ def audit(records: list[dict], alpha: float, population: str, capped: bool,
     print("\n  These bins are DESCRIPTIVE. They do not assert that any trial was required")
     print("  to post; that determination is Step 6.3's, with the coverage above in hand.")
 
+    print(_rule("DATE TYPE: ACTUAL EVENT vs STATED PLAN"))
+    print("  Missed in the first full pull. An anticipated date is a plan, not an event.")
+    print("  The temporal split trains on trials that COMPLETED before a boundary, so")
+    print("  splitting on an anticipated date would put unfinished trials in training --")
+    print("  the exact leak the split exists to prevent. Carried, never filtered here.")
+    for date_field, type_field in DATE_TYPE_PAIRS:
+        if type_field not in d.columns:
+            print(f"\n  {type_field}: absent from this pull")
+            continue
+        counts = Counter(normalize_date_type(v) or UNKNOWN for v in d[type_field])
+        parts = "  ".join(f"{k}={v} ({_pct(v, n)})" for k, v in counts.most_common())
+        print(f"\n  {type_field}: {parts}")
+    if "era_date_type" in d.columns:
+        eras_by_type = Counter(
+            (r.get("fdaaa_era") or UNKNOWN, r.get("era_date_type") or UNKNOWN)
+            for r in records)
+        print("\n  era x date type (does the era rest on an event or a plan?):")
+        for name, _s, _e in list(ERAS) + [(UNKNOWN, None, None)]:
+            row = {dt: c for (era, dt), c in eras_by_type.items() if era == name}
+            if not row:
+                continue
+            total = sum(row.values())
+            parts = "  ".join(f"{k}={v} ({_pct(v, total)})"
+                              for k, v in sorted(row.items()))
+            print(f"    {name:14s} n={total:7d}  {parts}")
+        print("    An era resting mostly on PLANNED dates is a weak claim: those trials")
+        print("    have not finished, so they carry no endpoint label anyway, but they")
+        print("    must not be counted as evidence about posting behaviour.")
+        planned = sum(1 for r in records if is_planned_date(
+            r.get("era_date_type")) is True)
+        actual = sum(1 for r in records if is_actual_date(
+            r.get("era_date_type")) is True)
+        print(f"    era rests on an ACTUAL date: {actual} ({_pct(actual, n)})")
+        print(f"    era rests on a PLANNED date: {planned} ({_pct(planned, n)})")
+        print("    The planned share is the part of the era picture that describes")
+        print("    intentions rather than history. It is also, by definition, unlabelled.")
+
+    print(_rule("DATE PLAUSIBILITY (bounds are flags; both are printed above)"))
+    print(f"  floor {min_trial_date}   horizon {max_future_days} days after {as_of}")
+    print("  Motivated by a real finding: the first full pull reported a")
+    print("  primary-to-overall completion gap with a maximum of 31,777 days -- 87 years.")
+    dq = date_quality_coverage(records, AUDITED_DATE_FIELDS, as_of,
+                               min_trial_date, max_future_days)
+    for field, buckets in dq.items():
+        parts = "  ".join(f"{k}={v} ({_pct(v, n)})" for k, v in buckets.items())
+        print(f"\n  {field}")
+        print(f"    {parts}")
+    print("\n  quality meanings:")
+    for q in DATE_QUALITIES:
+        print(f"    {q:20s} {DATE_QUALITY_DOC[q]}")
+    print("  Implausible dates are REPORTED, not dropped. Dropping them here would hide")
+    print("  how much of the population the era analysis cannot speak for.")
+
+    print(_rule("DRUG-TRIAL SIGNALS (scoping input -- no scope decision is made)"))
+    print("  The first full pull found phase explicitly not-applicable for 51% of")
+    print("  interventional trials: over half this population is device, behavioural,")
+    print("  surgical or dietary. Those trials have no mechanism, so they cannot carry")
+    print("  the mechanism attribution the product promises.")
+    print("  Three signals are carried because they DISAGREE, and collapsing them is the")
+    print("  judgment being deferred. is_drug_trial rests on intervention_type alone, so")
+    print("  it has one stated meaning and can be re-derived differently later.")
+    agree = drug_signal_agreement(records)
+    for sig in DRUG_SIGNALS:
+        buckets = agree["counts"][sig]
+        parts = "  ".join(f"{k}={v} ({_pct(v, n)})" for k, v in buckets.items())
+        print(f"\n  {sig}")
+        print(f"    {parts}")
+        print(f"    {DRUG_SIGNAL_DOC[sig]}")
+    print("\n  pairwise agreement (not_comparable = at least one signal unknown):")
+    for key, buckets in agree["pairs"].items():
+        a, b = key.split("__vs__")
+        comparable = buckets["agree"] + buckets["disagree"]
+        print(f"    {a} vs {b}")
+        print(f"      agree={buckets['agree']}  disagree={buckets['disagree']}  "
+              f"not_comparable={buckets['not_comparable']}  "
+              f"(agreement where comparable: {_pct(buckets['agree'], comparable)})")
+    print("  If the authoritative signal and the phase proxy agree almost always, the")
+    print("  proxy is usable where interventions are missing. If they diverge, scoping")
+    print("  must be decided on intervention_type alone.")
+
+    print(_rule("REFUSAL ACCOUNTING (labels withheld on purpose, counted not buried)"))
+    print("  A refusal that is not counted vanishes into tier D with 400k+ other rows.")
+    refusal_cols = {"scale_refused": "n_analyses_scale_refused",
+                    "coverage_refused": "n_analyses_coverage_refused",
+                    "ni_design": "n_analyses_ni_design"}
+    for label, col in refusal_cols.items():
+        rows_affected = sum(int(r.get(col) or 0) for r in records)
+        trials = sum(1 for r in records if int(r.get(col) or 0) > 0)
+        print(f"  {label:18s} analysis rows {rows_affected:7d}   trials {trials:7d}")
+    na = Counter(r.get("endpoint_na_reason") or "" for r in records)
+    print("\n  endpoint_na_reason -- why a trial has NO verdict, stated rather than blank:")
+    for reason, count in na.most_common():
+        if not reason:
+            continue
+        print(f"    {reason:32s} {count:7d}  {_pct(count, n)}")
+        print(f"      {NA_REASON_DOC.get(reason, '(undocumented)')}")
+    print(f"    {'(a verdict was produced)':32s} {na.get('', 0):7d}  "
+          f"{_pct(na.get('', 0), n)}")
+
+    print(_rule("SPONSOR CLASS vs RESPONSIBLE PARTY (paired, never marginal)"))
+    print("  Convention bins posting rate by LEAD SPONSOR; the FDAAA obligation falls on")
+    print("  the RESPONSIBLE PARTY. Both are carried so the disagreement is measured.")
+    print("  Compared PAIRED because matching marginal totals do not mean two fields")
+    print("  agree -- that is how a 49,759-row disagreement hid behind totals within 1%.")
+    sp = sponsor_agreement(records)
+    print("\n  coverage:")
+    for key, count in sp["coverage"].items():
+        print(f"    {key:14s} {count:7d}  {_pct(count, n)}")
+    print("\n  joint distribution (top 12 cells):")
+    for (lead, party), count in sorted(sp["joint"].items(), key=lambda kv: -kv[1])[:12]:
+        print(f"    lead={lead:16s} party={party:24s} {count:7d}  {_pct(count, n)}")
+
+    print(_rule("ENTITY COVERAGE (drug-name and condition sources, reported SEPARATELY)"))
+    print("  Three name sources are pulled rather than one. Picking one and discovering")
+    print("  later that it was the weak source is the expensive mistake, so coverage is")
+    print("  reported per source. This says nothing about whether a value RESOLVES to a")
+    print("  drug -- that needs DrugCentral and is the market feasibility gate.")
+    # NOT computed from `records`. The entity aggregates are written to a separate file
+    # and never land on the label record, so calling entity_coverage(records) counted a
+    # column that is not there and printed 0.0% for every source while the sponsor
+    # aggregates -- which DO land on the label record -- reported 92.5%. Lesson 16 again,
+    # and self-inflicted: a diagnostic whose denominator excluded the thing it measured.
+    if entity_cov is None:
+        print("\n  (not available: entity coverage is tallied during the pull, and this")
+        print("   run did not produce it. Re-run the pull, or --from-raw.)")
+    else:
+        ec = entity_cov
+        print(f"\n  {'source':28s} {'all trials':>18s}   {'DRUG TRIALS only':>18s}")
+        print(f"  {'':28s} {'(n=' + str(ec['total']) + ')':>18s}   "
+              f"{'(n=' + str(ec['drug_total']) + ')':>18s}")
+        for field in ec["present"]:
+            allc, drugc = ec["present"][field], ec["drug_present"][field]
+            print(f"    {field:26s} {allc:8d} {_pct(allc, ec['total']):>8s}   "
+                  f"{drugc:8d} {_pct(drugc, ec['drug_total']):>8s}")
+        print(f"\n    {'ANY drug-name source':26s} "
+              f"{ec['any_drug_name_source']:8d} "
+              f"{_pct(ec['any_drug_name_source'], ec['total']):>8s}   "
+              f"{ec['drug_any_drug_name_source']:8d} "
+              f"{_pct(ec['drug_any_drug_name_source'], ec['drug_total']):>8s}")
+        print(f"    {'BOTH MeSH sides':26s} "
+              f"{ec['both_mesh']:8d} {_pct(ec['both_mesh'], ec['total']):>8s}   "
+              f"{ec['drug_both_mesh']:8d} "
+              f"{_pct(ec['drug_both_mesh'], ec['drug_total']):>8s}")
+        print("\n  READ THE DRUG-TRIALS COLUMN. Scoping is drug-only, so a percentage")
+        print("  over all trials answers a question nobody asked.")
+        print("  'ANY drug-name source' is a WEAK ceiling: intervention_names is free")
+        print("  text present on essentially every trial, including 'Placebo' and")
+        print("  'Standard of care', so its presence says nothing about whether the")
+        print("  value resolves to a drug entity.")
+        print("  'BOTH MeSH sides' is the informative one: a curated drug term AND a")
+        print("  curated condition term on the same trial is the actual ceiling on")
+        print("  code-to-code indication matching, and no downstream rate can exceed it.")
+
     print(_rule("POSTING OUTCOME (the audit's dependent variable, never a feature)"))
     for field in POSTING_OUTCOME_FIELDS:
         if field not in d.columns:
@@ -735,6 +1009,35 @@ def main() -> int:
     ap.add_argument("--user", default=os.environ.get("AACT_USER"))
     ap.add_argument("--password", default=os.environ.get("AACT_PASSWORD"))
     ap.add_argument("--chunk", type=int, default=2000)
+    ap.add_argument("--min-trial-date", default=DEFAULT_MIN_TRIAL_DATE.isoformat(),
+                    help="floor for date plausibility (YYYY-MM-DD). A date earlier than "
+                         "this is a typo rather than a retrospective registration. "
+                         "Default: %(default)s")
+    ap.add_argument("--max-future-years", type=int, default=DEFAULT_MAX_FUTURE_YEARS,
+                    help="how far ahead an anticipated date may credibly sit. The first "
+                         "full pull found dates 87 years out. Default: %(default)s")
+    ap.add_argument("--as-of", default=None,
+                    help="reference date for the future-horizon check (YYYY-MM-DD). "
+                         "Defaults to today. Set it explicitly to make a run reproducible "
+                         "-- otherwise the date audit's verdicts shift as the clock moves.")
+    ap.add_argument("--ratio-scale-floor", type=float,
+                    default=DEFAULT_RATIO_SCALE_FLOOR,
+                    help="a ratio interval lying entirely at or above this is treated as "
+                         "percent-scaled and refused rather than tested against a null it "
+                         "is not centred on. Produces verdicts, so it is a flag.")
+    ap.add_argument("--coverage-tolerance", type=float,
+                    default=DEFAULT_COVERAGE_TOLERANCE_POINTS,
+                    help="coverage POINTS within which a posted ci_percent counts as "
+                         "matching the coverage alpha requires. Produces verdicts.")
+    ap.add_argument("--entities", type=Path,
+                    default=Path("data") / "aact" / "trial_entities.csv",
+                    help="drug-name and condition-MeSH aggregates, written SEPARATELY "
+                         "from the labels so the label schema stays stable for the "
+                         "posting-bias audit while market matching iterates")
+    ap.add_argument("--no-interventions", dest="with_interventions",
+                    action="store_false", default=True,
+                    help="skip the intervention_types aggregate. Drops is_drug_trial to "
+                         "unknown for every row, so only use it if the subquery fails.")
     ap.add_argument("--probe-only", action="store_true", help="schema check, then stop")
     ap.add_argument("--resume", action="store_true",
                     help="append to an existing --out instead of overwriting, skipping "
@@ -754,6 +1057,21 @@ def main() -> int:
     if args.chunk < 1:
         print(f"!! --chunk must be >= 1, got {args.chunk}")
         return 2
+    min_trial_date = parse_date(args.min_trial_date)
+    if min_trial_date is None:
+        print(f"!! --min-trial-date is not a date: {args.min_trial_date!r}")
+        return 2
+    if args.max_future_years < 0:
+        print(f"!! --max-future-years must be >= 0, got {args.max_future_years}")
+        return 2
+    max_future_days = args.max_future_years * DAYS_PER_YEAR_NOMINAL
+    if args.as_of is None:
+        as_of = _date.today()
+    else:
+        as_of = parse_date(args.as_of)
+        if as_of is None:
+            print(f"!! --as-of is not a date: {args.as_of!r}")
+            return 2
 
     print(_rule("AACT RESULTS PULL -> PER-TRIAL ENDPOINT-MET LABEL (full population)"))
     print_tier_legend()
@@ -779,13 +1097,28 @@ def main() -> int:
                             keep_default_na=False).to_dict("records")
         print(f"\n  offline re-derive: {len(studies)} studies, "
               f"{len(orows)} outcome/analysis rows")
+        # The offline path MUST take the same thresholds as the live pull. Lesson 6's
+        # near-miss was exactly this: a re-derive that silently disagreed with the pull
+        # it was meant to reproduce.
         records = derive(studies, orows, args.alpha, args.broad_includes_safety,
-                         args.era_fallback)
+                         args.era_fallback, args.ratio_scale_floor,
+                         args.coverage_tolerance)
         writer = StreamWriter(args.out, OUT_COLS)
         writer.write(records)
         writer.close()
+        entity_rows = [entity_record(r) for r in studies]
+        entities = StreamWriter(args.entities, ENTITY_COLS)
+        entities.write(entity_rows)
+        entities.close()
+        raw_drug_flag = {r["nct_id"]: r.get("is_drug_trial") for r in records}
+        raw_entity_cov = merge_entity_coverage(empty_entity_coverage(), entity_coverage(
+            [{**e, "is_drug_trial": raw_drug_flag.get(e["nct_id"])}
+             for e in entity_rows]))
+        print(f"  wrote {entities.n_written} entity rows -> {args.entities}")
         audit(records, args.alpha, "from-raw", capped=False,
-              era_fallback=args.era_fallback)
+              entity_cov=raw_entity_cov,
+              era_fallback=args.era_fallback, as_of=as_of,
+              min_trial_date=min_trial_date, max_future_days=max_future_days)
         print(f"\n  wrote {writer.n_written} rows -> {args.out}")
         return 0
 
@@ -802,6 +1135,8 @@ def main() -> int:
     label_writer = None
     raw_studies_writer = None
     raw_outcomes_writer = None
+    entity_writer = None
+    entity_cov = empty_entity_coverage()
     records: list[dict] = []
     try:
         with conn.cursor() as c:
@@ -821,6 +1156,23 @@ def main() -> int:
                                            OUTCOMES_NEED, "outcomes")
         a_cols, a_missing = resolve_columns(found["outcome_analyses"], ANALYSES_WANT,
                                            ANALYSES_NEED, "outcome_analyses")
+        # Degrade rather than fail, per source: a one-to-many table whose columns are
+        # absent is DISABLED with a printed warning, so its fields read unknown everywhere
+        # instead of the pull dying mid-flight on a query the probe could have caught.
+        usable_aggs, unavailable_aggs = available_sources(found)
+        if not args.with_interventions:
+            usable_aggs = ()
+            print("  --no-interventions: every one-to-many aggregate is disabled.")
+        for alias, missing in unavailable_aggs:
+            source = next(a for a in AGGREGATE_SOURCES if a.alias == alias)
+            print(f"  !! {source.table} unavailable (missing {', '.join(missing)}) "
+                  f"-- disabling that aggregate.")
+            print(f"     affected columns read unknown: "
+                  f"{', '.join(f.name for f in source.fields)}")
+            print(f"     needed for: {source.why}")
+        if usable_aggs:
+            print(f"  aggregates enabled: "
+                  f"{', '.join(a.table for a in usable_aggs)}")
         blocking = s_missing + o_missing + a_missing
         if blocking:
             print(f"\n!! required columns absent: {', '.join(blocking)}")
@@ -889,17 +1241,24 @@ def main() -> int:
                 print("  is the way to re-read the numbers: --from-raw")
                 return 0
 
-        studies_sql, outcomes_sql = build_sql(args.schema, s_cols, c_cols, o_cols, a_cols)
+        studies_sql, outcomes_sql = build_sql(args.schema, s_cols, c_cols, o_cols,
+                                              a_cols, usable_aggs)
         # Append only when resuming; otherwise every writer truncates, so a fresh run can
         # never silently inherit rows from a previous one.
         label_writer = StreamWriter(args.out, OUT_COLS, append=args.resume)
+        raw_studies_cols = (s_cols + [c for c in c_cols if c != "nct_id"]
+                            + (["intervention_types"] if args.with_interventions
+                               else []))
         raw_studies_writer = StreamWriter(Path(f"{args.raw_prefix}_studies.csv"),
-                                          s_cols + [c for c in c_cols if c != "nct_id"],
-                                          append=args.resume)
+                                          raw_studies_cols, append=args.resume)
         raw_outcomes_writer = StreamWriter(
             Path(f"{args.raw_prefix}_outcomes.csv"),
             [f"outcome_{c}" for c in o_cols] + [f"analysis_{c}" for c in a_cols],
             append=args.resume)
+        # Separate file, same chunked streaming. Keyed on nct_id so it joins back to the
+        # labels on a NATURAL key -- the only kind safe against AACT's nightly surrogate
+        # key regeneration (lesson 1).
+        entity_writer = StreamWriter(args.entities, ENTITY_COLS, append=args.resume)
         save_manifest(args.out, current_manifest)
 
         print(_rule("PULLING (derived and written per chunk to bound memory)"))
@@ -909,10 +1268,27 @@ def main() -> int:
             studies = fetch_rows(conn, studies_sql, block)
             orows = fetch_rows(conn, outcomes_sql, block)
             chunk_records = derive(studies, orows, args.alpha,
-                                   args.broad_includes_safety, args.era_fallback)
+                                   args.broad_includes_safety, args.era_fallback,
+                                   args.ratio_scale_floor, args.coverage_tolerance)
             raw_studies_writer.write(studies)
             raw_outcomes_writer.write(orows)
             label_writer.write(chunk_records)
+            chunk_entities = [entity_record(r) for r in studies]
+            entity_writer.write(chunk_entities)
+            # Tallied per chunk and merged rather than accumulated: the aggregates are
+            # free text and holding 460k of them would undo the streaming that bounds
+            # memory in the first place.
+            #
+            # is_drug_trial lives on the LABEL record, not the entity one, and coverage
+            # has to be reported per stratum because scoping is drug-only -- a percentage
+            # over all 460,569 trials answers a question nobody asked. Joined on nct_id
+            # rather than by position: both lists derive from the same chunk and are in
+            # the same order today, but a positional join would break silently the first
+            # time either side filters a row.
+            drug_flag = {r["nct_id"]: r.get("is_drug_trial") for r in chunk_records}
+            entity_cov = merge_entity_coverage(entity_cov, entity_coverage(
+                [{**e, "is_drug_trial": drug_flag.get(e["nct_id"])}
+                 for e in chunk_entities]))
             records.extend(chunk_records)
             # cumulative, so a resumed run's counter lines up with the original's
             print(f"    chunk {i // args.chunk + 1}/{n_chunks}: "
@@ -933,7 +1309,9 @@ def main() -> int:
     print("  (re-derive labels offline with --from-raw, no second query needed)")
 
     audit(records, args.alpha, args.population, capped=bool(args.max_trials),
-          era_fallback=args.era_fallback)
+          entity_cov=entity_cov,
+          era_fallback=args.era_fallback, as_of=as_of,
+          min_trial_date=min_trial_date, max_future_days=max_future_days)
     n_new = label_writer.n_written if label_writer is not None else 0
     print(f"\n  wrote {n_new} rows this run -> {args.out}")
     if args.resume:
