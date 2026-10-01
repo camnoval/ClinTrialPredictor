@@ -7,7 +7,8 @@ remaining ids partition the input), or from a constructed round-trip.
 import json
 
 from trial_pos.services.resume import (
-    MANIFEST_FIELDS, MANIFEST_FIELD_DOC, build_manifest, describe_conflicts,
+    MANIFEST_FIELDS, MANIFEST_FIELDS_ADDED_LATER, MANIFEST_FIELD_DOC,
+    build_manifest, describe_conflicts,
     header_problems, ids_remaining, manifest_conflicts,
 )
 
@@ -183,3 +184,48 @@ def test_missing_and_extra_columns_are_both_reported():
     joined = " ".join(problems)
     assert expected[0] in joined
     assert "something_else" in joined
+
+
+# ---- the fields added when section 0.1 bug 3 was fixed --------------------
+def test_the_later_fields_are_all_real_manifest_fields():
+    # A name in this list that is not in MANIFEST_FIELDS would make the pull script
+    # look for a conflict on a field nothing ever compares, and the explanatory note
+    # would never print.
+    assert set(MANIFEST_FIELDS_ADDED_LATER) <= set(MANIFEST_FIELDS)
+
+
+def test_the_later_fields_are_documented_like_any_other():
+    for field in MANIFEST_FIELDS_ADDED_LATER:
+        assert MANIFEST_FIELD_DOC[field].strip()
+
+
+def test_the_later_fields_are_still_required_by_build_manifest():
+    # They are late additions, not optional ones. A caller that forgets one must fail
+    # rather than write a manifest that compares equal to a run which set it.
+    for field in MANIFEST_FIELDS_ADDED_LATER:
+        partial = _settings()
+        del partial[field]
+        try:
+            build_manifest(partial)
+        except KeyError:
+            continue
+        raise AssertionError(f"build_manifest accepted a manifest missing {field}")
+
+
+def test_an_old_manifest_conflicts_on_every_later_field():
+    # The pull script keys its explanatory note on `was is None`, so this pins the
+    # shape it relies on: a manifest written before these fields existed reports them
+    # as absent rather than as equal.
+    current = build_manifest(_settings())
+    old = {f: current[f] for f in MANIFEST_FIELDS
+           if f not in MANIFEST_FIELDS_ADDED_LATER}
+    conflicts = manifest_conflicts(old, current)
+    absent = {f for f, was, _ in conflicts if was is None}
+    assert set(MANIFEST_FIELDS_ADDED_LATER) <= absent
+
+
+def test_a_complete_old_style_manifest_does_not_conflict():
+    # Guard against over-firing: a manifest that DOES record all the fields must still
+    # compare clean, or every resume would now be refused.
+    current = build_manifest(_settings())
+    assert manifest_conflicts(dict(current), current) == []

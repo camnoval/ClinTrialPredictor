@@ -94,10 +94,12 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
 
 from trial_pos.services.endpoint_label import (
     DEFAULT_ALPHA, DEFAULT_COVERAGE_TOLERANCE_POINTS, DEFAULT_RATIO_SCALE_FLOOR,
-    HEADLINE_TIERS, LABEL_DERIVED_FIELDS, NA_REASON_DOC, REFUSAL_KINDS, TIER_DOC,
+    HEADLINE_TIERS, LABEL_DERIVED_FIELDS, NA_REASON_DOC, REFUSAL_COUNT_FIELD,
+    REFUSAL_KINDS, TIER_DOC,
     TIER_ORDER, label_row, required_ci_percent,
 )
 from trial_pos.services.resume import (
+    MANIFEST_FIELDS_ADDED_LATER,
     build_manifest, describe_conflicts, header_problems, ids_remaining,
     manifest_conflicts,
 )
@@ -202,7 +204,11 @@ OUT_COLS = _dedup([
     "any_primary_met", "all_primary_met", "n_analyses_total",
     "tier_min", "tier_max", "tier_mix",
     "endpoint_met_strict", "endpoint_met_broad", "endpoint_na_reason",
-    "n_analyses_scale_refused", "n_analyses_coverage_refused", "n_analyses_ni_design",
+    # Every refusal kind gets a column, taken from REFUSAL_COUNT_FIELD rather than
+    # listed here: the geometric refusal shipped with no column because this line was
+    # hand-maintained, so 2,190 refused rows reported zero everywhere. Sorted so the
+    # header order is stable run to run and a diff of two label files stays readable.
+    *sorted(REFUSAL_COUNT_FIELD.values()),
     "label_source_strict", "label_source_broad", "label_rule",
     # Every threshold that produced a verdict travels WITH the verdict, or an offline
     # re-derive can silently use a different one and disagree with the live pull.
@@ -871,10 +877,10 @@ def audit(records: list[dict], alpha: float, population: str, capped: bool,
 
     print(_rule("REFUSAL ACCOUNTING (labels withheld on purpose, counted not buried)"))
     print("  A refusal that is not counted vanishes into tier D with 400k+ other rows.")
-    refusal_cols = {"scale_refused": "n_analyses_scale_refused",
-                    "coverage_refused": "n_analyses_coverage_refused",
-                    "ni_design": "n_analyses_ni_design"}
-    for label, col in refusal_cols.items():
+    # Iterates REFUSAL_KINDS so the printout cannot omit a kind -- the previous
+    # hardcoded three silently dropped the geometric refusal from this block.
+    for label in REFUSAL_KINDS:
+        col = REFUSAL_COUNT_FIELD[label]
         rows_affected = sum(int(r.get(col) or 0) for r in records)
         trials = sum(1 for r in records if int(r.get(col) or 0) > 0)
         print(f"  {label:18s} analysis rows {rows_affected:7d}   trials {trials:7d}")
@@ -1198,12 +1204,21 @@ def main() -> int:
 
         # ---- resume gate ---------------------------------------------------
         n_prior = 0          # rows already in --out from an earlier run
+        # Every setting here PRODUCES VERDICTS. The three at the bottom were
+        # missing until rev 7 section 0.1 bug 3: a --resume would have accepted a
+        # file whose rows were labelled at a different ratio scale floor, a
+        # different coverage tolerance or a different as-of horizon. `as_of` is
+        # serialised with isoformat() because a date is not JSON, and because a
+        # str() of a date is only incidentally the same thing.
         current_manifest = build_manifest({
             "population": args.population,
             "schema": args.schema,
             "alpha": args.alpha,
             "broad_includes_safety": args.broad_includes_safety,
             "era_fallback": args.era_fallback,
+            "ratio_scale_floor": args.ratio_scale_floor,
+            "coverage_tolerance": args.coverage_tolerance,
+            "as_of": as_of.isoformat(),
         })
         if args.resume:
             print(_rule("RESUME"))
@@ -1220,6 +1235,23 @@ def main() -> int:
                     print("     No manifest was found. Either this file came from a run")
                     print("     predating manifests, or it was written elsewhere. Re-run")
                     print("     without --resume to rebuild it cleanly.")
+                # A manifest written before section 0.1 bug 3 was fixed has no
+                # entry for the three verdict-producing flags, so it conflicts on
+                # them with None on the saved side. Saying so is the difference
+                # between a real mismatch and a gap in the record -- and the gap
+                # is not benign: the earlier run could have used any value, which
+                # is exactly what bug 3 was about. --force-resume would silence
+                # the message without answering the question.
+                stale = [f for f, was, _ in conflicts
+                         if was is None and f in MANIFEST_FIELDS_ADDED_LATER]
+                if stale and saved is not None:
+                    print("     NOTE: these fields are absent from the saved")
+                    print(f"     manifest rather than different: {sorted(stale)}.")
+                    print("     They were added when rev 7 bug 3 was fixed, so a")
+                    print("     file written before that records nothing about")
+                    print("     them and the settings behind its rows are UNKNOWN,")
+                    print("     not matching. Re-pull without --resume to get a")
+                    print("     file whose provenance is complete.")
                 print("     Override with --force-resume only if mixing settings is your")
                 print("     stated intent.")
                 return 4

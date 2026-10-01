@@ -38,6 +38,13 @@ MANIFEST_FIELDS = (
     "alpha",
     "broad_includes_safety",
     "era_fallback",
+    # Added after rev 7 section 0.1 bug 3. All three PRODUCE VERDICTS, so a
+    # resume that ignored them would append rows labelled under different
+    # decision rules to rows already in the file -- the exact failure the
+    # manifest exists to prevent, reached by omission rather than disagreement.
+    "ratio_scale_floor",
+    "coverage_tolerance",
+    "as_of",
 )
 
 MANIFEST_FIELD_DOC = {
@@ -46,7 +53,28 @@ MANIFEST_FIELD_DOC = {
     "alpha": "the p-value threshold that decides met/not-met",
     "broad_includes_safety": "whether safety terminations enter the broad label as 0",
     "era_fallback": "whether the era may be binned on completion_date",
+    "ratio_scale_floor": ("the bound above which a ratio interval is read as "
+                          "percent-scaled and REFUSED rather than tested against 1"),
+    "coverage_tolerance": ("how far a posted ci_percent may sit from the required "
+                          "coverage and still support an interval verdict"),
+    "as_of": ("the date the run treated as today. Moves the date-plausibility "
+              "horizon, so two runs at different as-of dates can disagree about "
+              "which rows are admissible at all"),
 }
+
+# Fields added to MANIFEST_FIELDS after manifests were already being written. A
+# manifest saved before they existed carries no value for them, so
+# `manifest_conflicts` reports a conflict with None on the saved side. That is correct
+# and is NOT a false alarm: the run that produced those rows really did not record the
+# setting, so whether it matched is genuinely unknown, and section 0.1 bug 3 is the
+# observation that such a run could have used any value. Named so a script can say WHY
+# an existing file suddenly conflicts, instead of the operator reaching for
+# --force-resume to make the message go away.
+MANIFEST_FIELDS_ADDED_LATER = (
+    "ratio_scale_floor",
+    "coverage_tolerance",
+    "as_of",
+)
 
 
 def build_manifest(settings: dict) -> dict:

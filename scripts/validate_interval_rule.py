@@ -341,7 +341,17 @@ def report_production_impact(labels_path: Path, refused_trials: dict,
     total = sum(by_tier.values())
     print(f"\n  union of all refusals            : {len(all_refused)} trials")
     print(f"  of those, found in the labels     : {total}")
-    print("\n  by tier_min as labelled BEFORE the fixes:")
+    # Section 0.1 bug 1. This caption used to read "as labelled BEFORE the
+    # fixes", which was false: the file being read is the CURRENT post-fix
+    # trial_labels.csv, and pre-fix labels no longer exist anywhere to be read.
+    # The false caption is how the stale section 3.1 breakdown survived two
+    # revisions -- a reader checking the number saw a plausible table under a
+    # heading that explained away its disagreeing with the current one.
+    print("\n  by tier_min AS CURRENTLY LABELLED (post-fix). This is not a")
+    print("  before/after comparison: pre-fix labels are not recoverable from")
+    print("  this file. A refused trial already sitting in tier D or E is one the")
+    print("  fixes have ALREADY moved, so it shows what the refusals cost after")
+    print("  the fact, not what they would have cost before.")
     for tier, n in by_tier.most_common():
         print(f"    {tier:22s} {n:6d}  {_pct(n, total)}")
     print("\n  A trial whose label came from an A/B p-value is untouched -- the interval")
@@ -417,6 +427,16 @@ def main() -> int:
     print("  This measures an ADJACENT population. A good number is a ceiling.")
 
     _rule("2. BY ANALYSIS DESIGN -- is the rule even asking the right question?")
+    # Section 0.1 bug 2. Section 3.1 of the handoff describes this table as
+    # "matched coverage". It is not: every validation row reaches it, whatever its
+    # ci_percent, because the design question is asked before coverage is consulted.
+    # Stated here rather than changed, because conditioning the table would silently
+    # alter figures section 3.1 already quotes. The matched-coverage figures are in
+    # section 3 under COVERAGE_MATCHED; compare against those, not against this.
+    print("  DENOMINATOR: all validation rows, UNCONDITIONED on ci_percent. Handoff")
+    print("  section 3.1 calls this table matched-coverage and is wrong to; the")
+    print("  matched-coverage stratum is in section 3. Quoting this table as a")
+    print("  matched-coverage figure double-counts the coverage fix.")
     print("  An NI or equivalence trial succeeds when the interval sits inside the")
     print("  MARGIN, which routinely includes the null. If the NI stratum under-calls")
     print(f"  heavily, the rule is answering a different question and belongs in "

@@ -316,8 +316,16 @@ NA_REASON_NONE = ""
 NA_REASON_PERCENT_SCALED = "percent_scaled_ratio_only"
 NA_REASON_COVERAGE_MISMATCH = "ci_coverage_mismatch_only"
 NA_REASON_NI_DESIGN = "ni_design_margin_unavailable"
+NA_REASON_GEOMETRIC_RATIO = "geometric_ratio_acceptance_window_unavailable"
 
 NA_REASON_DOC = {
+    NA_REASON_GEOMETRIC_RATIO: (
+        "every posted primary analysis was a ratio of geometric means on a unit scale. "
+        "That is the statistic of an equivalence design, decided by CONTAINMENT inside "
+        "an acceptance window rather than by exclusion of 1, and the window is not a "
+        "structured AACT field -- so the trial asked a question this tool cannot read, "
+        "which is different from having failed it."
+    ),
     NA_REASON_PERCENT_SCALED: (
         "every posted primary analysis was a percent-scaled ratio interval. Almost "
         "always a bioequivalence study, which tests formulation sameness rather than "
@@ -361,6 +369,47 @@ def is_percent_scaled_ratio(param_type, ci_lower, ci_upper,
     """
     return (contrast_family(param_type) == CONTRAST_RATIO
             and ratio_scale(ci_lower, ci_upper, floor) == RATIO_SCALE_PERCENT)
+
+
+# The bioequivalence statistic. A geometric mean ratio, however the sponsor spells it,
+# is the statistic of an EQUIVALENCE design: the decision rule is containment inside an
+# acceptance window (conventionally 0.80-1.25), not exclusion of 1.0. Nobody computes a
+# geometric mean ratio to run a superiority test.
+#
+# Matched on the NAME rather than on where the interval sits, and that is the whole point.
+# Reading containment as exclusion is wrong in BOTH directions: an interval inside the
+# window contains 1.0 and reads as "did not meet" when the study SUCCEEDED, and an interval
+# outside the window excludes 1.0 and reads as "met" when the study FAILED. So the position
+# of the interval carries no information about which error was made, and a rule keyed on
+# position would have to guess the window -- which is not a structured AACT field. The
+# statistic name is in the dump; the acceptance window is not.
+#
+# "least square"/"LS" is included because the overwhelmingly common AACT spellings are
+# "Ratio of geometric LS means" and its dozen variants; the 'geometric' alternative alone
+# misses "Least Square Mean Ratio", which is the same statistic with the word dropped.
+_GEOMETRIC_RATIO_NAME = re.compile(
+    r"""
+      geometric                        # geometric mean ratio, ratio of geometric means
+    | \bgm[crt]\b                      # GMC ratio, GMT ratio, GMR
+    | \bgls\w*\b | \bglsm\b            # GLSM ratio
+    | least\s*-?\s*squares?           # Least Square Mean Ratio, Ratio of LS means
+    | \bls\s+means?\b
+    """, re.IGNORECASE | re.VERBOSE)
+
+
+def is_geometric_ratio(param_type) -> bool:
+    """True when this row is a ratio of geometric means, i.e. an equivalence statistic.
+
+    Separate from `resolve_null_value` for the same reason `is_percent_scaled_ratio` is:
+    so the refusals can be COUNTED without parsing a reason string. A refusal that is not
+    counted vanishes into tier D with no trace (lesson 17).
+
+    Takes only the param_type. Unlike the percent-scale refusal this needs no interval and
+    no floor, because the statistic's NAME settles it -- see the note above on why the
+    interval position cannot.
+    """
+    return (contrast_family(param_type) == CONTRAST_RATIO
+            and bool(_GEOMETRIC_RATIO_NAME.search(str(param_type or ""))))
 
 
 def resolve_null_value(param_type, ci_lower, ci_upper,
@@ -470,6 +519,11 @@ CI_PERCENT_PROPORTION_MAX = 1.0
 
 REFUSAL_COVERAGE_MISMATCH = ("interval coverage does not support this verdict at the "
                              "configured alpha")
+REFUSAL_GEOMETRIC_BOUNDS_UNAVAILABLE = (
+    "ratio of geometric means: an equivalence statistic whose decision rule is "
+    "CONTAINMENT inside an acceptance window, not exclusion of 1. The window is not "
+    "a structured AACT field, and reading containment as exclusion is wrong in both "
+    "directions, so no verdict is available from this interval")
 REFUSAL_NI_MARGIN_UNAVAILABLE = ("non-inferiority or equivalence design: the decision "
                                  "rule is the margin, not the null, and the margin is "
                                  "not a structured AACT field")
@@ -479,9 +533,39 @@ REFUSAL_NI_MARGIN_UNAVAILABLE = ("non-inferiority or equivalence design: the dec
 # it is a statement about what the STUDY ASKED, which is more informative to a reader than
 # a statement about how the result was posted.
 REFUSAL_PERCENT_SCALED = "percent_scaled_ratio"
+REFUSAL_GEOMETRIC_RATIO = "geometric_ratio_equivalence"
 REFUSAL_COVERAGE = "coverage_mismatch"
 REFUSAL_NI_DESIGN = "ni_design"
-REFUSAL_KINDS = (REFUSAL_NI_DESIGN, REFUSAL_PERCENT_SCALED, REFUSAL_COVERAGE)
+# The geometric kind sits BELOW percent_scaled, which matters because most percent-scaled
+# rows in the dump are also geometric ratios ("Ratio of Adjusted Geometric Means",
+# "Ratio of the T/R geometric mean x 100"). Putting geometric first would absorb the
+# percent-scaled refusal almost entirely and destroy its independent evidence base --
+# section 3 of validate_interval_rule justifies that refusal on its own terms (n=296,
+# kappa 0.000, one-directional), and a refusal that stops being counted stops being
+# checkable. So percent_scaled keeps every row it already had and the geometric kind
+# takes only the UNIT-scaled geometric ratios, which are the rows that were reaching
+# tier C with an inverted verdict.
+REFUSAL_KINDS = (REFUSAL_NI_DESIGN, REFUSAL_PERCENT_SCALED,
+                 REFUSAL_GEOMETRIC_RATIO, REFUSAL_COVERAGE)
+
+# The per-trial column each refusal is COUNTED in. Derived from here by
+# `aggregate_trial` and by the pull's output columns, rather than listed separately in
+# each, because the geometric refusal shipped with no column at all: three call sites
+# hardcoded the three kinds that existed, so 2,190 refused analysis rows reported zero in
+# every count and were visible only in `endpoint_na_reason`, and only for trials where
+# EVERY analysis refused. That is precisely the disappearance lesson 17 is about, reached
+# by adding a kind rather than by failing to count one.
+#
+# The three original names are kept verbatim -- "scale_refused" rather than
+# "percent_scaled_ratio" -- because `trial_labels.csv` readers and the posting-bias audit
+# are written against them. `test_every_refusal_kind_has_a_count_field` pins the mapping
+# as total over REFUSAL_KINDS, so a fifth kind cannot be added without a column.
+REFUSAL_COUNT_FIELD = {
+    REFUSAL_NI_DESIGN: "n_analyses_ni_design",
+    REFUSAL_PERCENT_SCALED: "n_analyses_scale_refused",
+    REFUSAL_GEOMETRIC_RATIO: "n_analyses_geometric_refused",
+    REFUSAL_COVERAGE: "n_analyses_coverage_refused",
+}
 
 
 def required_ci_percent(alpha: float = DEFAULT_ALPHA) -> float:
@@ -618,6 +702,8 @@ def refusal_kind(row: dict, alpha: float = DEFAULT_ALPHA,
     if is_percent_scaled_ratio(row.get("param_type"), row.get("ci_lower_limit"),
                                row.get("ci_upper_limit"), ratio_scale_floor):
         return REFUSAL_PERCENT_SCALED
+    if is_geometric_ratio(row.get("param_type")):
+        return REFUSAL_GEOMETRIC_RATIO
     null, _ = resolve_null_value(row.get("param_type"), row.get("ci_lower_limit"),
                                  row.get("ci_upper_limit"), ratio_scale_floor)
     met, _ = met_from_ci(row.get("ci_lower_limit"), row.get("ci_upper_limit"), null)
@@ -653,6 +739,19 @@ def classify_analysis(row: dict, alpha: float = DEFAULT_ALPHA,
     # answers the superiority question, which is not the question these trials asked.
     if design == DESIGN_NI:
         return TIER_E, None, f"{reason}; {REFUSAL_NI_MARGIN_UNAVAILABLE}"
+    # Tier E, not tier D: tier E is defined as a row carrying a real interval but no
+    # APPLICABLE DECISION RULE, which is exactly this. Routing it to tier D would put it
+    # with the rows that have no analysis at all and lose the distinction.
+    #
+    # Leaves BEFORE the interval is consulted, like the NI branch above and for the same
+    # reason: the interval answers the superiority question, which is not the question an
+    # equivalence design asked.
+    if (is_geometric_ratio(row.get("param_type"))
+            and not is_percent_scaled_ratio(row.get("param_type"),
+                                            row.get("ci_lower_limit"),
+                                            row.get("ci_upper_limit"),
+                                            ratio_scale_floor)):
+        return TIER_E, None, f"{reason}; {REFUSAL_GEOMETRIC_BOUNDS_UNAVAILABLE}"
     null, null_reason = resolve_null_value(row.get("param_type"),
                                            row.get("ci_lower_limit"),
                                            row.get("ci_upper_limit"),
@@ -676,6 +775,7 @@ def classify_analysis(row: dict, alpha: float = DEFAULT_ALPHA,
 NA_REASON_FOR_REFUSAL = {
     REFUSAL_NI_DESIGN: NA_REASON_NI_DESIGN,
     REFUSAL_PERCENT_SCALED: NA_REASON_PERCENT_SCALED,
+    REFUSAL_GEOMETRIC_RATIO: NA_REASON_GEOMETRIC_RATIO,
     REFUSAL_COVERAGE: NA_REASON_COVERAGE_MISMATCH,
 }
 
@@ -782,9 +882,8 @@ def aggregate_trial(outcomes: dict[str, list[dict]], alpha: float = DEFAULT_ALPH
         "any_primary_met": (1 if n_met > 0 else 0) if n_analyzed else None,
         "all_primary_met": (1 if n_met == n_analyzed else 0) if n_analyzed else None,
         "n_analyses_total": sum(v["n_analyses"] for v in verdicts.values()),
-        "n_analyses_scale_refused": n_scale_refused,
-        "n_analyses_coverage_refused": refusals[REFUSAL_COVERAGE],
-        "n_analyses_ni_design": refusals[REFUSAL_NI_DESIGN],
+        # Every kind in REFUSAL_KINDS, not a hand-listed three.
+        **{REFUSAL_COUNT_FIELD[kind]: refusals[kind] for kind in REFUSAL_KINDS},
         # A trial with no verdict has a STATEABLE reason whenever a refusal took one away,
         # which is different from having had nothing to begin with. Precedence is
         # REFUSAL_KINDS order: the NI reason first, because it describes what the study

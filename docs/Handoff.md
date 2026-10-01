@@ -1,8 +1,10 @@
-# Handoff: clinical-trial success predictor — rev 6
+# Handoff: clinical-trial success predictor — rev 7
 
-Supersedes rev 5, written in the same session. Rev 5 is superseded rather than amended
-because the tier-C interval rule turned out to be wrong in THREE independent ways, not
-one, and the third of them adds a tier.
+Supersedes rev 6. Rev 6's structure and arguments stand; what changed is that **eleven
+numbers in it were verified against the live CSVs and found wrong**, seven of them from one
+cause, and three of its arguments were quoted off the wrong denominator. §13 is the
+correction ledger — read it before quoting any figure from an earlier revision. §12 adds the
+endpoint-type classifier, which is built, tested and deliberately UNSCORED.
 
 **`docs/Handoff.md` in the repo was still rev 2 when rev 4 was written.** A session reading
 the repo instead of the pasted document got the dead events-per-variable argument as live
@@ -31,6 +33,83 @@ and must be updated IN PLACE from here on.
 was being applied without checking a parameter that was sitting in the data. The null
 depends on the ratio's SCALE; the interval test depends on its COVERAGE; and which test
 applies at all depends on the DESIGN. Each parameter was in the dump. None was read.
+
+### 0.1 rev 6 -> rev 7
+
+Nothing in rev 6's architecture moved. What moved:
+
+| | rev 6 | **rev 7** |
+| --- | --- | --- |
+| §3 "other numbers" block | computed on a **452,000**-trial run | recomputed on 460,569 |
+| era split | 117,593 / 297,742 | **117,613 / 306,291** |
+| multi-endpoint disagreement | 2,191 trials | **1,880** trials |
+| `tier_min D` | 439,157 (= D + E) | **437,835** (D alone) |
+| §3.1 production impact | 1,966 C / 231 D / 122 headline | **1,322 E / 521 D / 249 C / 227 headline** |
+| market/endpoint overlap | 5,768 (22.8%) | **5,822 (23.0%)** |
+| phase not-applicable | 231,038 (51.1%) | **236,949 (51.4%)** |
+| PHASE1/PHASE2 reading | "moves 14,740 trials" | **moves 9,219 verdicts** |
+| phase-1 representation gap | 5.5x (disclosure denominator) | **8.0x** on the modelling population |
+| 75% market gate | "target 3 proceeds" | ceiling cleared, **gate still pending §8.1c** |
+| endpoint-type gate | phase proxy, clause unfilled | **classifier built, unscored** (§12) |
+| test count | 425 | **553** |
+
+The seven §3 figures share ONE cause: that block was computed on a 452,000-trial run and
+never recomputed after the pull widened to 460,569. They sum to exactly 452,000, which is
+how it was found. Everything else in §3 verified exactly.
+
+**Three live bugs found in the scripts** while verifying, all still open:
+1. `validate_interval_rule.py` section 5 prints the header "by tier_min as labelled BEFORE
+   the fixes" but reads the current post-fix `trial_labels.csv`. That caption is how the
+   stale §3.1 breakdown survived two revisions.
+2. §3.1's bug-3 table is described as "matched coverage", but the script's section 2 runs
+   over all 25,683 validation rows unconditioned.
+3. `trial_labels.csv.manifest.json` records alpha / broad_includes_safety / era_fallback /
+   population / schema, but **not** `ratio_scale_floor`, `coverage_tolerance` or `as_of` —
+   all three of which produce verdicts. A `--resume` would therefore accept a run whose
+   verdict-producing flags had changed.
+
+---
+
+### 0.2 File manifest — what this document references that is NOT on disk
+
+Nine paths named in this handoff do not exist in the repo. None is an error; all nine are one
+of three things, and the distinction matters because two of them are blockers and the rest are
+not.
+
+**Absent from the handoff zip the assistant was given, PRESENT on the owner's machine.**
+Scope matters and rev 7 got it wrong once: an opener told a fresh session not to plan around
+these, which inverted the instruction. `results_raw_studies.csv` (81 MB),
+`trial_entities.csv` (172 MB) and `mondo_xref.csv` all exist locally, so `--from-raw` runs,
+section 3 of the posting-bias audit does not skip, and the §8.1d both-MeSH figure IS
+verifiable — it was unverifiable only in the assistant's copy (lesson 56).
+
+| path | consequence of its absence |
+| --- | --- |
+| `data/aact/results_raw_studies.csv` | `--from-raw` on the label pull will not run |
+| `data/aact/trial_entities.csv` | section 3 of `audit_posting_bias.py` skips; the §1.2.2 both-MeSH figure cannot be re-verified |
+| `data/ontology/mondo_xref.csv` | archive-era only; nothing current reads it |
+| `data/chembl/drug_indication.csv` | archive-era only, and carries the Gen-1 cohort cap |
+
+**Not yet written** (these are the work, not a packaging problem):
+
+| path | §14 item |
+| --- | --- |
+| `scripts/score_endpoint_type.py` | 4 — until it exists the 0.60 kappa gate is enforced by nothing |
+| `scripts/probe_drugcentral.py` | 6 — the 50% resolution gate and the 3-year market window both rest on it |
+
+**Produced by a script that has not been run yet:**
+
+| path | produced by |
+| --- | --- |
+| `data/aact/trial_design_outcomes.csv` | `scripts/pull_design_outcomes.py` (§14 item 2) |
+| `data/labels/endpoint_type_sample.csv` and its key and instructions | `scripts/build_endpoint_type_sample.py` (§14 item 3) |
+
+Two large files are excluded from any zip built by the assistant, because they are unchanged
+and each is bigger than everything else combined: `data/aact/trial_labels.csv` (178 MB) and
+`data/aact/results_raw_outcomes.csv` (74 MB). `trial_labels.csv.manifest.json` IS included,
+since it is small and §0.1 bug 3 is about its contents.
+
+---
 
 ## 1. The goal
 
@@ -249,10 +328,10 @@ target with its own window, decided on evidence later.
 **The redundancy worry did not survive the data.** The concern was that a pivotal-phase
 market label would collapse into endpoint-met — a drug reaching phase 3 has survived two
 phases, so approval risk might be dominated by whether the pivotal trial hit. Measured:
-**only 5,768 of the 25,332 market-eligible trials (22.8%) carry a headline endpoint-met
-label.** For the other 19,564 the market number would be the ONLY output the tool can
+**only 5,822 of the 25,332 market-eligible trials (23.0%) carry a headline endpoint-met
+label.** For the other 19,510 the market number would be the ONLY output the tool can
 produce. Complementary, not redundant, and this is the strongest argument for building
-target 3 anywhere in this document. The 22.8% overlap becomes the §4.5 use-C external
+target 3 anywhere in this document. The 23.0% overlap becomes the §4.5 use-C external
 validation set, never a training input.
 
 **PHASE 4 IS OUT of market and advancement, and KEPT for endpoint-met.** The owner's
@@ -351,12 +430,26 @@ scripts/check_aact_connection.py             layered connection diagnosis
 scripts/inspect_data_dir.py                  read-only data/ inventory
 scripts/probe_ctgov.py                       CT.gov v2 API probe (parked)
 scripts/run_checks.py                        the gate
-tests/                                       test_endpoint_label (116), test_population (102),
-                                             test_recon_stats (32), test_resume (21),
-                                             test_agreement (20), test_aact_aggregates (23),
-                                             test_eligibility (38), test_posting_bias (25),
-                                             test_fdaaa (29)
-                                             [test_endpoint_label 120, test_population 108]
+tests/                                       test_endpoint_label (120), test_population (116),
+                                             test_agreement (52), test_endpoint_type (48),
+                                             test_sampling (48), test_eligibility (38),
+                                             test_recon_stats (32), test_FDAAA (29),
+                                             test_posting_bias (25),
+                                             test_aact_aggregates (24), test_resume (21)
+                                             = 553. Counted with
+                                             `grep -c '^def test' tests/test_*.py`, not from
+                                             memory: rev 6 carried per-file counts of
+                                             116 / 102 / 23, a bracketed [120, 108]
+                                             correction that was itself wrong, and the
+                                             filename `test_fdaaa.py` when the file on disk
+                                             is `test_FDAAA.py`. A wrong per-file count makes
+                                             a MISSING file indistinguishable from a
+                                             miscounted one, which is exactly the diagnosis a
+                                             stale tree needs (lesson 54).
+src/trial_pos/services/endpoint_type.py      the endpoint-type classifier (§12)
+src/trial_pos/services/sampling.py           stratified sampling, allocation, weights
+scripts/pull_design_outcomes.py              registered primary outcome text pull
+scripts/build_endpoint_type_sample.py        audit + hand-labelling sample builder
 docs/EndpointLabelSpec.md
 ```
 
@@ -388,7 +481,7 @@ Full-population pull, **460,569 interventional trials (100%)**, snapshot 2026-09
 | tier_min A | 18,304 | — | **18,391** |
 | tier_min B | 1,634 | — | **1,652** |
 | tier_min C | 3,086 | 2,607 | **1,369** |
-| tier_min D | 437,545 | 438,024 | **439,157** |
+| tier_min D | 437,545 | 438,024 | **437,835** |
 | `endpoint_na_reason` populated | — | 479 | **1,843** |
 
 `endpoint_na_reason` breakdown: `ni_design_margin_unavailable` 1,552,
@@ -533,8 +626,10 @@ side effect. `'NON_INFERIORITY_OR_EQUIVALENCE'` names two tests and is resolved 
 
 #### What all three cost, and one thing that looks like a bug
 Production impact: 1,820 trials touched by the NI refusal, 299 by coverage, 226 by scale;
-2,319 in the union, of which 1,966 sat at tier C, 231 already at tier D (no change) and 122
-in the headline (untouched — their labels came from p-values).
+2,319 in the union. The **live post-fix** breakdown of that union is **1,322 at tier E, 521
+at tier D, 249 at tier C and 227 in the headline** (untouched — their labels came from
+p-values). The rev-6 figures (1,966 C / 231 D / 122 headline) predate tier E and are
+superseded: same union, different destinations.
 
 **Headline went UP while strict labelled went DOWN**, again. 23,024 → 21,412 strict but
 19,938 → 20,043 headline. `tier_min` is the WEAKEST *counted* tier, so withdrawing a bogus
@@ -555,7 +650,7 @@ headline. Correct, intended, and lesson 25.
 Pre-fix identities that passed, recorded so they are not redone: tiers summed to strict
 labelled (18,304+1,634+3,086 = 23,024); headline was exactly A+B (19,938); broad sources
 summed to broad labelled (25,309); labelled + tier D = 460,569. Of 2,603 futility
-classifications 2,244 entered the broad label, the other 359 already having an analysis
+classifications **2,246** entered the broad label, the other 359 already having an analysis
 verdict, which correctly takes precedence.
 
 **Post-fix these must be RE-CHECKED on the re-pull, not assumed to carry over** — the tier
@@ -582,19 +677,20 @@ split. Do not be surprised by half.
 
 ### Other numbers from the same run
 
-- Multi-endpoint: any_met == all_met for 20,828 of 23,019 (90.5%); 2,191 differ. Mean
-  `frac_primary_met` 0.567. **All four readings still carried, and the choice is now DUE** —
+- Multi-endpoint: any_met == all_met for 19,532 of 21,412 (91.2%); **1,880 differ**. Mean
+  `frac_primary_met` 0.561. **All four readings still carried, and the choice is now DUE** —
   see §8.4.
-- `why_stopped`: none 411,786 / operational 15,402 / other 13,865 / business 6,530 /
-  futility 2,599 / safety 1,246 / external_evidence 366 / benefit_risk 157 /
+- `why_stopped`: none 420,311 / operational 15,412 / other 13,883 / business 6,541 /
+  futility 2,603 / safety 1,246 / external_evidence 366 / benefit_risk 157 /
   efficacy_success 49.
-- `results_posted` vs AACT's `were_results_reported`: **452,000/452,000 agreement.** Two
+- `results_posted` vs AACT's `were_results_reported`: **460,569/460,569 agreement.** Two
   independently derived definitions matching exactly — the check most worth having passed.
 - Strict and broad headline were identical pre-fix (both 19,938), because broad's extra rows
   come from `why_stopped` and therefore sit at `tier_min = D`, which the A/B headline filter
   excludes by construction. Rev 2 predicted this and it is confirmed at 90× scale.
-- Era (pooled, with fallback): pre_fdaaa 32,577 (7.2%) / fdaaa_801 117,593 (26.0%) /
-  final_rule 297,742 (65.9%) / unknown 4,088 (0.9%). **Read with §6.1 in mind** — the
+- Era (pooled, with fallback): pre_fdaaa 32,577 (7.1%) / fdaaa_801 **117,613** (25.5%) /
+  final_rule **306,291** (66.5%) / unknown 4,088 (0.9%). The §6.1 table already carried
+  306,291; this block disagreed with it and this block was the stale one. **Read with §6.1 in mind** — the
   implausibly high final_rule share is largely planned dates.
 
 ---
@@ -675,7 +771,7 @@ cohort cap in the data they produced.
 
 ## 5. SCOPING: DECIDED. DRUG TRIALS ONLY.
 
-**`phase` is explicitly not-applicable for 231,038 trials (51.1%).** Over half of
+**`phase` is explicitly not-applicable for 236,949 trials (51.4%).** Over half of
 interventional ClinicalTrials.gov is device, behavioural, surgical or dietary. Those trials
 have **no mechanism**, so they cannot carry the mechanism attribution the product promises.
 
@@ -865,6 +961,9 @@ is a judgment the structured fields do not make.
 ---
 
 ## 8. Immediate next actions
+
+**Ordering superseded by §14 (rev 7).** The DONE subsections below are the durable record of
+what was run and what it found; read §14 for what happens next.
 
 ### 8.1 DONE: the label fix and its audit
 `endpoint_label.py` splits `contrast_family` / `ratio_scale` / `resolve_null_value`;
@@ -1073,8 +1172,17 @@ the totals** — a scoping exclusion will never change while an open window shri
 year the snapshot advances.
 
 **THE GATE NUMBER: 75.0% both-MeSH inside the market-eligible cohort** (19,000 of 25,332),
-against 63.0% over all drug trials. The pre-registered threshold was 50% (§1.2.2), so on
-its own stated terms **target 3 proceeds.** Every source is better in this cohort than in
+against 63.0% over all drug trials.
+
+**READ WHAT THIS CLEARED, rev 7.** The pre-registered gate in §1.2.2 was a **drug-resolution**
+rate — can this trial's intervention be resolved to a product that DrugCentral knows. What
+75.0% measures is **both-MeSH presence**: the trial carries MeSH drug terms and MeSH
+condition terms. Presence is a structural UPPER BOUND on resolution, never equal to it. So
+the honest reading is: **the ceiling clears the gate and the gate itself is still pending
+§8.1c**, which is where resolution is actually measured. This is sound as a STOP signal — had
+the ceiling come in under 50%, target 3 would be dead — and weak as a GO signal. It is also
+unverifiable from the current handoff zip, since `trial_entities.csv` is not in it. Treat
+"target 3 proceeds" as provisional until the DrugCentral probe runs. Every source is better in this cohort than in
 the drug population at large — MeSH drug terms 84.8% vs 77.0%, condition terms 87.7% vs
 80.3% — which makes sense: pivotal trials are larger, better documented and more likely to
 have been indexed.
@@ -1269,8 +1377,12 @@ It should not be quoted as an FDAAA compliance rate.
 
 #### The PHASE1/PHASE2 reading, flagged as a judgment
 The statute excludes a study that is phase 1 ONLY, so a `PHASE1/PHASE2` registration is
-treated as in scope. That is a reading, not a fact, and it moves **14,740 trials**: 4,396
-applicable, 5,391 not applicable, 4,953 undeterminable. `PHASE1_ONLY_PHASES` is the one
+treated as in scope. That is a reading, not a fact. **14,740 trials carry the registration**
+(4,396 applicable, 5,391 not applicable, 4,953 undeterminable), but flipping the flag moves
+only **9,219 verdicts**: re-run with `PHASE1_ONLY_PHASES` inverted gives applicable
+32,647 -> 28,251, undeterminable 67,129 -> 62,306, not_applicable 122,111 -> 131,330. The
+other 5,521 spanning trials are decided EARLIER by era or product scope (5,391) or by an
+unusable date (130), so the reading never reaches them. Quote 9,219, not 14,740. `PHASE1_ONLY_PHASES` is the one
 place to change it and `applicability_coverage` reports the affected count every run.
 
 ### 8.1g THE USER-FACING FLAG (owner's decision: return the number, flag it heavily)
@@ -1329,13 +1441,13 @@ No posting dependence, so it becomes the workhorse target. Multiple lookahead wi
 (2/3/5 years), each with its own censoring exclusion; a trial enters training for a window
 only if that window closed before the data cutoff. Competing risk stated plainly: failure to
 advance can reflect portfolio deprioritisation rather than a negative result. Futility stops
-(2,599) are clean negatives here — which is where the `why_stopped` work pays off, since it
+(2,603) are clean negatives here — which is where the `why_stopped` work pays off, since it
 cannot touch the headline endpoint-met slice. FDA approval enters as use B (§4.5).
 
 ### 8.4 Then features, then models
 **DUE NOW, because scoping is settled: which multi-endpoint reading is the target?**
 `label_row` sets strict from `any_primary_met`, the most permissive of the four, and `any`
-differs from `all` on 2,191 trials. Recommendation: `any_primary_met` as headline with
+differs from `all` on **1,880** trials. Recommendation: `any_primary_met` as headline with
 `all_primary_met` reported beside it, matching the strict/broad pattern — but this is a
 product claim, and "cleared at least one of its primary endpoints" is a weaker sentence than
 most people hear in a stated 72%. **Owner decision outstanding.**
@@ -1551,12 +1663,67 @@ per model, per §1.1 point 3.
     artefact and rev 2 sat in the repo for two revisions teaching a dead argument, which is
     exactly how a stale number becomes a decision. Numbers enter this document only after
     they appear in a run output, and the source file must be the current one.
-47. **A refusal must be counted or it vanishes.** 439,157 trials sit in tier D; 1,843 more
+47. **A refusal must be counted or it vanishes.** 437,835 trials sit in tier D; 1,843 more
     would disappear into it without trace. `refusal_kind`, the per-kind counts and
     `endpoint_na_reason` exist so each refusal is a number and a stateable sentence, not an
     absence. Tier E goes further: non-inferiority trials rely on a different test, so they
     get a NAMED tier rather than being dissolved into "no analysis". Same principle as
     lesson 17, applied to a decision rather than an enum.
+48. **A figure block carries the run it was computed on, and that run must be named.**
+    Seven wrong numbers in §3 came from one unnamed run: the block was computed at 452,000
+    trials and never recomputed when the pull widened to 460,569. They were found only
+    because they still summed to 452,000. Every figure block from here on names its row
+    count in its first line, so a stale block is detectable by arithmetic rather than by
+    memory.
+49. **A caption that lies is worse than no caption.** `validate_interval_rule.py` section 5
+    is headed "as labelled BEFORE the fixes" and reads the current post-fix file. The
+    caption is why a superseded breakdown was quoted for two revisions: a reader who
+    checked the number against the script would have confirmed it. A caption is an
+    assertion about provenance and must be tested like any other.
+50. **A gate clears on the quantity it MEASURES, not the one it was written about.** The
+    50% market gate was pre-registered on drug RESOLUTION and cleared at 75.0% on both-MeSH
+    PRESENCE. Presence is an upper bound on resolution, so the ceiling cleared and the gate
+    did not. Sound as a stop signal, weak as a go signal. Before recording a gate as
+    cleared, name the quantity in the threshold and the quantity in the run output, and
+    confirm they are the same quantity.
+51. **A count of AFFECTED rows is not a count of CHANGED verdicts.** The PHASE1/PHASE2
+    reading was quoted as moving 14,740 trials, which is how many carry the registration.
+    Flipping the flag moves 9,219 verdicts; the other 5,521 are decided earlier by era or
+    product scope, so the reading never reaches them. Measure a judgment by re-running with
+    it inverted, not by counting the rows it could in principle touch.
+52. **A denominator that is not the modelling population overstates a gap or hides it.** The
+    phase-1 representation gap is 5.5x against the 140,285-trial disclosure denominator and
+    **8.0x** against the 14,368-trial modelling population, where phase 1 is 423 trials
+    (2.9%). The modelling population is the only denominator that describes what the model
+    will be trained on. Lesson 16's family, fourth occurrence.
+53. **One row per outcome is an assumption, and it fails silently.** The endpoint-type
+    sample loader counted one row per outcome x ANALYSIS on the results-side file, inflating
+    outcomes 148,110 against a true 120,521, inflating every class share and the multi-match
+    denominator, and putting the same key into a stratum several times so it could be drawn
+    twice. Found by smoke-testing on the real file; a fixture with one analysis per outcome
+    would have hidden it. Enforce cardinality at the loader, and count what was collapsed.
+54. **A per-file count is a diagnostic instrument, not decoration.** Rev 6's test inventory
+    had three per-file counts wrong and one filename wrong while the TOTAL was right, so it
+    looked fine in aggregate. When a stale code tree reached a fresh session, those per-file
+    counts were the only way to tell "this file is missing" from "this file was miscounted",
+    and they could not do it. Counts in the inventory are now generated by a command written
+    down beside them.
+55. **A zip is a snapshot with a build time, and it must state it.** A rev-7 handoff was
+    shipped inside a rev-6 code tree: the document described six modules that were not
+    present. The fresh session correctly REFUSED to reconstruct them, on the grounds that a
+    falsification test run against reconstructed patterns certifies the reconstruction rather
+    than the pre-registered rule — the §12.7 trap, one level up. Third occurrence of the
+    stale-artefact fuse (lesson 11, and the rev-2-inside-rev-4 note in the header). **Before
+    handing over: run the gate from INSIDE the packaged tree, quote the count, and list what
+    changed since the last zip.**
+56. **"Absent from the zip" is not "absent from the project".** Rev 7 §0.2 recorded
+    `results_raw_studies.csv`, `trial_entities.csv` and `mondo_xref.csv` as deliberately
+    excluded, and an opener told a fresh session not to plan around them. They are present on
+    the owner's machine — 81 MB, 172 MB and a MONDO crosswalk — so `--from-raw` DOES run,
+    section 3 of the posting-bias audit does NOT skip, and the §8.1d both-MeSH figure IS
+    verifiable. Scope a statement about a missing file to the artefact it is missing from.
+
+
 
 ---
 
@@ -1565,7 +1732,8 @@ per model, per §1.1 point 3.
 - One smoke-tested script per step; pure logic in `src/` with tests, scripts as thin I/O and
   audit printouts only. **No derivations inside a script** — `agreement.py` exists because
   kappa was violating this.
-- `python scripts\run_checks.py` must stay green. **Currently 425.**
+- `python scripts\run_checks.py` must stay green. **Currently 553** (rev 6: 425; +32
+  k-class agreement, +48 endpoint-type, +48 sampling).
 - **No hardcoded numeric reference values in tests.** Derive from a closed form, an
   independent computation, a structural property, or the constant depended on.
 - **No magic numbers.** Name them or expose them as CLI flags, with the reason written beside
@@ -1619,3 +1787,359 @@ per model, per §1.1 point 3.
 - **`max_phase == 4` meaning "approved"** is an unnamed literal in the archived
   `join_chembl.py`, `label_indication.py`, `build_units.py`. Give it a shared constant if any
   is revived.
+
+---
+
+## 12. THE ENDPOINT-TYPE CLASSIFIER — BUILT, TESTED, DELIBERATELY UNSCORED
+
+### 12.0 The problem it solves
+
+The endpoint-met label is read from a trial's own posted primary ANALYSIS: a p-value against
+an alpha, or an interval against a null. That presupposes the primary endpoint was something
+a threshold was applied to. Much of early-phase research reports a VALUE instead — an AUC, a
+Cmax, a maximum tolerated dose — and for those trials the question "did it meet its primary
+endpoint" has no answer to estimate. A probability there is not a cautious estimate, it is a
+category error.
+
+`fdaaa.compose_flag` has always taken the endpoint clause as a PARAMETER and left it
+unfilled, because inventing it would assert a measurement nobody made. §12 is what fills it.
+
+### 12.1 IT GATES PER TRIAL, NOT PER PHASE. SETTLED.
+
+Phase is a proxy for endpoint type and leaks in both directions: a phase 1 trial with an
+efficacy-shaped primary endpoint is a legitimate target, and a phase 3 trial with a
+pharmacokinetic primary endpoint is not, however late its phase. A phase gate waves the
+second group through and refuses the first. **Endpoint type is the variable that decides
+whether the question applies, so the gate reads the endpoint.**
+
+### 12.2 THE INPUT IS REGISTERED TEXT. LOAD-BEARING.
+
+| field | what it is | coverage |
+| --- | --- | --- |
+| `design_outcomes.measure` | what the sponsor REGISTERED. Mirrors CT.gov v2 `primaryOutcomes[].measure`, which is what the live tool reads | essentially every trial |
+| `outcomes.title` | what the sponsor posted WITH RESULTS, edited at posting time | only the 75,434 posting trials — **12.2%** of phase 1 drug trials |
+
+The classifier is built on the FIRST. A gate validated on results-side titles could not be
+deployed against a trial with no posted results, which is exactly the case the flag exists
+for. Primary-title coverage among drug trials, for the record: PHASE1 5,506/45,093 (12.2%),
+PHASE1/PHASE2 3,850/14,740 (26.1%), PHASE2 18,698/59,105 (31.6%), PHASE3 12,852/36,966
+(34.8%), EARLY_PHASE1 399/4,980 (8.0%), PHASE4 7,472/30,899 (24.2%).
+
+**`design_outcomes` is NOT among the six declared sources in `aact_aggregates.py`.** It is a
+new pull, not a re-pull: `scripts/pull_design_outcomes.py`, standalone, writes
+`data/aact/trial_design_outcomes.csv`, leaves `trial_labels.csv` and `trial_entities.csv`
+untouched. **[DECISION]** confirmed by the owner as option (b), a standalone pull.
+
+Key is `(nct_id, design_outcome_index)` with a `measure_sha8` beside it. `design_outcomes.id`
+is queried for ORDER BY only and never written — AACT regenerates surrogate keys nightly
+(lesson 1), so a file keyed on one would join cleanly against the wrong rows after any
+rebuild. The hash is what makes a text change between snapshots detectable.
+
+### 12.3 The class scheme. SETTLED.
+
+Six classes the rule emits, plus one the labeller may use and the rule never emits:
+
+| class | gate | why |
+| --- | --- | --- |
+| `bioequivalence` | not_applicable | tested, but against containment bounds rather than a null, and §11 rejects implementing that rule. **[DECISION]** its own class, not folded into PK: it already has its own promised refusal sentence in §1.1 |
+| `dose_finding` | not_applicable | the result is a selected dose, not a verdict |
+| `pharmacokinetic` | not_applicable | a value with an interval around itself, not tested against a threshold |
+| `safety_tolerability` | not_applicable | a count or rate; where it IS compared the trial's own posted analysis carries it |
+| `efficacy_shaped` | **applicable** | the shape the label was built for |
+| `other` | **undeterminable** | the rule could not read it. NEVER folded into not_applicable |
+| `unclear` | — | labeller-only. Maps to None, lands in `n_incomparable`, counted |
+
+**`other` -> undeterminable is the tri-state rule applied to a product state.** "The rule
+could not read the endpoint" and "the question does not apply" are different claims, and
+collapsing them would let the tool tell a user the question does not apply on the strength
+of a regex that simply failed to match.
+
+`CLASS_PRECEDENCE = (bioequivalence, dose_finding, pharmacokinetic, safety_tolerability,
+efficacy_shaped)` resolves a title matching several. **That order is a reading, not a
+fact**, in the same family as the PHASE1/PHASE2 reading, so `matched_classes()` returns
+every hit and the audit counts how often the order decided anything.
+
+### 12.4 Roll-up: ANY, with mixed trials given their own sentence. SETTLED.
+
+**[DECISION]** `DEFAULT_GATE_ROLLUP = ROLLUP_ANY`, because `endpoint_met_strict` is set from
+`any_primary_met`. `test_default_rollup_matches_the_label_rollup` derives the ANY semantics
+from `label_row`'s BEHAVIOUR, not from a constant: it builds a two-endpoint trial with one
+met and one missed and asserts the strict label reads met. **If §8.4 moves the label to ALL,
+that test fails and forces the gate to move with it.** Otherwise the tool would refuse
+trials whose labels it happily computed in training.
+
+**[DECISION]** mixed trials get a THIRD sentence, not one of the two existing ones:
+
+> This trial registered 3 primary endpoints; 2 of them are pharmacokinetic measurements with
+> no threshold to clear, so this estimate reflects the 1 of 3 that was tested.
+
+Saying "the question does not apply" would be wrong and saying nothing would overstate what
+the number covers. The mechanism word is chosen by PRECEDENCE, not by count, so the sentence
+a user reads does not change because one more safety endpoint was registered.
+
+### 12.5 The kappa gate. PRE-REGISTERED.
+
+**[DECISION]** `GATE_KAPPA_MINIMUM = 0.60`, `REPORTABLE_KAPPA_MINIMUM = 0.40`, both fixed
+before any hand label existed, because a number arriving without a criterion gets
+rationalised into acceptability.
+
+**The gating figure is kappa on the BINARY COLLAPSE** (`refuses_estimate`: would the tool
+decline?), not the multi-class kappa. **[DECISION, with reasoning, at the owner's request]**
+the decision that reaches a user is two-valued even though the classes are not. Confusing
+pharmacokinetic with dose-finding is wrong about the class and RIGHT about the decision, and
+blocking the feature on an error no user can see would be punishing the wrong thing.
+Confusing dose-finding with efficacy-shaped is wrong about the decision and must block.
+Multi-class kappa is reported beside it and gates nothing. Both come from ONE set of hand
+labels via `agreement.collapse_matrix`, so they cannot disagree with each other.
+
+The collapse's direction is stated rather than assumed: an `other` the labeller calls
+pharmacokinetic counts as DISAGREEMENT, while an `other` the labeller calls efficacy-shaped
+counts as agreement. That makes the collapsed figure conservative on refusals and blind to
+one class of ordinary misreading — which is why the full matrix, `per_class_rates` and
+`asymmetries` print beside it.
+
+Side conditions, all pre-registered:
+- disagreement must not be **one-directional**. A rule that errs one way is biased rather
+  than noisy and is disqualified at any kappa (`asymmetries`, `MIN_PAIR_FOR_ASYMMETRY = 5`).
+- strata below `MIN_STRATUM_FOR_VERDICT = 20` print and produce **no verdict** (lesson 29).
+- **revisit 0.60 DOWNWARD if self-agreement < 0.70.** A threshold above the human ceiling is
+  unreachable by construction.
+
+### 12.6 The sample. SETTLED, sizing OPEN.
+
+**[DECISION]** unit is one PRIMARY OUTCOME, not one trial. **[DECISION]** stratified,
+**non-proportional** allocation (owner: "whatever trains the model better long term").
+**[DECISION]** 40 of the 200 presented TWICE under unrelated ids, shuffled apart, to measure
+the owner's own self-agreement — which is the ceiling any rule can reach against these
+labels.
+
+Allocation is square-root of stratum size with a floor, which sits between equal allocation
+(best per-stratum precision) and proportional (best population estimate). Selection is by
+salted sha256 of the natural key, not an RNG: reproducible on any machine and any Python
+version from the printed salt alone.
+
+**WHAT 200 LABELS BUYS, AND DOES NOT.** SE of a kappa at n=200 is ~0.055, so the 95%
+interval is roughly ±0.11. A result of 0.75 clears decisively; 0.45 fails decisively; **0.63
+clears on the point estimate and not on the interval, and 200 labels cannot say which side
+of the line it is on.** A decisive answer anywhere in that middle band needs ~1,000 labels.
+Six-class per-class recall/precision IS available at ~33 per class. The 29-cell
+phase x class table is NOT: with 29 strata and a floor of 6, the floor consumes 174 of 200
+and every cell lands at 6–13, so per-stratum kappa is unavailable everywhere.
+
+**Sizing recommendations, not yet ratified by the owner:**
+1. Collapse the stratification phase axis from five groups to three (phase1 / pivotal /
+   other). Phase is not an input to the rule — it is in the stratification only to cover
+   text styles — so three bands answer the question and free ~66 labels from the floor.
+2. Boost the decisive cells to ~25 each once the real `design_outcomes` cell sizes are
+   known. Unequal allocation is already handled correctly by the N/n weights, so boosting
+   costs no bias, only a shift in where precision goes. **The pivotal-phase refusal cells
+   are the ones worth insisting on**: a false refusal on a phase 3 trial is the tool's most
+   visible possible failure, those endpoints are ~3% of pivotal outcomes, and errors in a 3%
+   cell barely move the pooled figure that is supposed to protect against them.
+3. **Pre-register the continuation rule NOW**: if the pooled binary kappa lands in
+   0.55–0.75, draw a second tranche under a different salt excluding everything already
+   labelled, and report only the combined figure. Deciding to add labels after seeing a
+   number you dislike biases the result upward.
+4. Report the trial-level figure on the SINGLE-endpoint subset. Free, and it is the number
+   closest to what ships: 34,234 of 53,203 drug trials with posted primaries have exactly
+   one primary outcome, so for those the per-outcome figure IS the trial-level figure. For
+   multi-endpoint trials the ANY roll-up can amplify one error into a whole-trial flip, and
+   that amplification stays **unmeasured**.
+
+### 12.7 Two references that need no hand labelling
+
+**The sponsor-posted analyses — NOT YET BUILT, recommended next.** For the 75,434 posting
+trials, the sponsor's own primary analysis says whether a threshold was applied: a p-value or
+an interval against a null means yes, a value with a CI around itself means no. That is the
+same distinction, judged by the people who ran the trial, across 78,256 analysis rows, and it
+is **fully independent of the keyword rule**. Runs on `results_raw_outcomes.csv` already on
+disk — no new pull. Blind spot, and it is severe: posting is selected (16.4% overall, phase 3
+over-represented 2.31x, phase 1 at 0.18x), so it is strongest exactly where endpoint type
+matters least. It reduces the hand-labelling job to adjudicating DISAGREEMENTS — roughly
+60–80 labels rather than 250 — and adjudication is the more informative use of the time.
+
+**The gate-versus-tier cross-check — BUILT, in section 4 of the sample builder.** A trial the
+gate refuses which nonetheless carries a tier A/B label is a case where the sponsor DID apply
+a threshold. Runs on tens of thousands of trials rather than 200. Covers the over-refusal
+direction only: the absence of a label mostly means nothing was posted, which is a disclosure
+fact rather than an endpoint-type fact, so no kappa is computed on it.
+
+**What NO automated reference can do is ratify the class scheme itself.** Every one of them
+is downstream of the decision that endpoints divide into these six kinds and that four of
+them mean refuse. If that carving is wrong, all of them will agree with the rule and report a
+high kappa. A measurement that cannot come back negative is not a measurement. The
+irreducible human step is ~25 endpoints drawn from where the references disagree: "yes,
+refusing this is right" / "no, that is wrong". Fifteen minutes, once.
+
+**The assistant labelling the sample is NOT a substitute.** It wrote `CLASS_PRECEDENCE` and
+every pattern, so its labels measure whether the regex faithfully implements its own
+judgment — implementation fidelity, not scheme validity. Usable as an explicitly
+non-independent second rater, reported as such, never as the gate reference. Pre-labelling
+for the owner to review is specifically refused: reviewing means anchoring, and the result
+would be confirmation dressed as measurement. This is why the predicted class is kept out of
+the labelling file.
+
+### 12.8 Files, and what is NOT wired
+
+New: `src/trial_pos/services/endpoint_type.py`, `src/trial_pos/services/sampling.py`,
+`tests/test_endpoint_type.py` (48), `tests/test_sampling.py` (48),
+`scripts/pull_design_outcomes.py`, `scripts/build_endpoint_type_sample.py`.
+Modified: `src/trial_pos/services/agreement.py` (k-class core added, binary API unchanged in
+behaviour and now DELEGATING to it — `test_binary_and_k_class_agree_on_a_2x2` pins that),
+`tests/test_agreement.py` (+32, original 20 untouched).
+**Unchanged, explicitly: `fdaaa.py`.** `compose_flag` already took the clause as a parameter.
+
+`GATE_ONLY_FIELDS` names every field the module emits and all of them are **gate-only (R7)**:
+they may decide whether an estimate is DISPLAYED and may never enter the endpoint-met feature
+matrix. Two reasons — the class is derived from the same primary-outcome text the label's
+analysis rows hang off, and the trial-level gate shares the label's any/all roll-up, so a
+feature built from these is one revision away from being a label input and the revision would
+not look like one. **[DECISION]** owner agreed: gate-only, and unavailable prospectively
+anyway. `test_every_emitted_field_is_registered` fails if an output is added without
+registering it. These go into the per-target leakage registry when §8.4 builds it.
+
+**NOT BUILT: `scripts/score_endpoint_type.py`.** Deferred until labels exist. **Consequence,
+stated plainly: the 0.60 threshold is not yet enforced by any code.** Nothing wires
+`endpoint_clause` into `compose_flag` until that script clears it, so the clause stays
+visibly missing by design.
+
+### 12.9 Decisions settled AFTER §12.8 was written, on the sponsor-side reference
+
+**[DECISION 1] An analysis carrying neither a p-value nor an interval is a THIRD state,**
+`threshold_unknown`, counted separately and never folded into "no threshold applied." If it
+were folded into "no", the sponsor reference would agree with the keyword rule everywhere the
+rule says pharmacokinetic — for a reason that has nothing to do with endpoint type — and the
+independence the whole reference rests on would evaporate. Tri-state rule, §10, applied one
+level down.
+
+**[DECISION 2] Several analyses on ONE outcome that disagree: ANY.** If any analysis on the
+endpoint carries a threshold test, the endpoint was threshold-tested. Note this is a
+DIFFERENT level from §8.4 — analyses within one outcome, not outcomes within a trial — so it
+is a separate decision that happens to take the same reading. The alternative says an
+endpoint stops being threshold-tested because the sponsor also posted a descriptive summary
+of it.
+
+**[DECISION 3] The sponsor reference is TIER-DERIVED, reusing `endpoint_label.py`, not a
+fresh reader of the raw fields.** Tier A/B/C/E/D already encodes "did this analysis support a
+verdict", and `resolve_null_value`, `contrast_family` and `ratio_scale` already handle the
+bioequivalence trap where an interval sits against containment bounds rather than a null. A
+second reader would reimplement all of it and get the BE case wrong — the lesson-16 adjacency
+inherited by construction. Tier E and the percent-scaled ratio refusals map to
+`threshold_unknown`, not to "no".
+
+**The cost, accepted explicitly:** the reference is then no longer independent of the LABEL
+pipeline. It remains independent of the KEYWORD RULE, which is the thing being validated, and
+that is the independence that matters here. But any future claim that this reference validates
+the label machinery itself is circular and must be refused.
+
+**[DECISION 4] Build the falsification cross-tab FIRST**, before the full script: the keyword
+gate against the tier-derived reference, reading two cells — trials the rule refuses that the
+sponsor clearly threshold-tested, and the reverse. 152 phase-3 all-PK-titled trials already
+carry headline A/B labels. **If the over-refusal cell is large, the six-class scheme is
+carving endpoints wrongly and no amount of hand labelling rescues it.** Stop on failure rather
+than proceeding to the sample.
+
+**[DECISION 5] Sizing as recommended in §12.6**: three phase groups rather than five, decisive
+cells boosted to ~25 once real cell sizes are known, continuation rule pre-registered at
+0.55–0.75.
+
+**[DECISION 6] `--duplicates 12`, not 40.** 40 repeats on ~70 adjudications is 57% overhead
+spent measuring the labeller rather than the rule. Stated cost: a self-agreement kappa on 12
+items has SE around 0.2, so it is a smell test rather than a measurement — it catches
+inconsistent labelling, it does not give a usable ceiling. If the main kappa lands borderline,
+the continuation tranche carries more repeats, which is when the ceiling is actually needed to
+interpret it.
+
+**[DECISION 7] TWO labelling frames, not one.** Cells are defined by both verdicts:
+
+| cell | labels |
+| --- | --- |
+| both refuse | small audit sample |
+| both allow | small audit sample |
+| **rule refuses, sponsor tested** (over-refusal) | heavy |
+| **rule allows, sponsor did not** (under-refusal) | heavy |
+| sponsor `threshold_unknown` | original phase x class stratification |
+
+The agreement cells get a small audit sample rather than none: **two wrong readings agreeing
+with each other is the failure mode that looks exactly like success**, and a design that never
+looks at agreements cannot detect it.
+
+The sponsor reference exists only for the 24% of drug trials that posted, skewed 2.31x toward
+phase 3. **The trials with no sponsor verdict are where the gate does most of its work** — a
+phase 1 trial with nothing posted is the case the flag exists for — and they can be validated
+only by hand labels. So the disagreement-adjudication frame sits BESIDE the original
+stratification, it does not replace it. Indicative shape, to be set from real cell counts:
+~50 adjudications, ~10 agreement-cell audits, ~30 on the unposted frame, ~12 repeats, so about
+100 rows.
+
+
+---
+
+## 13. CORRECTION LEDGER, rev 6 -> rev 7
+
+Verified by recomputing from `data/aact/trial_labels.csv` (460,569 rows, 2026-09-20 snapshot)
+and `data/aact/results_raw_outcomes.csv` (207,481 rows), and by re-running
+`audit_posting_bias.py` and `validate_interval_rule.py`.
+
+**Reproduced EXACTLY, recorded so they are not re-verified:** 460,569 rows; results posted
+75,434 (16.4%); >=1 primary analysis 24,228 (5.3%); strict labelled 21,412 at 60.7% positive;
+headline 20,043 = 12,475/7,568; drug-only headline 14,368 = 8,797/5,571 at 61.2%; tiers A
+18,391 / B 1,652 / C 1,369 / E 1,322; `endpoint_na_reason` 1,843 = 1,552/200/91;
+`is_drug_trial` true 221,887; all of §8.1d–f cell for cell (eligibility 14,368 / 95,926 /
+25,332; window 25,332 / 22,589 / 15,813; phase composition 55.8 / 19.4 / 13.9 / 10.9; FDAAA
+verdicts 32,647 / 122,111 / 67,129; disclosure-inside-verdict 80.8 / 25.1 / 31.0 vs 16.1 /
+3.7 / 23.0); §8.1e representation figures (phase3 17.5% -> 40.3%, 2.31x; phase1 23.2% ->
+4.2%, 0.18x); all three bug tables in §3.1.
+
+**Corrected:**
+
+| where | rev 6 said | actual | cause |
+| --- | --- | --- | --- |
+| §3 era | fdaaa_801 117,593 / final_rule 297,742 | **117,613 / 306,291** | 452,000-run block; §6.1's own table already said 306,291 |
+| §3 `why_stopped` | 411,786 / 15,402 / 13,865 / 6,530 / 2,599 | **420,311 / 15,412 / 13,883 / 6,541 / 2,603** | same block |
+| §3 results agreement | 452,000/452,000 | **460,569/460,569** | same block |
+| §3 multi-endpoint | 20,828 of 23,019 (90.5%), 2,191 differ, mean 0.567 | **19,532 of 21,412 (91.2%), 1,880 differ, mean 0.561** | same block |
+| §8.3 futility | 2,599 | **2,603** | same block |
+| §3 broad label | 2,244 entered | **2,246** | same block |
+| §8.4 | "differs on 2,191" | **1,880** | same block |
+| §3 tier table | `tier_min D` 439,157 | **437,835** | 439,157 is unlabelled = D + E; the difference is exactly the 1,322 tier-E trials, contradicting §8.1b's own account of the tier-E fix |
+| lesson 47 | 439,157 in tier D | **437,835** | same |
+| §1.2.3 | 5,768 of 25,332 (22.8%), leaving 19,564 | **5,822 (23.0%), leaving 19,510** | §8.1d had it right |
+| §5 | phase N/A 231,038 (51.1%) | **236,949 (51.4%)** | also §5.2's own `phase_is_drug_like` false count |
+| §3.1 | 1,966 C / 231 D / 122 headline | **1,322 E / 521 D / 249 C / 227 headline** | predates tier E; same union 2,319 |
+| §8.1f | reading "moves 14,740 trials" | **moves 9,219 verdicts** | affected-rows vs changed-verdicts (lesson 51) |
+| §8.1e / lesson 40 | phase-1 gap 5.5x | **8.0x** on the 14,368 modelling population, where phase1 = 423 trials (2.9%) | disclosure denominator vs modelling denominator (lesson 52) |
+| §1.2.2 gate | "target 3 proceeds" | ceiling cleared on both-MeSH PRESENCE; **resolution gate still pending §8.1c** | lesson 50 |
+
+**Figures that exist NOWHERE in the repo and are therefore not reproducible:** the 63% phase-1
+PK figure and the 7% / 20% / 6% / 31% / 64% endpoint-type figures. They appear only as prose
+in `fdaaa.py:238` and in this document; the generating script is gone. An independent crude
+regex gave phase-1 PK+dose 51.3% (other 26.3%) and phase-3 trial-level all-PK 2.4% / any-PK
+3.9%, which shows the figures are **rule-dependent** rather than properties of the data.
+**Do not quote any of them again.** §12 is the replacement, and it is unscored until labelled.
+Also found: **152 phase-3 trials with all-PK-titled primaries carrying headline A/B labels**,
+so "PK endpoint" does not imply "no threshold tested".
+
+---
+
+## 14. NEXT ACTIONS, in order. Supersedes §8's ordering.
+
+0. **Build the falsification cross-tab** (§12.9 decision 4). ~40 lines. If the over-refusal
+   cell is large, stop: the class scheme is wrong and nothing downstream is worth building.
+1. **Build the sponsor-analysis endpoint-type reference**, tier-derived per §12.9. No new
+   pull, runs on data already on disk, independent of the keyword rule, and its output
+   decides the labelling frame — so it comes BEFORE the `design_outcomes` pull.
+2. **Run `pull_design_outcomes.py --probe-only`, then the pull.** Standalone PowerShell
+   window, not VS Code (lesson 13).
+3. **Run `build_endpoint_type_sample.py --audit-only`** and paste the output. The strata
+   collapse (§12.6 item 1) and the cell boosts (item 2) get set from the real cell sizes in
+   one edit, not guessed from the results-side file.
+4. **Write `score_endpoint_type.py`.** Until it exists the 0.60 gate is not enforced by code.
+5. **The ~25-endpoint scheme ratification** (§12.7). Fifteen minutes, and it is the one step
+   no automated reference can replace.
+6. **The DrugCentral probe, §8.1c** — `scripts/probe_drugcentral.py`, not yet written. It
+   ratifies or kills the 50% resolution gate AND delivers the readout-to-approval lag
+   distribution that confirms or kills the 3-year market window. That window is currently an
+   assumption holding up a whole target.
+7. **Fix the three script bugs in §0.1**: the lying caption, the unconditioned bug-3 table,
+   and the three verdict-producing flags missing from the manifest.

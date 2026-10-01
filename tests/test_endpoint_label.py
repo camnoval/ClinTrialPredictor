@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 from trial_pos.services.endpoint_label import (
+    NA_REASON_GEOMETRIC_RATIO, REFUSAL_COUNT_FIELD,
+    REFUSAL_GEOMETRIC_BOUNDS_UNAVAILABLE,
+    REFUSAL_GEOMETRIC_RATIO, REFUSAL_NI_MARGIN_UNAVAILABLE, REFUSAL_KINDS,
+    is_geometric_ratio, refusal_kind,
     TIER_A, TIER_B, TIER_C, TIER_D, TIER_DOC, TIER_ORDER, LABEL_DERIVED_FIELDS,
     aggregate_outcome, aggregate_trial, analysis_design, broad_label, classify_analysis,
     classify_stop_reason, label_row, met_from_ci, met_from_p, null_value_for,
@@ -577,7 +581,11 @@ def test_unnamed_percent_scaled_ratio_also_refused():
 
 def test_unit_scaled_ratio_interval_still_tier_c():
     # the refusal must not cost the 7,518 rows where the rule scores kappa 0.849
-    tier, met, _ = classify_analysis({"param_type": "Geometric Mean Ratio", "p_value": "",
+    # Fixture changed from "Geometric Mean Ratio" to a hazard ratio when the geometric
+    # refusal landed: a geometric mean ratio now refuses to tier E on its NAME, so it can
+    # no longer stand in for a generic unit-scaled ratio here. The claim under test is
+    # about the SCALE path, which a hazard ratio exercises identically.
+    tier, met, _ = classify_analysis({"param_type": "Hazard Ratio", "p_value": "",
                                       "ci_lower_limit": "1.10", "ci_upper_limit": "1.90",
                                       "ci_percent": "95.0"})
     assert (tier, met) == (TIER_C, 1)
@@ -654,7 +662,11 @@ def test_label_row_carries_the_threshold_it_used():
 def test_floor_change_flips_the_verdict_end_to_end():
     # structural: raising the floor above the interval makes the same row unit-scaled
     # again, which proves the flag reaches the label and is not read from a constant
-    row = {"param_type": "Geometric mean ratio", "p_value": "",
+    # Fixture is a hazard ratio rather than a geometric mean ratio for the reason given
+    # in test_unit_scaled_ratio_interval_still_tier_c: this test is about the FLOOR flag
+    # reaching the label, and a geometric ratio would now refuse on its name before the
+    # floor was ever consulted, which would make the test pass for the wrong reason.
+    row = {"param_type": "Hazard Ratio", "p_value": "",
            "ci_lower_limit": "85.08", "ci_upper_limit": "104.21", "ci_percent": "95.0"}
     assert classify_analysis(row)[0] == TIER_D
     assert classify_analysis(row, ratio_scale_floor=200.0)[0] == TIER_C
@@ -1027,3 +1039,147 @@ def test_fallback_picks_the_weakest_uncounted_tier():
     assert agg["any_primary_met"] is None
     assert TIER_ORDER.index(agg["tier_max"]) < TIER_ORDER.index(agg["tier_min"])
     assert agg["tier_max"] == TIER_E and agg["tier_min"] == TIER_D
+
+
+
+# ===========================================================================
+# THE GEOMETRIC-RATIO REFUSAL -- an equivalence statistic read as superiority
+# ===========================================================================
+# A ratio of geometric means is decided by CONTAINMENT inside an acceptance window, not by
+# exclusion of 1. Reading containment as exclusion is wrong in BOTH directions, so the
+# refusal keys on the statistic's name and never on where the interval sits. Measured on
+# the p-value validation set, the NI/equivalence stratum under-calls 638 to 177 -- a 3.6:1
+# asymmetry in exactly the direction this mechanism predicts.
+def test_a_geometric_mean_ratio_is_recognised_however_spelled():
+    # The AACT spellings vary wildly and all denote the same statistic. Derived from the
+    # predicate rather than asserting a count, so adding a spelling cannot break it.
+    for param_type in ("Geometric mean ratio", "Geometric Mean Ratio",
+                       "Adjusted geometric mean ratio", "Ratio of geometric LS means",
+                       "Ratio of geometric least square mean", "GMC ratio", "GMT Ratio",
+                       "Least Square Mean Ratio", "Geometric LS Mean Ratio",
+                       "Geometric Mean Ratio of the LS Means"):
+        assert is_geometric_ratio(param_type), param_type
+
+
+def test_a_superiority_ratio_is_not_a_geometric_ratio():
+    # The discriminating half. A hazard, odds or risk ratio IS a superiority statistic and
+    # its exclusion-of-1 reading is correct, so refusing it would throw away good verdicts.
+    for param_type in ("Hazard Ratio (HR)", "Odds Ratio (OR)", "Risk Ratio (RR)",
+                       "Ratio", "Mean Difference (Final Values)",
+                       "Posterior Median Ratio"):
+        assert not is_geometric_ratio(param_type), param_type
+
+
+def test_a_single_arm_geometric_mean_is_not_a_ratio():
+    # "Geometric Mean" names no contrast at all, so contrast_family gates it out before the
+    # name is consulted. Without that guard the predicate would refuse descriptive rows.
+    assert not is_geometric_ratio("Geometric Mean")
+    assert not is_geometric_ratio("Geometric Least Squares Mean")
+
+
+def test_a_unit_scaled_geometric_ratio_refuses_to_tier_e():
+    tier, met, reason = classify_analysis(
+        {"param_type": "Geometric mean ratio", "p_value": "",
+         "ci_lower_limit": "0.85", "ci_upper_limit": "1.10", "ci_percent": "90.0"})
+    assert (tier, met) == (TIER_E, None)
+    assert REFUSAL_GEOMETRIC_BOUNDS_UNAVAILABLE in reason
+
+
+def test_the_refusal_does_not_depend_on_where_the_interval_sits():
+    # THE structural property. Containment-read-as-exclusion errs both ways, so an
+    # interval inside the window and one outside it are equally unreadable. A rule keyed on
+    # position would refuse one and label the other, and would be wrong about the other.
+    inside = {"param_type": "Geometric mean ratio", "p_value": "",
+              "ci_lower_limit": "0.90", "ci_upper_limit": "1.11", "ci_percent": "90.0"}
+    outside = dict(inside, ci_lower_limit="1.40", ci_upper_limit="1.90")
+    assert classify_analysis(inside)[:2] == classify_analysis(outside)[:2]
+    assert classify_analysis(outside)[0] == TIER_E
+
+
+def test_a_posted_p_value_still_outranks_the_geometric_refusal():
+    # A sponsor who posted a p-value stated their own verdict. The refusal is about an
+    # interval having no readable decision rule, which a p-value row never consults.
+    tier, met, _ = classify_analysis(
+        {"non_inferiority_type": "Superiority", "p_value": "0.01",
+         "param_type": "Geometric mean ratio",
+         "ci_lower_limit": "0.85", "ci_upper_limit": "1.10"})
+    assert (tier, met) == (TIER_A, 1)
+
+
+def test_an_explicit_ni_flag_still_outranks_the_geometric_refusal():
+    # Both send the row to tier E, so the tier cannot distinguish them; the REASON must,
+    # because the NI flag is the sponsor saying so and the statistic name is an inference.
+    _, _, reason = classify_analysis(
+        {"non_inferiority_type": "NON_INFERIORITY", "p_value": "",
+         "param_type": "Geometric mean ratio",
+         "ci_lower_limit": "0.85", "ci_upper_limit": "1.10"})
+    assert REFUSAL_NI_MARGIN_UNAVAILABLE in reason
+    assert REFUSAL_GEOMETRIC_BOUNDS_UNAVAILABLE not in reason
+
+
+def test_percent_scaled_outranks_the_geometric_refusal():
+    # Deliberate precedence: most percent-scaled rows in the dump are ALSO geometric
+    # ratios, so putting geometric first would absorb the percent-scaled refusal and
+    # destroy its independent evidence base. Derived from the floor, not transcribed.
+    floor = DEFAULT_RATIO_SCALE_FLOOR
+    row = {"param_type": "Geometric mean ratio", "p_value": "",
+           "ci_lower_limit": floor * 8.5, "ci_upper_limit": floor * 10.4}
+    assert is_geometric_ratio(row["param_type"])
+    assert refusal_kind(row) == REFUSAL_PERCENT_SCALED
+    assert classify_analysis(row)[0] == TIER_D
+
+
+def test_the_geometric_refusal_is_counted_not_buried():
+    # A refusal that is not counted vanishes into the population (lesson 17).
+    row = {"param_type": "Geometric mean ratio", "p_value": "",
+           "ci_lower_limit": "0.85", "ci_upper_limit": "1.10"}
+    assert refusal_kind(row) == REFUSAL_GEOMETRIC_RATIO
+    assert REFUSAL_GEOMETRIC_RATIO in REFUSAL_KINDS
+
+
+def test_the_geometric_refusal_reaches_the_trial_level_na_reason():
+    agg = aggregate_trial({"o1": [
+        {"param_type": "Geometric mean ratio", "p_value": "",
+         "ci_lower_limit": "0.85", "ci_upper_limit": "1.10"}]})
+    assert agg["any_primary_met"] is None            # unknown, not zero
+    assert agg["endpoint_na_reason"] == NA_REASON_GEOMETRIC_RATIO
+    assert NA_REASON_GEOMETRIC_RATIO in NA_REASON_DOC
+
+
+
+def test_every_refusal_kind_has_a_count_field():
+    # Total over REFUSAL_KINDS, so a new kind cannot be added without a column. The
+    # geometric refusal shipped without one and 2,190 refused analysis rows reported zero
+    # in every count -- countable only via endpoint_na_reason, and only for trials where
+    # EVERY analysis refused.
+    assert set(REFUSAL_COUNT_FIELD) == set(REFUSAL_KINDS)
+    assert len(set(REFUSAL_COUNT_FIELD.values())) == len(REFUSAL_KINDS)
+
+
+def test_aggregate_trial_emits_a_count_for_every_refusal_kind():
+    agg = aggregate_trial({"o1": [{"p_value": "", "param_type": "Hazard Ratio",
+                                   "ci_lower_limit": "1.2", "ci_upper_limit": "1.8"}]})
+    for field in REFUSAL_COUNT_FIELD.values():
+        assert field in agg, field
+
+
+def test_each_refusal_kind_increments_its_own_field_and_no_other():
+    # One row per kind, each row chosen to trigger exactly one refusal, and the assertion
+    # is derived from REFUSAL_COUNT_FIELD rather than naming columns.
+    floor = DEFAULT_RATIO_SCALE_FLOOR
+    rows = {
+        REFUSAL_NI_DESIGN: {"non_inferiority_type": "NON_INFERIORITY", "p_value": "",
+                            "param_type": "Hazard Ratio", "ci_lower_limit": "1.2",
+                            "ci_upper_limit": "1.8"},
+        REFUSAL_PERCENT_SCALED: {"p_value": "", "param_type": "Ratio",
+                                 "ci_lower_limit": floor * 8.5,
+                                 "ci_upper_limit": floor * 10.4},
+        REFUSAL_GEOMETRIC_RATIO: {"p_value": "", "param_type": "Geometric mean ratio",
+                                  "ci_lower_limit": "0.85", "ci_upper_limit": "1.10"},
+    }
+    for kind, row in rows.items():
+        assert refusal_kind(row) == kind, kind
+        agg = aggregate_trial({"o1": [row]})
+        for other, field in REFUSAL_COUNT_FIELD.items():
+            expected = 1 if other == kind else 0
+            assert agg[field] == expected, (kind, other, agg[field])
