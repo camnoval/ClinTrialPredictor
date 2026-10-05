@@ -221,9 +221,16 @@ CLASS_GATE = {
     # agree. The 856 it missed were getting inverted tier-C labels, which is the failure a
     # text-layer mask cannot prevent and a statistic-layer refusal does.
     CLASS_BIOEQUIVALENCE: GATE_APPLICABLE,
-    CLASS_DOSE_FINDING: GATE_NOT_APPLICABLE,
+    # FLIPPED 2026-10-01 from not_applicable, on the confirming sample recorded beside
+    # CANDIDATE_APPLICABLE_FLIPS: shipped mapping false-refusal 84.1% against a
+    # pre-registered ceiling of 25%, candidate 18.2%. Allowed WITH A MANDATORY CLAUSE --
+    # see QUALIFIED_CLASSES -- never as a bare number.
+    CLASS_DOSE_FINDING: GATE_APPLICABLE,
+    # NOT flipped, and the only class still refusing. The hand labels called it answerless
+    # 8 of 8 in the ratification and 15 of 17 in the confirming sample, on disjoint
+    # endpoints. That replication is the strongest single finding in the exercise.
     CLASS_PHARMACOKINETIC: GATE_NOT_APPLICABLE,
-    CLASS_SAFETY: GATE_NOT_APPLICABLE,
+    CLASS_SAFETY: GATE_APPLICABLE,
     CLASS_EFFICACY: GATE_APPLICABLE,
     CLASS_OTHER: GATE_UNDETERMINABLE,
 }
@@ -290,12 +297,192 @@ REASON_DOC = {
 # self-agreement on the re-labelled subset comes in below 0.70: a threshold above the human
 # ceiling is unreachable by construction, and that ceiling is what
 # `DUPLICATE_LABEL_COUNT` in the sampler exists to measure.
+# DEMOTED 2026-10-01 from gating threshold to REPORTED DIAGNOSTIC. The value is unchanged
+# and pinned by a test, because lowering a pre-registered number because the rule failed it
+# is the move pre-registration exists to prevent -- and the ratification did fail it, at
+# 0.439.
+#
+# The reason for the demotion is not that figure. It is that 0.60 was never connected to
+# anything that ships. Nobody has shown that a gate at kappa 0.60 produces a better model
+# than one at 0.45, or than no gate at all; the number was chosen as a plausible agreement
+# level before any class prevalence was known. A threshold on an intermediate quantity,
+# with no demonstrated link to the outcome, should not block shipping.
+#
+# This is a different act from lowering it, and the difference is that the argument does
+# not depend on which way the number came out: it would hold identically if the
+# ratification had scored 0.85. What gates instead is `GATING_CRITERIA` below; what
+# measures the gate's VALUE rather than its correctness is the downstream prediction after
+# that.
+#
+# Kept and still reported, because `validate_interval_rule` reports kappa throughout and
+# comparability across the project's agreement measurements is worth keeping.
 GATE_KAPPA_MINIMUM = 0.60
 REPORTABLE_KAPPA_MINIMUM = 0.40
 
 # A verdict banner on a handful of rows is a banner that gets ignored (lesson 29). Strata
 # thinner than this are printed and excluded from any verdict.
 MIN_STRATUM_FOR_VERDICT = 20
+
+# ---- PRE-REGISTERED 2026-10-01, BEFORE THE CONFIRMING SAMPLE EXISTS -------
+# Written down now because the hypothesis below was DERIVED FROM the 25 endpoints that
+# suggested it, and a fix scored on the rows that produced it is not a measurement. These
+# constants fix what would count as confirmation before the confirming data is collected.
+#
+# WHAT THE 25-ENDPOINT RATIFICATION FOUND (scheme_sheet.csv, one labeller, blind)
+#   The six-class carving SURVIVED: the labeller reproduced five of the six classes in
+#   their own words without having seen them. That is the one question section 12.7 says
+#   no automated reference can answer, and it came back clean.
+#   The CLASS-TO-GATE MAPPING did not. Per class, hand answer to "does 'did this trial
+#   meet its primary endpoint' have an answer here":
+#     pharmacokinetic      refuse   no x8                 mapping correct
+#     efficacy_shaped      allow    yes x3                mapping correct
+#     bioequivalence       allow    yes x2, unclear x1    mapping correct
+#     other                allow    yes x2, unclear x1    mapping correct (undeterminable
+#                                                         does not refuse)
+#     dose_finding         REFUSE   yes x3                MAPPING WRONG
+#     safety_tolerability  REFUSE   yes x4, no x1         MAPPING WRONG
+#   Binary collapse: raw 0.696, kappa 0.439, and 7 over-refusals against 0 under-refusals
+#   -- entirely one-directional, which section 12.5 disqualifies at any kappa.
+#
+# THE HYPOTHESIS UNDER TEST
+#   Mapping CLASS_DOSE_FINDING and CLASS_SAFETY to GATE_APPLICABLE raises the binary kappa
+#   above GATE_KAPPA_MINIMUM and removes the one-directional bias. On the 25 ratification
+#   endpoints that change scores kappa 0.907 with 0 over-refusals and 1 under-refusal --
+#   but those are the rows the hypothesis was read off, so that figure confirms nothing and
+#   must never be quoted as validation.
+#
+# RESULT, 2026-10-01, on 86 presentations / 80 fresh endpoints, one labeller, blind,
+# excluding by nct_id every trial seen in the ratification (confirm_sheet.csv):
+#   mapping      n   raw     kappa   allow-prec  false-refl  over  under
+#   shipped     74   0.284   0.053   100.0%      84.1%         53     0
+#   candidate   74   0.959   0.834    98.4%      18.2%          2     1
+#   per class: dose_finding 25/26 have an answer, safety 26/28, pharmacokinetic 2/17,
+#   efficacy_shaped 11/15. Both TESTED classes cleared MIN_STRATUM_FOR_VERDICT; the two
+#   controls did not and carry no verdict of their own. Self-consistency 7/7 repeated
+#   pairs.
+#   SHIPPED FAILS on false-refusal, CANDIDATE PASSES both bars. The flips are APPLIED
+#   below as a result -- in the qualified form described next, which is what was
+#   pre-registered, not a bare flip.
+CANDIDATE_APPLICABLE_FLIPS = (CLASS_DOSE_FINDING, CLASS_SAFETY)
+
+# AMENDED 2026-10-01, BEFORE SCORING, and the amendment makes the test HARDER rather than
+# easier: the candidate mapping is applicable WITH A MANDATORY CLAUSE, not bare applicable.
+#
+# Why. The gate is binary -- show a number or do not -- and that is the wrong shape for
+# what the hand labels found. A dose-escalation trial's "success" means a tolerable dose
+# was identified; a comparative-safety trial's means the arms differed acceptably. Both are
+# real answers, and neither is what a user reading a bare "68% chance of success" will
+# assume it means. Silence misleads in one direction and an unqualified number in the
+# other, so the third option is a number plus an accurate statement of what success meant.
+#
+# This is also what makes 50 hand labels ADEQUATE evidence. A bare flip would ask those
+# rows to license silently showing thousands of users a number whose meaning nobody has
+# stated. The qualified flip asks them to license showing a number together with its
+# meaning, which is a far smaller claim and one 50 rows can carry. The serving half of the
+# gate can never be validated against outcomes (SERVING_GATE_HAS_NO_OUTCOME_REFERENCE), so
+# reducing the cost of being wrong is the only available risk control.
+QUALIFIED_CLASSES = CANDIDATE_APPLICABLE_FLIPS
+
+# RECORDED AS A HYPOTHESIS, NOT APPLIED. The 26 dose-finding rows split into two kinds that
+# the single class conflates:
+#   the ESTIMAND   "Maximum tolerated dose (MTD)", "Recommended phase 2 dose (RP2D)" -- the
+#                  trial set out to produce a dose and either did or hit the stopping rule
+#                  where every dose is too toxic and no MTD can be determined. Pass/fail.
+#   the INPUT      "Number of participants with a Dose Limiting Toxicity (DLT)" -- the
+#                  measurement that LOCATES the dose. The phase 1 target DLT rate is
+#                  conventionally 20-33%, so zero DLTs is not success (escalation stopped
+#                  too low) and 60% is not drug failure (that dose is above the MTD). There
+#                  is no direction in which a DLT count is "met".
+# The labeller answered yes to 9 of 10 input-type rows, which on their own criterion is
+# arguably wrong. NOT acted on, because the split was derived from the same 10 rows that
+# would test it -- the exact circularity this block exists to prevent. A fresh sample
+# stratified on the distinction is what would settle it.
+DOSE_FINDING_SPLIT_UNTESTED = ("mtd_or_rp2d_is_the_estimand",
+                               "dlt_count_is_the_input")
+
+# The decision bar is TWO asymmetric rates, not one symmetric kappa, because the two
+# errors do not cost the same. A false ALLOWANCE puts a success probability on a trial for
+# which "success" has no defined meaning -- an authoritative-looking number that is not
+# wrong so much as meaningless, and nothing downstream can detect it. A false REFUSAL
+# withholds an answer that existed, which costs coverage and is visible as a refusal. So
+# allowance precision carries the tighter bar. Kappa cannot express this: it is symmetric.
+#
+# Both are computed against HAND LABELS, not against the sponsor-analysis reference. The
+# ratification showed why that distinction is load-bearing: the sponsor reference read a
+# posted p-value as "this endpoint was threshold-tested", and for pharmacokinetic
+# endpoints that inference is wrong -- a sponsor can test whether exposure differs between
+# arms without exposure being a success criterion. It named pharmacokinetic the largest
+# over-refusal class; the hand labels say that mapping is correct 8 times out of 8. The
+# sponsor reference therefore overstates over-refusal in a systematic direction and cannot
+# be the bar.
+#
+# Values chosen to DISCRIMINATE between the shipped and candidate mappings rather than to
+# be passed: on the ratification rows the shipped mapping scores allowance precision 1.00
+# (passes) and false-refusal share 0.47 (fails), the candidate roughly 0.93 and 0.00
+# (passes both). A bar that both clear, or neither, would not be a test.
+# RATIFIED BY THE PROJECT OWNER 2026-10-01, before the confirming sample was drawn.
+#
+# These cannot be OPTIMISED from data, and a search for the "best" pair would be a category
+# error: there is no outcome to optimise against, which is precisely why kappa was demoted
+# above. What a threshold sweep CAN show is whether a bar discriminates between the two
+# mappings, and that has been checked on the ratification rows. A sweep run after the
+# confirming sample is labelled is a diagnostic only; selecting a threshold from it would
+# convert a pre-registered test into a fitted one.
+MIN_ALLOWANCE_PRECISION = 0.90
+MAX_FALSE_REFUSAL_SHARE = 0.25
+
+# What actually gates, named so no reader has to infer it from which constant happens to
+# have "minimum" in it. BOTH must pass; they are not averaged, because averaging two
+# asymmetric criteria discards the asymmetry that motivated having two of them.
+GATING_CRITERIA = ("allowance_precision", "false_refusal_share")
+
+# Sample size, from MIN_STRATUM_FOR_VERDICT rather than from an estimate. Section 12.9's
+# indicative ~100 rows and the sampler's 200 default both FAIL to produce a per-stratum
+# verdict: three phase groups x six classes is 18 strata, and 18 x 20 needs 360 rows. The
+# ratification narrowed the question to two classes, so the confirming sample is scoped to
+# them plus controls instead of spread thin across all eighteen:
+#   25 x CLASS_DOSE_FINDING and 25 x CLASS_SAFETY   -- the two mappings under test
+#   15 x CLASS_PHARMACOKINETIC and 15 x CLASS_EFFICACY -- controls, to catch under-refusals
+#                                                        the flips introduce
+# 80 rows clears MIN_STRATUM_FOR_VERDICT on both tested classes. It does NOT support a
+# six-class kappa or any per-phase figure, and must not be reported as one.
+CONFIRM_SAMPLE_PER_TESTED_CLASS = 25
+CONFIRM_SAMPLE_PER_CONTROL_CLASS = 15
+
+# ---- THE DOWNSTREAM TEST, pre-registered while no model exists -------------
+# The criteria above test whether the gate is CORRECT. They cannot test whether it is WORTH
+# HAVING, because agreement with a human is still an intermediate quantity. The end-to-end
+# test is about successes and failures:
+#
+#   Train with gate-refused trials INCLUDED, train with them EXCLUDED, compare held-out
+#   performance. If "did this trial meet its primary endpoint" is close to meaningless for a
+#   maximum-tolerated-dose trial, that trial's label is close to noise, and including it
+#   should measurably hurt. If the two models are indistinguishable, the gate is not earning
+#   its complexity on the training side, and that is a finding rather than a disappointment.
+#
+# Written down NOW, before a model exists, because that is when the direction can be fixed
+# without knowing the answer -- which is most of what pre-registration buys.
+TRAINING_EXCLUSION_PREDICTED_DIRECTION = "improve"
+
+# The effect size cannot be set yet: it depends on the metric, the split and the negative
+# count, none of which exist. None rather than a placeholder, per the tri-state rule of
+# section 10 -- unknown is not zero, and 0.0 here would read as "no improvement required"
+# rather than "not yet decidable". Fix it when the model exists, and BEFORE running the
+# comparison.
+TRAINING_EXCLUSION_MIN_EFFECT = None
+
+# THE HALF THAT CAN NEVER BE TESTED THIS WAY, recorded so its absence is not mistaken for
+# an oversight. The gate has two jobs:
+#   TRAINING  which trials carry a usable label. Testable end-to-end, as above.
+#   SERVING   which trials get a probability shown. NOT testable against outcomes, by
+#             construction: if a trial's primary endpoint is a maximum tolerated dose there
+#             is no ground truth for "did it meet its endpoint", so whether refusing to
+#             score it was right cannot be checked by looking at what happened. There is no
+#             outcome to compare against.
+# For the serving half, human judgment is not a stopgap until something better arrives. It
+# is the only possible reference, permanently, and GATING_CRITERIA is therefore not an
+# interim measure there even once a model exists.
+SERVING_GATE_HAS_NO_OUTCOME_REFERENCE = True
 
 # ---- fields this module emits, all gate-only (R7) -------------------------
 GATE_ONLY_FIELDS = (
@@ -619,15 +806,58 @@ CLAUSE_MIXED_TEMPLATE = (
     "so this estimate reflects the {n_testable} of {n_primary} that {be_testable} "
     "tested.")
 
+# What "met its primary endpoint" MEANS for a class that is allowed but qualified. One
+# entry per QUALIFIED_CLASSES, checked total by a test, because a qualified class with no
+# sentence would show a bare number -- which is precisely the thing the qualified flip was
+# chosen over.
+#
+# Written to state what the trial was trying to do, not to hedge. "This may not be
+# reliable" tells a reader nothing; "success here means a tolerable dose was identified"
+# tells them what the number is about.
+CLASS_SUCCESS_MEANING = {
+    CLASS_DOSE_FINDING: (
+        "This trial's primary endpoint is a dose: the maximum tolerated dose, the "
+        "recommended phase 2 dose, or the dose-limiting toxicities used to find one. "
+        "Meeting it means a tolerable dose was identified, not that a treatment effect "
+        "was shown."),
+    CLASS_SAFETY: (
+        "This trial's primary endpoint is safety or tolerability -- a rate of adverse "
+        "events, toxicities or abnormal findings. Meeting it means the rate was "
+        "acceptable against the trial's own criterion, not that the treatment worked."),
+}
+
 # One word per REFUSING class, for the sentence a user reads. Bioequivalence was removed
 # when it became applicable: a mechanism word for a class that never refuses is a
 # sentence that can never be produced, and `test_mechanism_words_cover_exactly_the
 # _refusing_classes` derives the key set from CLASS_GATE so the two cannot drift again.
 MECHANISM_WORD = {
-    CLASS_DOSE_FINDING: "dose-finding",
     CLASS_PHARMACOKINETIC: "pharmacokinetic",
-    CLASS_SAFETY: "safety or tolerability",
 }
+
+
+def _dominant_qualified(record: dict) -> Optional[str]:
+    """Which QUALIFIED class names the clause, when a trial has more than one.
+
+    Resolved by `CLASS_PRECEDENCE` rather than by count, for the reason
+    `_dominant_untestable` is: the sentence a user reads must not change because one more
+    safety endpoint was registered.
+    """
+    present = set(record.get("classes", ()))
+    for endpoint_class in CLASS_PRECEDENCE:
+        if endpoint_class in present and endpoint_class in QUALIFIED_CLASSES:
+            return endpoint_class
+    return None
+
+
+def requires_clause(record: dict) -> bool:
+    """Does this gate record REQUIRE a clause beside its number?
+
+    True exactly when the trial is allowed and at least one primary belongs to a qualified
+    class. Exposed so a caller can assert the clause is present rather than discovering it
+    is missing, which is the failure the qualified flip was designed to avoid.
+    """
+    return (record.get("gate") == GATE_APPLICABLE
+            and _dominant_qualified(record) is not None)
 
 
 def _dominant_untestable(record: dict) -> Optional[str]:
@@ -672,16 +902,33 @@ def _plural(n: int, singular: str, plural: str) -> str:
 def endpoint_clause(record: dict) -> Optional[str]:
     """The clause passed to `fdaaa.compose_flag` BESIDE a number that is shown.
 
-    None in every case except a mixed trial. There is deliberately no clause for the plain
-    applicable case (nothing to caveat) or the undeterminable case (nothing measured), so
-    the flag never gains a sentence the classifier did not earn.
+    Three cases produce one, and the order matters:
 
-    `compose_flag` is unchanged: it already takes this as a parameter. Nothing wires this
-    function into it until the scoring step reports a kappa clearing
-    `GATE_KAPPA_MINIMUM` -- until then the clause stays visibly missing rather than
-    silently invented.
+      QUALIFIED   the trial is allowed because its primaries are dose-finding or safety.
+                  The clause states what success MEANT for that kind of endpoint. This is
+                  MANDATORY -- the flip of those two classes in CLASS_GATE was approved on
+                  the explicit condition that a clause accompanies the number, so a bare
+                  number for a qualified class is a regression, not a simplification.
+      MIXED       some primaries testable, some not. The existing sentence.
+      otherwise   None. A plain applicable trial has nothing to caveat and an
+                  undeterminable one has nothing measured, so the flag never gains a
+                  sentence the classifier did not earn.
+
+    Qualified is checked BEFORE mixed because a trial can be both -- a dose-finding
+    primary alongside a pharmacokinetic one -- and in that case what success meant is more
+    useful to the reader than how many endpoints were excluded.
+
+    `compose_flag` is unchanged: it already takes this as a parameter. The precondition for
+    wiring it in used to be a kappa clearing `GATE_KAPPA_MINIMUM`; that threshold has been
+    demoted to a reported diagnostic, so the condition is now `GATING_CRITERIA` -- both
+    bars passing on hand labels, which the confirming sample recorded above does.
     """
-    if record.get("gate") != GATE_APPLICABLE or not record.get("mixed"):
+    if record.get("gate") != GATE_APPLICABLE:
+        return None
+    qualified = _dominant_qualified(record)
+    if qualified is not None:
+        return CLASS_SUCCESS_MEANING[qualified]
+    if not record.get("mixed"):
         return None
     cls = _dominant_untestable(record)
     word = MECHANISM_WORD.get(cls, "value-reporting")

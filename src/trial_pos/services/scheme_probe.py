@@ -55,7 +55,7 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 from trial_pos.services.endpoint_type import (
-    CLASS_EFFICACY, CLASS_GATE, CLASS_OTHER, CLASS_PRECEDENCE, CLASS_SAFETY,
+    CLASS_EFFICACY, CLASS_GATE, CLASS_OTHER, CLASS_PHARMACOKINETIC, CLASS_PRECEDENCE,
     GATE_APPLICABLE, GATE_VERDICTS, matched_classes,
 )
 
@@ -111,43 +111,59 @@ def outcome_gate(title, precedence: tuple = CLASS_PRECEDENCE,
 # precedence order and to a gate mapping are not independent: promoting efficacy_shaped
 # above safety removes some of the same endpoints that mapping safety to applicable would
 # have rescued, so the two separately do not sum to the two together.
+# RETARGETED 2026-10-01. The original variants were `safety_applicable`,
+# `efficacy_first` and their combination, probing whether those two resolution-step
+# changes explained the gate's over-refusal. They did not explain it (82.3% -> 78.1%), but
+# hand labels later showed the safety MAPPING was wrong anyway, and CLASS_GATE now allows
+# safety and dose_finding. So `safety_applicable` became literally identical to the
+# baseline -- a variant that cannot come back different, which is the one thing a
+# diagnostic must never be.
+#
+# They are replaced rather than deleted because the probe's question is still live: only
+# `pharmacokinetic` refuses now, so what remains to be gained or lost from the resolution
+# step is entirely about how pharmacokinetic competes with everything else.
 VARIANT_BASELINE = "baseline"
-VARIANT_SAFETY_APPLICABLE = "safety_applicable"
-VARIANT_EFFICACY_FIRST = "efficacy_first"
-VARIANT_BOTH = "safety_applicable_and_efficacy_first"
+VARIANT_EFFICACY_OVER_PK = "efficacy_over_pharmacokinetic"
+VARIANT_PK_APPLICABLE = "pharmacokinetic_applicable"
 
 # efficacy_shaped moved to the FRONT. Section 12.3 put it last on the ground that its
 # patterns are the broadest, so anything more specific should have claimed the title
 # already. That reasoning is about pattern breadth; the measured cost is that it hands
 # every efficacy endpoint mentioning a dose or a toxicity to a refusing class.
-_EFFICACY_FIRST = (CLASS_EFFICACY,) + tuple(c for c in CLASS_PRECEDENCE
-                                            if c != CLASS_EFFICACY)
+# efficacy_shaped moved ahead of pharmacokinetic, nothing else reordered. Pharmacokinetic
+# is the only refusing class, so this is now the ONLY precedence change that can move a
+# gate verdict: a title matching both an efficacy pattern and a PK one is read as
+# efficacy instead of refused.
+_EFFICACY_OVER_PK = tuple(
+    sorted(CLASS_PRECEDENCE,
+           key=lambda c: (CLASS_PRECEDENCE.index(CLASS_EFFICACY) + 0.5
+                          if c == CLASS_PHARMACOKINETIC
+                          else CLASS_PRECEDENCE.index(c))))
 
-_SAFETY_APPLICABLE = dict(CLASS_GATE, **{CLASS_SAFETY: GATE_APPLICABLE})
+# The extreme: nothing refuses at all. Included as a CEILING rather than a proposal --
+# hand labels called pharmacokinetic answerless 8 of 8 and then 15 of 17 on disjoint
+# endpoints, so this variant is expected to be wrong. Its value is bounding how much of
+# the remaining disagreement the resolution step could possibly explain.
+_PK_APPLICABLE = dict(CLASS_GATE, **{CLASS_PHARMACOKINETIC: GATE_APPLICABLE})
 
 VARIANTS = {
     VARIANT_BASELINE: (CLASS_PRECEDENCE, CLASS_GATE),
-    VARIANT_SAFETY_APPLICABLE: (CLASS_PRECEDENCE, _SAFETY_APPLICABLE),
-    VARIANT_EFFICACY_FIRST: (_EFFICACY_FIRST, CLASS_GATE),
-    VARIANT_BOTH: (_EFFICACY_FIRST, _SAFETY_APPLICABLE),
+    VARIANT_EFFICACY_OVER_PK: (_EFFICACY_OVER_PK, CLASS_GATE),
+    VARIANT_PK_APPLICABLE: (CLASS_PRECEDENCE, _PK_APPLICABLE),
 }
 
-VARIANT_ORDER = (VARIANT_BASELINE, VARIANT_SAFETY_APPLICABLE, VARIANT_EFFICACY_FIRST,
-                 VARIANT_BOTH)
+VARIANT_ORDER = (VARIANT_BASELINE, VARIANT_EFFICACY_OVER_PK, VARIANT_PK_APPLICABLE)
 
 VARIANT_DOC = {
     VARIANT_BASELINE: "the shipping scheme, for the comparison to be against something",
-    VARIANT_SAFETY_APPLICABLE: (
-        "safety_tolerability -> applicable. Follows section 12.3's own stated reason for "
-        "the class rather than its gate: where a safety endpoint IS compared, the posted "
-        "analysis carries the comparison and the label reads it"),
-    VARIANT_EFFICACY_FIRST: (
-        "efficacy_shaped first in precedence. A title matching both an efficacy pattern "
-        "and a refusing one is read as efficacy, so 'survival at the maximum tolerated "
-        "dose' is no longer a dose-finding endpoint"),
-    VARIANT_BOTH: (
-        "both changes. Reported because they overlap: separately they rescue some of the "
-        "same endpoints, so their effects do not add"),
+    VARIANT_EFFICACY_OVER_PK: (
+        "efficacy_shaped ahead of pharmacokinetic. The only precedence change that can "
+        "still move a gate verdict, since pharmacokinetic is the only refusing class: a "
+        "title matching both patterns is read as efficacy rather than refused"),
+    VARIANT_PK_APPLICABLE: (
+        "pharmacokinetic -> applicable, i.e. the gate refuses nothing. A CEILING, not a "
+        "proposal: hand labels called this class answerless 8 of 8 and 15 of 17 on "
+        "disjoint endpoints, so it bounds what the resolution step could explain"),
 }
 
 # What CANNOT be probed this way, recorded so its absence is not read as its being fine.

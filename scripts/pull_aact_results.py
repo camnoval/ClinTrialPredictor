@@ -997,6 +997,12 @@ def main() -> int:
     ap.add_argument("--out", default=Path("data/aact/trial_labels.csv"), type=Path)
     ap.add_argument("--raw-prefix", default=Path("data/aact/results_raw"), type=Path,
                     help="write raw pulled rows here so labels can be re-derived offline")
+    ap.add_argument("--allow-missing-aggregates", action="store_true",
+                    help="with --from-raw: re-derive the LABEL columns even though the "
+                         "raw dump cannot reproduce the drug-name, MeSH and sponsor "
+                         "aggregates. The entity file is left untouched and the "
+                         "aggregate columns come out blank. Off by default because the "
+                         "previous behaviour wrote blanks over a populated entity file.")
     ap.add_argument("--from-raw", default=None, type=Path,
                     help="re-derive from a previous --raw-prefix dump, no DB needed")
     ap.add_argument("--alpha", type=float, default=DEFAULT_ALPHA)
@@ -1103,6 +1109,48 @@ def main() -> int:
                             keep_default_na=False).to_dict("records")
         print(f"\n  offline re-derive: {len(studies)} studies, "
               f"{len(orows)} outcome/analysis rows")
+        # FAIL CLOSED ON MISSING AGGREGATES.
+        #
+        # results_raw_studies.csv carries `intervention_types` but NOT the one-to-many
+        # aggregates: the drug-name and MeSH columns in ENTITY_FIELDS, and the sponsor
+        # class / responsible-party columns. Those come from separate AACT tables
+        # (interventions, browse_conditions, browse_interventions, sponsors,
+        # responsible_parties) that the raw dump never captured.
+        #
+        # Before this guard, --from-raw ran anyway: `entity_record` found no source
+        # columns, produced 461,824 rows of blanks, and OVERWROTE a populated
+        # trial_entities.csv with them. The sponsor columns in the label file went to
+        # 'unknown' for every trial at the same time. Both losses were silent -- the audit
+        # printed 0.0% coverage and 100% 'neither', which reads as a finding about the
+        # data rather than as a destroyed input.
+        #
+        # So the default is now to refuse. A re-derive that cannot reproduce part of its
+        # output must not write that part at all: an empty file is indistinguishable from
+        # a real one downstream, whereas a missing file is obvious.
+        aggregate_cols = tuple(ENTITY_FIELDS) + tuple(SPONSOR_COLS)
+        present = set(studies[0]) if studies else set()
+        absent = [c for c in aggregate_cols if c not in present]
+        if absent:
+            print(f"\n  !! the raw studies dump carries none of the one-to-many "
+                  f"aggregates:")
+            print(f"     {absent}")
+            print("     These come from AACT tables the raw dump never captured, so this")
+            print("     re-derive CANNOT reproduce them. Writing anyway would put blanks")
+            print("     over a populated entity file and set every sponsor column to")
+            print("     'unknown' -- both silently.")
+            if not args.allow_missing_aggregates:
+                print("\n     REFUSING. Labels were NOT written and the entity file was")
+                print("     NOT touched. Two ways forward:")
+                print("       - a live pull, which is the only way to restore the")
+                print("         aggregates;")
+                print("       - --allow-missing-aggregates, which re-derives the LABEL")
+                print("         columns only and leaves the entity file alone. Use it")
+                print("         when you want the label fix and already accept that the")
+                print("         aggregate columns in the output will be blank.")
+                return 2
+            print("\n     --allow-missing-aggregates given: writing LABELS ONLY. The")
+            print("     entity file is left untouched, and the aggregate columns in the")
+            print("     label file will be blank. Re-run a live pull to restore them.")
         # The offline path MUST take the same thresholds as the live pull. Lesson 6's
         # near-miss was exactly this: a re-derive that silently disagreed with the pull
         # it was meant to reproduce.
@@ -1112,15 +1160,23 @@ def main() -> int:
         writer = StreamWriter(args.out, OUT_COLS)
         writer.write(records)
         writer.close()
-        entity_rows = [entity_record(r) for r in studies]
-        entities = StreamWriter(args.entities, ENTITY_COLS)
-        entities.write(entity_rows)
-        entities.close()
-        raw_drug_flag = {r["nct_id"]: r.get("is_drug_trial") for r in records}
-        raw_entity_cov = merge_entity_coverage(empty_entity_coverage(), entity_coverage(
-            [{**e, "is_drug_trial": raw_drug_flag.get(e["nct_id"])}
-             for e in entity_rows]))
-        print(f"  wrote {entities.n_written} entity rows -> {args.entities}")
+        if absent:
+            # Entity file deliberately NOT written: see the guard above. An empty entity
+            # file is indistinguishable from a real one to every downstream reader.
+            raw_entity_cov = empty_entity_coverage()
+            print(f"  entity file NOT written (aggregates unavailable): "
+                  f"{args.entities} left as it was")
+        else:
+            entity_rows = [entity_record(r) for r in studies]
+            entities = StreamWriter(args.entities, ENTITY_COLS)
+            entities.write(entity_rows)
+            entities.close()
+            raw_drug_flag = {r["nct_id"]: r.get("is_drug_trial") for r in records}
+            raw_entity_cov = merge_entity_coverage(
+                empty_entity_coverage(), entity_coverage(
+                    [{**e, "is_drug_trial": raw_drug_flag.get(e["nct_id"])}
+                     for e in entity_rows]))
+            print(f"  wrote {entities.n_written} entity rows -> {args.entities}")
         audit(records, args.alpha, "from-raw", capped=False,
               entity_cov=raw_entity_cov,
               era_fallback=args.era_fallback, as_of=as_of,

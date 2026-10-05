@@ -27,9 +27,9 @@ from trial_pos.services.endpoint_type import (
     matched_classes, trial_gate,
 )
 from trial_pos.services.scheme_probe import (
-    UNPROBEABLE, VARIANT_BASELINE, VARIANT_BOTH, VARIANT_EFFICACY_FIRST,
-    VARIANT_ORDER, VARIANT_SAFETY_APPLICABLE, VARIANT_DOC, VARIANTS, gate_under,
-    moved_share, outcome_gate, reclassified, resolve_class, variant_gates,
+    UNPROBEABLE, VARIANT_BASELINE, VARIANT_DOC, VARIANT_EFFICACY_OVER_PK, VARIANT_ORDER,
+    VARIANT_PK_APPLICABLE, VARIANTS, gate_under, moved_share, outcome_gate, reclassified,
+    resolve_class, variant_gates,
 )
 from test_endpoint_type import CORPUS
 
@@ -145,38 +145,50 @@ def test_variant_gates_raises_on_an_unknown_variant():
 
 
 # ---- what each variant actually does --------------------------------------
-def test_the_safety_variant_moves_safety_endpoints_to_applicable():
-    safety_titles = [t for t, expected in CORPUS if expected == CLASS_SAFETY]
-    assert safety_titles, "the corpus must contain safety titles for this to mean anything"
-    for title in safety_titles:
+def test_the_pk_variant_moves_pharmacokinetic_endpoints_to_applicable():
+    pk_titles = [t for t, expected in CORPUS if expected == CLASS_PHARMACOKINETIC]
+    assert pk_titles, "the corpus must contain pharmacokinetic titles"
+    for title in pk_titles:
         assert outcome_gate(title) == GATE_NOT_APPLICABLE
-        assert variant_gates([title], VARIANT_SAFETY_APPLICABLE) == [GATE_APPLICABLE]
+        assert variant_gates([title], VARIANT_PK_APPLICABLE) == [GATE_APPLICABLE]
 
 
-def test_the_safety_variant_leaves_pharmacokinetic_endpoints_refused():
+def test_the_pk_variant_leaves_every_other_class_alone():
     # One change at a time, checked rather than asserted: a variant with side effects on
     # other classes would attribute their movement to the wrong cause.
-    pk_titles = [t for t, expected in CORPUS if expected == CLASS_PHARMACOKINETIC]
-    for title in pk_titles:
-        assert variant_gates([title], VARIANT_SAFETY_APPLICABLE) == [
-            outcome_gate(title)]
+    for title, expected in CORPUS:
+        if expected == CLASS_PHARMACOKINETIC:
+            continue
+        assert variant_gates([title], VARIANT_PK_APPLICABLE) == [outcome_gate(title)]
 
 
-def test_the_efficacy_variant_rescues_titles_where_efficacy_also_matched():
-    # Structural: any title where an efficacy pattern fired but a refusing class won must
-    # become applicable under efficacy-first, and nothing else needs to.
-    moved = 0
+def test_the_pk_variant_refuses_nothing_at_all():
+    # The ceiling: with the only refusing class flipped, no endpoint can be refused.
+    for gate in variant_gates(TITLES, VARIANT_PK_APPLICABLE):
+        assert gate != GATE_NOT_APPLICABLE
+
+
+def test_the_precedence_variant_only_rescues_titles_matching_both():
+    # Structural. Pharmacokinetic is the only refusing class, so moving efficacy ahead of
+    # it can change a verdict ONLY for a title that matched both patterns, and must change
+    # nothing else. Asserted both ways so a variant with wider effects is caught.
+    # The predicate is "baseline resolved to pharmacokinetic AND something else matched",
+    # not "matched efficacy too". Moving pharmacokinetic to LAST in the order means it
+    # loses to every other class, and the classes it now loses to all allow -- so
+    # "Safety, Tolerability and Pharmacokinetics of Multiple Ascending Doses" moves via
+    # safety_tolerability, with no efficacy pattern involved. A narrower predicate looks
+    # right and is wrong in a way only the corpus reveals.
     for title in TITLES:
-        also_efficacy = CLASS_EFFICACY in matched_classes(title)
+        matched = set(matched_classes(title))
+        rescuable = (resolve_class(matched) == CLASS_PHARMACOKINETIC
+                     and matched != {CLASS_PHARMACOKINETIC})
         base = outcome_gate(title)
-        candidate = variant_gates([title], VARIANT_EFFICACY_FIRST)[0]
-        if also_efficacy and base != GATE_APPLICABLE:
-            assert candidate == GATE_APPLICABLE
-            moved += 1
+        candidate = variant_gates([title], VARIANT_EFFICACY_OVER_PK)[0]
+        if rescuable:
+            assert base == GATE_NOT_APPLICABLE, title
+            assert candidate == GATE_APPLICABLE, title
         else:
-            assert candidate == base
-    assert moved > 0, ("the corpus must contain a title where efficacy lost to "
-                       "precedence, or this variant is untested")
+            assert candidate == base, title
 
 
 def test_no_variant_ever_moves_an_endpoint_into_undeterminable():
@@ -195,20 +207,21 @@ def test_the_baseline_moves_nothing():
     assert moved_share(report) == 0.0
 
 
-def test_the_combined_variant_moves_at_least_as_much_as_either_alone():
-    # Both changes only ever turn a refusal into an allowance, so the combination's moved
-    # set contains each single variant's. Closed-form monotonicity, not a measured figure.
-    combined = reclassified(TITLES, VARIANT_BOTH)["moved"]
-    for variant in (VARIANT_SAFETY_APPLICABLE, VARIANT_EFFICACY_FIRST):
-        assert combined >= reclassified(TITLES, variant)["moved"]
+def test_the_ceiling_variant_moves_at_least_as_much_as_the_precedence_one():
+    # Flipping the only refusing class rescues every endpoint the precedence change
+    # rescues, and generally more. Closed-form monotonicity, not a measured figure, and it
+    # is what makes VARIANT_PK_APPLICABLE a ceiling rather than another candidate.
+    ceiling = reclassified(TITLES, VARIANT_PK_APPLICABLE)["moved"]
+    assert ceiling >= reclassified(TITLES, VARIANT_EFFICACY_OVER_PK)["moved"]
 
 
-def test_the_combined_variant_moves_no_more_than_the_two_sums():
-    # The overlap claim in the module docstring, as a test: the two repairs rescue some of
-    # the same endpoints, so the combination cannot exceed their sum.
-    separate = sum(reclassified(TITLES, v)["moved"]
-                   for v in (VARIANT_SAFETY_APPLICABLE, VARIANT_EFFICACY_FIRST))
-    assert reclassified(TITLES, VARIANT_BOTH)["moved"] <= separate
+def test_no_variant_moves_an_endpoint_into_a_refusal():
+    # Every live variant only ever turns a refusal into an allowance. A variant that
+    # created refusals would be a different kind of proposal and would need its own
+    # argument.
+    for variant in VARIANT_ORDER:
+        for _, after in reclassified(TITLES, variant)["moves"]:
+            assert after != GATE_NOT_APPLICABLE, variant
 
 
 def test_move_counts_never_exceed_the_corpus():
@@ -220,7 +233,7 @@ def test_move_counts_never_exceed_the_corpus():
 
 def test_moved_share_is_none_on_an_empty_corpus():
     # None, not 0.0: "no endpoints to move" is not "moved none of them".
-    assert moved_share(reclassified([], VARIANT_BOTH)) is None
+    assert moved_share(reclassified([], VARIANT_PK_APPLICABLE)) is None
 
 
 def test_reclassified_raises_on_an_unknown_variant():

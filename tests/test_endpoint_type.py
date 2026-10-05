@@ -18,6 +18,12 @@ from trial_pos.services.endpoint_label import (
     HEADLINE_TIERS, TIER_A, TIER_D, label_row,
 )
 from trial_pos.services.endpoint_type import (
+    CANDIDATE_APPLICABLE_FLIPS, CLASS_SUCCESS_MEANING, CONFIRM_SAMPLE_PER_CONTROL_CLASS,
+    DOSE_FINDING_SPLIT_UNTESTED, GATING_CRITERIA, QUALIFIED_CLASSES, requires_clause,
+    SERVING_GATE_HAS_NO_OUTCOME_REFERENCE, TRAINING_EXCLUSION_MIN_EFFECT,
+    TRAINING_EXCLUSION_PREDICTED_DIRECTION,
+    CONFIRM_SAMPLE_PER_TESTED_CLASS, MAX_FALSE_REFUSAL_SHARE, MIN_ALLOWANCE_PRECISION,
+    MIN_STRATUM_FOR_VERDICT,
     CLASS_BIOEQUIVALENCE, CLASS_DOC, CLASS_DOSE_FINDING, CLASS_EFFICACY, CLASS_GATE,
     CLASS_OTHER, CLASS_PHARMACOKINETIC, CLASS_PRECEDENCE, CLASS_SAFETY, CLASS_UNCLEAR,
     DEFAULT_GATE_ROLLUP, ENDPOINT_CLASSES, GATE_APPLICABLE, GATE_DOC,
@@ -228,7 +234,12 @@ def test_single_outcome_trial_takes_its_class_gate_directly():
 
 
 def test_all_untestable_is_refused_under_either_rollup():
-    classes = [CLASS_PHARMACOKINETIC, CLASS_DOSE_FINDING]
+    # Both entries are pharmacokinetic because it is now the ONLY refusing class: the
+    # 2026-10-01 confirming sample moved dose_finding and safety to applicable. Derived
+    # from CLASS_GATE rather than naming classes, so a future flip moves the fixture.
+    refusing = [c for c, gate in CLASS_GATE.items() if gate == GATE_NOT_APPLICABLE]
+    assert refusing, "a gate that refuses nothing is not a gate"
+    classes = (refusing * 2)[:2]
     for rollup in GATE_ROLLUPS:
         record = trial_gate(classes, rollup)
         assert record["gate"] == GATE_NOT_APPLICABLE
@@ -370,13 +381,21 @@ def test_mixed_clause_agrees_in_number():
 
 
 def test_the_mechanism_word_is_chosen_by_precedence_not_by_count():
-    # so the sentence a user reads does not change because one more safety endpoint was
+    # so the sentence a user reads does not change because one more endpoint was
     # registered. Deterministic beats representative for an explanation.
-    classes = [CLASS_SAFETY, CLASS_SAFETY, CLASS_SAFETY, CLASS_DOSE_FINDING]
+    #
+    # Built from the refusing classes rather than naming two, because only
+    # pharmacokinetic refuses since the 2026-10-01 flips. With one refusing class the
+    # precedence claim is trivially satisfied, so the test asserts the WEAKER thing that
+    # is still checkable -- the word comes from the precedence-earliest refusing class
+    # present -- and remains meaningful if a second refusing class is ever added back.
+    refusing = [c for c in CLASS_PRECEDENCE
+                if CLASS_GATE.get(c) == GATE_NOT_APPLICABLE]
+    assert refusing
+    classes = [refusing[-1]] * 3 + [refusing[0]]
     record = trial_gate(classes)
     sentence = decline_sentence(record)
-    earlier = min(CLASS_PRECEDENCE.index(c) for c in set(classes))
-    expected = MECHANISM_WORD[CLASS_PRECEDENCE[earlier]]
+    expected = MECHANISM_WORD[refusing[0]]
     assert expected.split()[0].lower() in sentence.lower()
 
 
@@ -460,3 +479,144 @@ def test_gate_versus_tier_isolates_the_informative_cell():
     out = gate_versus_tier(rows, HEADLINE_TIERS)
     assert out["refused_but_labelled"] == 1
     assert out["refused_and_unlabelled"] == 0
+
+
+
+# ===========================================================================
+# THE PRE-REGISTRATION -- these tests exist to stop it being edited quietly
+# ===========================================================================
+def test_the_flips_name_real_classes():
+    for endpoint_class in CANDIDATE_APPLICABLE_FLIPS:
+        assert endpoint_class in ENDPOINT_CLASSES, endpoint_class
+
+
+def test_the_flips_have_been_applied():
+    # Inverted 2026-10-01. This test previously asserted the flips were NOT applied, so
+    # that nobody could apply them before the confirming sample existed -- the shipped and
+    # candidate mappings had to be scored on the same fresh rows, which is impossible once
+    # the shipped mapping is gone. The sample has now been labelled and scored (see
+    # CANDIDATE_APPLICABLE_FLIPS), so the assertion flips with it.
+    for endpoint_class in CANDIDATE_APPLICABLE_FLIPS:
+        assert CLASS_GATE[endpoint_class] == GATE_APPLICABLE, endpoint_class
+
+
+def test_every_flipped_class_is_qualified_and_carries_a_clause():
+    # The flip was approved ON CONDITION that a clause accompanies the number. A flipped
+    # class with no success-meaning text would show a bare probability, which is the exact
+    # outcome the qualified form was chosen over.
+    assert set(QUALIFIED_CLASSES) == set(CANDIDATE_APPLICABLE_FLIPS)
+    for endpoint_class in QUALIFIED_CLASSES:
+        assert CLASS_SUCCESS_MEANING[endpoint_class].strip(), endpoint_class
+        record = trial_gate([endpoint_class])
+        assert requires_clause(record) is True, endpoint_class
+        assert endpoint_clause(record) == CLASS_SUCCESS_MEANING[endpoint_class]
+
+
+def test_an_unqualified_applicable_trial_gets_no_clause():
+    # Only the flipped classes are qualified. A plain efficacy trial has nothing to state.
+    record = trial_gate([CLASS_EFFICACY])
+    assert requires_clause(record) is False
+    assert endpoint_clause(record) is None
+
+
+def test_a_refused_trial_never_requires_a_clause():
+    # A clause sits BESIDE a number. A refusal has no number, and decline_sentence covers
+    # it instead.
+    record = trial_gate([CLASS_PHARMACOKINETIC])
+    assert requires_clause(record) is False
+    assert endpoint_clause(record) is None
+    assert decline_sentence(record) is not None
+
+
+def test_qualified_outranks_mixed_in_the_clause():
+    # A dose-finding primary beside a pharmacokinetic one is both qualified and mixed.
+    # What success MEANT is more useful to a reader than how many endpoints were excluded,
+    # so qualified is checked first -- asserted here rather than left to reading order.
+    record = trial_gate([CLASS_DOSE_FINDING, CLASS_PHARMACOKINETIC])
+    assert record["mixed"] is True
+    assert endpoint_clause(record) == CLASS_SUCCESS_MEANING[CLASS_DOSE_FINDING]
+
+
+def test_the_dose_finding_split_is_recorded_but_not_acted_on():
+    # Derived from the same 10 rows that would test it, so it stays a hypothesis. Two
+    # named kinds, and dose_finding is still ONE class in the vocabulary.
+    assert len(DOSE_FINDING_SPLIT_UNTESTED) == 2
+    assert CLASS_DOSE_FINDING in ENDPOINT_CLASSES
+
+
+def test_the_flips_leave_at_least_one_refusing_class_behind():
+    # A gate that refuses nothing is not a gate. Pharmacokinetic is the mapping the hand
+    # labels confirmed 8 out of 8, so it must survive any candidate revision.
+    surviving = {c for c, gate in CLASS_GATE.items()
+                 if gate == GATE_NOT_APPLICABLE and c not in CANDIDATE_APPLICABLE_FLIPS}
+    assert surviving
+    assert CLASS_PHARMACOKINETIC in surviving
+
+
+def test_the_two_bars_are_asymmetric_in_the_stated_direction():
+    # Allowance precision carries the TIGHTER bar because a false allowance is the worse
+    # error. Stated as a relation rather than as two numbers, so changing either one
+    # cannot silently invert the asymmetry the comment argues for.
+    assert MIN_ALLOWANCE_PRECISION > 1.0 - MAX_FALSE_REFUSAL_SHARE
+
+
+def test_the_bars_are_probabilities():
+    for bar in (MIN_ALLOWANCE_PRECISION, MAX_FALSE_REFUSAL_SHARE):
+        assert 0.0 < bar < 1.0
+
+
+def test_the_confirming_sample_clears_the_verdict_threshold_on_tested_classes():
+    # Derived from MIN_STRATUM_FOR_VERDICT, not transcribed: the whole reason the sample is
+    # 80 rows rather than the sampler's 200 is that 200 across 18 strata clears it nowhere.
+    assert CONFIRM_SAMPLE_PER_TESTED_CLASS >= MIN_STRATUM_FOR_VERDICT
+    for endpoint_class in CANDIDATE_APPLICABLE_FLIPS:
+        assert endpoint_class in ENDPOINT_CLASSES, endpoint_class
+
+
+def test_the_controls_are_smaller_than_the_tested_classes():
+    # Controls exist to catch under-refusals the flips introduce, not to carry a verdict of
+    # their own, so they are deliberately below the verdict threshold.
+    assert CONFIRM_SAMPLE_PER_CONTROL_CLASS < CONFIRM_SAMPLE_PER_TESTED_CLASS
+    assert CONFIRM_SAMPLE_PER_CONTROL_CLASS < MIN_STRATUM_FOR_VERDICT
+
+
+def test_the_kappa_minimum_is_unchanged_despite_being_demoted():
+    # GATE_KAPPA_MINIMUM was pre-registered before any of this evidence existed, and the
+    # ratification scored 0.439 against it. It has been demoted from gating to reported,
+    # but its VALUE is pinned: demoting a threshold is defensible on the argument that it
+    # was never linked to the outcome, whereas lowering it is the move pre-registration
+    # exists to prevent, and the two must not be confused by editing both at once.
+    assert GATE_KAPPA_MINIMUM == 0.60
+    assert REPORTABLE_KAPPA_MINIMUM < GATE_KAPPA_MINIMUM
+
+
+def test_kappa_is_not_one_of_the_gating_criteria():
+    # The demotion, asserted rather than only described in a comment.
+    assert not any("kappa" in criterion for criterion in GATING_CRITERIA)
+
+
+def test_both_asymmetric_criteria_gate():
+    # Both, not one, and not an average: averaging two asymmetric criteria would discard
+    # the asymmetry that motivated having two.
+    assert set(GATING_CRITERIA) == {"allowance_precision", "false_refusal_share"}
+    assert len(GATING_CRITERIA) == 2
+
+
+def test_the_training_exclusion_direction_is_a_real_prediction():
+    # A pre-registered direction has to be falsifiable: "improve" can come back wrong.
+    # "no effect" or "either" would make the test unfailable and therefore not a test.
+    assert TRAINING_EXCLUSION_PREDICTED_DIRECTION in ("improve", "degrade")
+
+
+def test_the_training_exclusion_effect_size_is_unset_not_zero():
+    # Tri-state (section 10): unknown is not zero. A 0.0 here would read as "no
+    # improvement required" rather than "not yet decidable", which is the weaker claim
+    # masquerading as the stronger one. Must be set before the comparison is run, not
+    # after.
+    assert TRAINING_EXCLUSION_MIN_EFFECT is None
+
+
+def test_the_serving_half_is_recorded_as_having_no_outcome_reference():
+    # Recorded so that the absence of an end-to-end test for the serving gate is not later
+    # mistaken for an oversight and "fixed" by inventing a proxy outcome.
+    assert SERVING_GATE_HAS_NO_OUTCOME_REFERENCE is True

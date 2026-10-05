@@ -294,6 +294,49 @@ def trial_threshold(outcomes: dict, alpha: float = DEFAULT_ALPHA,
                          for v in SPONSOR_VERDICTS}}
 
 
+# ---- hand labels, in the same three-state vocabulary ----------------------
+# The ratification sheet asks a human "does 'did this trial meet its primary endpoint'
+# have an answer for this endpoint", with answers yes / no / unclear. Those map onto the
+# three verdicts above, which means `crosstab`, `cell_for`, `false_refusal_share` and
+# `allowance_precision` all work on hand labels unchanged, and the gate is scored by the
+# same code against both references.
+#
+# THE TWO REFERENCES ARE NOT THE SAME QUESTION, and reusing the vocabulary must not hide
+# it. The sponsor reference asks whether a threshold WAS APPLIED to this particular
+# analysis -- an instance fact, read off posted statistics. The hand label asks whether
+# this KIND of endpoint has a pass/fail answer at all -- a fact about the endpoint, read
+# off its text. They coincide for the gate's purpose, because the gate decides by kind and
+# the only evidence of kind is the text. They came apart measurably on pharmacokinetic
+# endpoints: the sponsor reference called 908 of them threshold-tested because a p-value
+# was posted, while the hand labels called the same class answerless 8 times out of 8. A
+# sponsor can test whether exposure differs between arms without exposure being a success
+# criterion. Where the two disagree the HAND LABEL governs, because the gate's question is
+# about kind.
+HAND_ANSWER_TO_VERDICT = {
+    "yes": THRESHOLD_TESTED,
+    "no": THRESHOLD_NOT_APPLIED,
+    "unclear": THRESHOLD_UNKNOWN,
+    "maybe": THRESHOLD_UNKNOWN,
+}
+
+
+def hand_verdict(answer) -> str:
+    """A sheet answer -> one of SPONSOR_VERDICTS. Raises on anything unrecognised.
+
+    Raises rather than defaulting to unknown: a typo silently becoming "unclear" would
+    shrink the denominator of every rate without appearing anywhere, and a blank cell --
+    a row the operator skipped -- must surface as an error rather than be scored as a
+    considered "cannot tell".
+    """
+    key = str(answer or "").strip().lower()
+    if key not in HAND_ANSWER_TO_VERDICT:
+        raise ValueError(
+            f"{answer!r} is not a recognised hand answer; expected one of "
+            f"{sorted(HAND_ANSWER_TO_VERDICT)}. A blank cell is a skipped row, not an "
+            f"'unclear', and must be filled in or removed.")
+    return HAND_ANSWER_TO_VERDICT[key]
+
+
 # ---- the cross-tab ---------------------------------------------------------
 # The two cells that decide whether the six-class scheme survives. Named, because a cell
 # referred to by its coordinates in a printout is a cell whose meaning has to be

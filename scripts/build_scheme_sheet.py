@@ -187,14 +187,33 @@ def main() -> int:
             trials[row["nct_id"]] = True
 
     # ---- the SPAN frame, from registered text -----------------------------
-    by_class: dict = defaultdict(list)
+    # set, not list: see the dedupe note below. Iteration order of a set is not
+    # stable, which would matter if selection depended on it -- it does not:
+    # `ordered_by_hash` sorts by a salted hash of each key, so the chosen rows are a
+    # function of the set CONTENTS and the salt, never of iteration order.
+    by_class: dict = defaultdict(set)
+    skipped = Counter()
     for raw in read_rows(args.measures, ("nct_id", "outcome_type", "measure")):
         if (raw.get("outcome_type") or "").strip().lower() != PRIMARY_OUTCOME_TYPE:
             continue
         nct = (raw.get("nct_id") or "").strip()
         if nct not in trials or not (raw.get("measure") or "").strip():
             continue
-        by_class[classify_title(raw["measure"])].append((nct, raw["measure"]))
+        # DEDUPE BY (nct_id, measure). A trial can register the IDENTICAL primary
+        # outcome text more than once -- the same "Maximum tolerated dose (MTD)" filed
+        # under two design_outcome_index values, often one per cohort. Appending without
+        # deduping put the same key in a pool twice, which produced two presentations
+        # with the same label_id and tripped `presentation_rows`' collision guard.
+        #
+        # Deduped rather than keyed on design_outcome_index: identical text is the SAME
+        # question, and showing it to the operator twice would be an unplanned duplicate
+        # competing with the planned ones that measure self-consistency.
+        key = (nct, raw["measure"])
+        bucket = by_class[classify_title(raw["measure"])]
+        if key in bucket:
+            skipped["duplicate_text_within_trial"] += 1
+            continue
+        bucket.add(key)
 
     # ---- the DISAGREEMENT frame, from posted analyses ---------------------
     # Only the p-value-backed over-refusals. An over-refusal resting on a contrast
@@ -239,6 +258,8 @@ def main() -> int:
         if record["reasons"][REASON_P_VALUE]:
             disagreeing.append((key[0], title))
 
+    for reason, n in skipped.most_common():
+        print(f"  skipped {reason:<30}{n:>10,}")
     print(f"\n  SPAN frame, endpoints available per rule class:")
     for cls in ENDPOINT_CLASSES:
         print(f"    {cls:<24}{len(by_class[cls]):>10,}")

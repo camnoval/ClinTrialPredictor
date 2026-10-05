@@ -29,7 +29,8 @@ from trial_pos.services.sponsor_threshold import (
     REASON_VALUE_WITH_INTERVAL, REASON_VERDICT,
     SPONSOR_REASONS, SPONSOR_VERDICT_DOC, SPONSOR_VERDICTS, THRESHOLD_NOT_APPLIED,
     THRESHOLD_TESTED, THRESHOLD_UNKNOWN, UNREADABLE_CELLS, VERDICT_PRECEDENCE,
-    allowance_precision, analysis_threshold, cell_for, cell_rate, crosstab,
+    HAND_ANSWER_TO_VERDICT, allowance_precision, analysis_threshold, cell_for,
+    cell_rate, crosstab, hand_verdict,
     decisive_total, disagreement_ratio, false_refusal_share, has_interval,
     one_directional, outcome_threshold, over_refusal_rate, refusal_precision,
     resolve_verdicts, selection_report, trial_threshold, under_refusal_rate,
@@ -827,3 +828,66 @@ def test_percent_scaled_outranks_the_geometric_reading():
         _row(param_type="Ratio of adjusted geometric means",
              ci_lower_limit=str(PERCENT_LO), ci_upper_limit=str(PERCENT_HI)))
     assert (verdict, reason) == (THRESHOLD_UNKNOWN, REASON_PERCENT_SCALED)
+
+
+
+# ---- hand labels in the shared vocabulary ---------------------------------
+def test_every_hand_answer_maps_into_the_verdict_vocabulary():
+    assert set(HAND_ANSWER_TO_VERDICT.values()) <= set(SPONSOR_VERDICTS)
+
+
+def test_every_verdict_is_reachable_from_a_hand_answer():
+    # A verdict no hand answer produces would make one cell of the cross-tab unreachable
+    # when scoring against hand labels, and the missing cell would read as a clean result.
+    assert set(HAND_ANSWER_TO_VERDICT.values()) == set(SPONSOR_VERDICTS)
+
+
+def test_yes_and_no_are_not_the_same_verdict():
+    assert HAND_ANSWER_TO_VERDICT["yes"] != HAND_ANSWER_TO_VERDICT["no"]
+
+
+def test_unclear_is_the_third_state_not_a_no():
+    # Section 12.9 decision 1 one level up: an operator who cannot tell has not said "no
+    # threshold applied". Folding the two would count every ambiguous endpoint as agreeing
+    # with a refusal.
+    assert HAND_ANSWER_TO_VERDICT["unclear"] == THRESHOLD_UNKNOWN
+    assert HAND_ANSWER_TO_VERDICT["unclear"] != THRESHOLD_NOT_APPLIED
+
+
+def test_hand_verdict_is_case_and_space_insensitive():
+    for raw in ("yes", "YES", " Yes ", "yEs"):
+        assert hand_verdict(raw) == THRESHOLD_TESTED
+
+
+def test_hand_verdict_raises_on_a_blank_cell():
+    # A skipped row must surface, not be scored as a considered "cannot tell".
+    for blank in ("", "   ", None):
+        try:
+            hand_verdict(blank)
+        except ValueError:
+            continue
+        raise AssertionError(f"hand_verdict({blank!r}) should raise")
+
+
+def test_hand_verdict_raises_on_an_unrecognised_answer():
+    try:
+        hand_verdict("probably")
+    except ValueError:
+        return
+    raise AssertionError("hand_verdict should raise rather than default to unknown")
+
+
+def test_hand_labels_flow_through_the_existing_crosstab():
+    # The whole point of sharing the vocabulary: the gate is scored by the same code
+    # against hand labels as against the sponsor reference.
+    pairs = [(GATE_NOT_APPLICABLE, hand_verdict("no")),
+             (GATE_NOT_APPLICABLE, hand_verdict("yes")),
+             (GATE_APPLICABLE, hand_verdict("yes")),
+             (GATE_APPLICABLE, hand_verdict("unclear"))]
+    table = crosstab(pairs)
+    assert table["cells"][CELL_BOTH_REFUSE] == 1
+    assert table["cells"][CELL_OVER_REFUSAL] == 1
+    assert table["cells"][CELL_BOTH_ALLOW] == 1
+    assert table["cells"][CELL_SPONSOR_UNREADABLE] == 1
+    assert false_refusal_share(table) == 0.5
+    assert allowance_precision(table) == 1.0
