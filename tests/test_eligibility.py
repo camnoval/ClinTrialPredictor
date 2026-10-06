@@ -21,6 +21,8 @@ from trial_pos.services.eligibility import (
     REASON_RETROSPECTIVE_REGISTRATION, REASON_REGISTRATION_TIMING_UNKNOWN,
     REGISTRATION_SUBMITTED_FIELD, merge_registration_timing, registration_timing,
     GATE_EXCLUSION_FIELD, REASON_GATE_REFUSED, merge_gate_exclusion,
+    ENDPOINT_MET_OUTCOMES, OUTCOME_MET, OUTCOME_NOT_MET, POST_LABEL_REASONS,
+    endpoint_met_outcome_counts, strict_outcome,
     eligible_for_advancement, eligible_for_endpoint_met, eligible_for_market,
     normalize_phase, phase_class, readout_date, window_closed,
 )
@@ -467,3 +469,123 @@ def test_merge_gate_exclusion_uses_the_gate_itself():
     assert values == [TRAINING_EXCLUDED_GATE_REFUSED, TRAINING_NOT_EXCLUDED,
                       TRAINING_NOT_EXCLUDED, TRAINING_NOT_EXCLUDED]
     assert GATE_EXCLUSION_FIELD not in rows[0]
+
+# ---- the class balance inside the endpoint-met population -----------------
+_STRICT_OF = {OUTCOME_MET: "1", OUTCOME_NOT_MET: "0"}
+
+
+def _post_label_rows(strict):
+    """One labelled row per post-label reason, keyed by the reason it should report."""
+    return {
+        REASON_RETROSPECTIVE_REGISTRATION: _row(strict=strict, registered_years_before=-1),
+        REASON_REGISTRATION_TIMING_UNKNOWN: _row(strict=strict, submitted=""),
+        REASON_GATE_REFUSED: _row(strict=strict, gate=TRAINING_EXCLUDED_GATE_REFUSED),
+    }
+
+
+def test_strict_outcome_reads_the_label_file_tokens_and_the_label_row_ints():
+    assert strict_outcome({"endpoint_met_strict": "1"}) == OUTCOME_MET
+    assert strict_outcome({"endpoint_met_strict": " 0 "}) == OUTCOME_NOT_MET
+    assert strict_outcome({"endpoint_met_strict": 1}) == OUTCOME_MET
+    assert strict_outcome({"endpoint_met_strict": 0}) == OUTCOME_NOT_MET
+
+
+def test_strict_outcome_refuses_anything_else():
+    for raw in ("", None, "2", "1.0", "True", True, False, "met"):
+        try:
+            strict_outcome({"endpoint_met_strict": raw})
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted {raw!r}")
+
+
+def test_every_post_label_reason_is_a_known_endpoint_met_reason():
+    known = set(INELIGIBILITY_REASONS) | set(UNDETERMINABLE_REASONS)
+    assert set(POST_LABEL_REASONS) <= known
+    for reason in POST_LABEL_REASONS:
+        assert REASON_DOC[reason].strip()
+
+
+def test_each_post_label_fixture_reports_its_reason():
+    # otherwise the counting tests below could pass on rows excluded for something else
+    for reason, row in _post_label_rows("1").items():
+        assert eligible_for_endpoint_met(row)["reason"] == reason
+
+
+def test_outcomes_are_counted_under_the_disposition_that_removed_them():
+    for outcome in ENDPOINT_MET_OUTCOMES:
+        strict = _STRICT_OF[outcome]
+        fixtures = _post_label_rows(strict)
+        rows = [_row(strict=strict)] + list(fixtures.values())
+        out = endpoint_met_outcome_counts(rows)
+        assert out["dispositions"][ELIGIBLE][outcome] == 1
+        for reason in fixtures:
+            assert out["dispositions"][reason][outcome] == 1, reason
+        other = [o for o in ENDPOINT_MET_OUTCOMES if o != outcome]
+        for bucket in out["dispositions"].values():
+            assert all(bucket[o] == 0 for o in other)
+
+
+def test_rows_excluded_before_the_label_condition_are_not_counted():
+    from trial_pos.services.endpoint_label import TIER_C
+    rows = [_row(drug=False), _row(strict=""), _row(tier=TIER_C),
+            _row(drug=False, registered_years_before=-1)]
+    out = endpoint_met_outcome_counts(rows)
+    assert all(n == 0 for n in out["labelled"].values())
+
+
+def test_labelled_is_the_sum_of_dispositions():
+    rows = ([_row(strict="1"), _row(strict="0"), _row(strict="0")]
+            + list(_post_label_rows("0").values()) + list(_post_label_rows("1").values()))
+    out = endpoint_met_outcome_counts(rows)
+    for outcome in ENDPOINT_MET_OUTCOMES:
+        assert out["labelled"][outcome] == sum(d[outcome]
+                                               for d in out["dispositions"].values())
+
+
+def test_eligible_total_agrees_with_eligibility_coverage():
+    rows = ([_row(strict="1"), _row(strict="0"), _row(drug=False), _row(strict="")]
+            + list(_post_label_rows("0").values()))
+    counts = endpoint_met_outcome_counts(rows)
+    coverage = eligibility_coverage(rows, SNAPSHOT)
+    assert (sum(counts["dispositions"][ELIGIBLE].values())
+            == coverage["targets"][TARGET_ENDPOINT_MET]["verdicts"][ELIGIBLE])
+    for reason in POST_LABEL_REASONS:
+        assert (sum(counts["dispositions"][reason].values())
+                == coverage["targets"][TARGET_ENDPOINT_MET]["reasons"].get(reason, 0))
+
+
+def test_strata_partition_the_eligible_population():
+    rows = [_row(phase="PHASE1", strict="1"), _row(phase="PHASE3", strict="0"),
+            _row(phase="PHASE3", strict="1"), _row(phase="PHASE3", strict="0",
+                                                    registered_years_before=-1)]
+    out = endpoint_met_outcome_counts(rows, stratum=lambda r: r["phase"])
+    for outcome in ENDPOINT_MET_OUTCOMES:
+        assert (sum(s[outcome] for s in out["strata"].values())
+                == out["dispositions"][ELIGIBLE][outcome])
+    assert endpoint_met_outcome_counts(rows)["strata"] == {}
+
+
+def test_minority_is_the_smaller_eligible_class():
+    rows = [_row(strict="1"), _row(strict="1"), _row(strict="0")]
+    smaller, n = endpoint_met_outcome_counts(rows)["minority"]
+    counts = endpoint_met_outcome_counts(rows)["dispositions"][ELIGIBLE]
+    assert n == min(counts.values()) and counts[smaller] == n
+
+
+def test_tier_c_reaches_the_counts_only_through_the_flag():
+    from trial_pos.services.endpoint_label import TIER_C
+    rows = [_row(tier=TIER_C, strict="0")]
+    assert endpoint_met_outcome_counts(rows)["labelled"][OUTCOME_NOT_MET] == 0
+    loose = endpoint_met_outcome_counts(rows, headline_only=False)
+    assert loose["dispositions"][ELIGIBLE][OUTCOME_NOT_MET] == 1
+    assert loose["headline_only"] is False
+
+
+def test_an_unreadable_label_on_a_counted_row_raises():
+    for row in (_row(strict="2"), _row(strict="2", registered_years_before=-1)):
+        try:
+            endpoint_met_outcome_counts([row])
+        except ValueError:
+            continue
+        raise AssertionError("an unreadable label was counted")

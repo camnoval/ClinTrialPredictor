@@ -12,6 +12,10 @@ import math
 
 from trial_pos.services.eligibility import KNOWN_PHASES
 from trial_pos.services.sampling import (
+    DEFAULT_DUPLICATE_COUNT, SKIP_BLANK_TEXT, SKIP_REPEATED_TEXT, STRATUM_GROUPS,
+    STRATUM_GROUP_OF_PHASE_GROUP, STRATUM_GROUP_PHASE1, STRATUM_GROUP_PHASE2_PIVOTAL,
+    STRATUM_GROUP_POST_APPROVAL_UNKNOWN, UNIT_SKIP_KINDS, sampling_units, stratum_group,
+    PHASE_GROUP_PHASE2, PHASE_GROUP_POST_APPROVAL,
     DEFAULT_MIN_PER_STRATUM, DEFAULT_SAMPLE_SALT, DEFAULT_SAMPLE_SIZE,
     PHASE_GROUPS, PHASE_GROUP_DOC, PHASE_GROUP_PHASE1, PHASE_GROUP_PIVOTAL,
     PHASE_GROUP_UNKNOWN, allocation_report, choose_duplicates, duplicate_pairs, label_id,
@@ -50,6 +54,65 @@ def test_phase_one_group_holds_the_spanning_registration():
 def test_every_group_is_documented():
     for group in PHASE_GROUPS:
         assert PHASE_GROUP_DOC[group].strip()
+
+
+# ---- stratification groups ----------------------------------------------
+def test_every_phase_group_has_a_stratum_group():
+    assert set(STRATUM_GROUP_OF_PHASE_GROUP) == set(PHASE_GROUPS)
+    assert set(STRATUM_GROUP_OF_PHASE_GROUP.values()) == set(STRATUM_GROUPS)
+
+
+def test_stratum_groups_are_the_settled_merge():
+    of = STRATUM_GROUP_OF_PHASE_GROUP
+    assert of[PHASE_GROUP_PHASE1] == STRATUM_GROUP_PHASE1
+    assert of[PHASE_GROUP_PHASE2] == of[PHASE_GROUP_PIVOTAL] == STRATUM_GROUP_PHASE2_PIVOTAL
+    assert (of[PHASE_GROUP_POST_APPROVAL] == of[PHASE_GROUP_UNKNOWN]
+            == STRATUM_GROUP_POST_APPROVAL_UNKNOWN)
+
+
+def test_stratum_group_is_total_over_arbitrary_input():
+    for raw in (None, "", "NA", "PHASE7", 3) + tuple(KNOWN_PHASES):
+        assert stratum_group(raw) in STRATUM_GROUPS
+
+
+# ---- sampling units -------------------------------------------------------
+def _o(key, text):
+    return {"key": key, "text": text}
+
+
+def test_repeated_text_within_a_trial_is_one_unit_and_counted():
+    by_trial = {"T1": [_o("T1#1", "MTD"), _o("T1#2", "MTD"), _o("T1#3", "Cmax")]}
+    units, skipped = sampling_units(by_trial)
+    assert [u["key"] for u in units["T1"]] == ["T1#1", "T1#3"]    # first in order kept
+    assert skipped[SKIP_REPEATED_TEXT] == 1
+
+
+def test_whitespace_variants_are_the_same_unit():
+    units, skipped = sampling_units({"T1": [_o("a", "Maximum  tolerated dose "),
+                                            _o("b", "Maximum tolerated\tdose")]})
+    assert len(units["T1"]) == 1 and skipped[SKIP_REPEATED_TEXT] == 1
+
+
+def test_the_same_text_in_two_trials_is_two_units():
+    units, skipped = sampling_units({"T1": [_o("a", "MTD")], "T2": [_o("b", "MTD")]})
+    assert len(units["T1"]) == len(units["T2"]) == 1
+    assert skipped[SKIP_REPEATED_TEXT] == 0
+
+
+def test_blank_text_is_not_a_unit_and_a_blank_only_trial_drops_out():
+    units, skipped = sampling_units({"T1": [_o("a", ""), _o("b", "  "), _o("c", None)],
+                                     "T2": [_o("d", "Cmax"), _o("e", "")]})
+    assert "T1" not in units and len(units["T2"]) == 1
+    assert skipped[SKIP_BLANK_TEXT] == 4
+
+
+def test_every_input_outcome_is_kept_or_counted():
+    by_trial = {"T1": [_o("a", "MTD"), _o("b", "MTD"), _o("c", ""), _o("d", "AUC")],
+                "T2": [_o("e", "x"), _o("f", " x")]}
+    units, skipped = sampling_units(by_trial)
+    assert set(skipped) == set(UNIT_SKIP_KINDS)
+    kept = sum(len(v) for v in units.values())
+    assert kept + sum(skipped.values()) == sum(len(v) for v in by_trial.values())
 
 
 # ---- deterministic ordering ---------------------------------------------
@@ -176,12 +239,18 @@ def test_negative_arguments_raise():
 
 
 def test_the_defaults_are_a_feasible_allocation():
-    # the shipped defaults must not be a configuration that raises on a realistic stratum
-    # count: five phase groups times six classes is thirty cells
-    sizes = {f"cell{i}": 50 + i for i in range(30)}
+    # the shipped defaults must not raise when every stratum-group x class cell is
+    # populated, which is the most strata the sampler can produce
+    from trial_pos.services.endpoint_type import ENDPOINT_CLASSES
+    cells = len(STRATUM_GROUPS) * len(ENDPOINT_CLASSES)
+    sizes = {f"cell{i}": 50 + i for i in range(cells)}
     alloc = sqrt_allocation(sizes, total=DEFAULT_SAMPLE_SIZE,
                             min_per_stratum=DEFAULT_MIN_PER_STRATUM)
     assert sum(alloc.values()) == DEFAULT_SAMPLE_SIZE
+
+
+def test_the_default_repeats_fit_inside_the_default_sample():
+    assert 0 < DEFAULT_DUPLICATE_COUNT <= DEFAULT_SAMPLE_SIZE
 
 
 # ---- weights -------------------------------------------------------------

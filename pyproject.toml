@@ -18,6 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 bayes = ["pymc>=5.0", "bambi>=0.13"]   # Bayesian logistic (rstanarm -> pymc/bambi)
 dev = ["pytest>=8.0", "ruff>=0.4"]
+pull = ["psycopg2-binary>=2.9"]   # AACT pulls only; not needed to run
 
 [tool.setuptools.packages.find]
 where = ["src"]

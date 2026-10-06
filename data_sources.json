@@ -1,0 +1,402 @@
+{
+  "schema_version": 1,
+  "zenodo_record": "23197696",
+  "doi": "10.5281/zenodo.23197696",
+  "sources": {
+    "aact": {
+      "description": "AACT (CTTI) snapshot of ClinicalTrials.gov, and files derived from it by this project's pulls",
+      "license": "ClinicalTrials.gov data; AACT terms of use",
+      "license_checked": false
+    },
+    "drugcentral": {
+      "description": "DrugCentral release archive and the tables extracted from it",
+      "license": "CC BY-SA 4.0 (to be confirmed at drugcentral.org)",
+      "license_checked": false
+    },
+    "drugsatfda": {
+      "description": "FDA Drugs@FDA data files, as downloaded",
+      "license": "US Government work, public domain",
+      "license_checked": false
+    },
+    "hand_labels": {
+      "description": "the project owner's blind hand labels and the keys they are scored against",
+      "license": "project's own",
+      "license_checked": false
+    },
+    "ontology": {
+      "description": "MONDO cross-references built by the archived build_mondo_edges.py",
+      "license": "MONDO: CC BY 4.0 (to be confirmed)",
+      "license_checked": false
+    }
+  },
+  "files": [
+    {
+      "path": "data/aact/trial_labels.csv",
+      "zenodo_name": "data__aact__trial_labels.csv",
+      "bytes": 179439307,
+      "sha256": "135d01172a8805bd742c8006f8dac603c75a57d66cc04483e352ecd7f4f17d1c",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_labels.csv.manifest.json",
+      "zenodo_name": "data__aact__trial_labels.csv.manifest.json",
+      "bytes": 224,
+      "sha256": "6de9511c39566f3c09b64a882e8ca5cf2b4ae12cb1317b02de024a2d145b3039",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_entities.csv",
+      "zenodo_name": "data__aact__trial_entities.csv",
+      "bytes": 172534485,
+      "sha256": "70d0fffad6eb6f3a73d63bf81dded0b9803a545c4e4f1aa6d9d44eaea5c78749",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_design_outcomes.csv",
+      "zenodo_name": "data__aact__trial_design_outcomes.csv",
+      "bytes": 308094649,
+      "sha256": "024fb870285fc1426a920ab27adfa7d9793b4eec981c2722a21cf3c480f7496d",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_design_outcomes.csv.manifest.json",
+      "zenodo_name": "data__aact__trial_design_outcomes.csv.manifest.json",
+      "bytes": 90,
+      "sha256": "4f8685e70851cba1ff87349795ba756080e2d96c9bdb3285715e587d52751415",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/recon_raw_counts.csv",
+      "zenodo_name": "data__aact__recon_raw_counts.csv",
+      "bytes": 755932,
+      "sha256": "f0352c744065a81d91b22ecfc85bcecda8a538b90484b8a847b597db2baca053",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/recon_raw_measurements.csv",
+      "zenodo_name": "data__aact__recon_raw_measurements.csv",
+      "bytes": 2961341,
+      "sha256": "6a0fcd851a179d739abafa709eb0476b734ad887b65f0d1f90f6a9c07e28b2ab",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_registration_fields.csv",
+      "zenodo_name": "data__aact__trial_registration_fields.csv",
+      "bytes": 311524620,
+      "sha256": "894f678fc4610e86015965198ff8c3c7a5456b431f8b11dcef9274715666ea61",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_registration_text.csv",
+      "zenodo_name": "data__aact__trial_registration_text.csv",
+      "bytes": 1286848211,
+      "sha256": "001927bab05dadb68fee58b816ab09476993d764a51c309505cd04998b120b37",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_registration_fields.provenance.csv",
+      "zenodo_name": "data__aact__trial_registration_fields.provenance.csv",
+      "bytes": 16045,
+      "sha256": "8cd17bcf09ef68db2db907478dca918cc0e714366ca71584bf1baece76db948f",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/trial_registration_fields.manifest.json",
+      "zenodo_name": "data__aact__trial_registration_fields.manifest.json",
+      "bytes": 6334,
+      "sha256": "ad5a332d833d224f9849fba3b79ab00bc925bc0ebf6b201caea4f51069e56017",
+      "tier": "run",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/results_raw_studies.csv",
+      "zenodo_name": "data__aact__results_raw_studies.csv",
+      "bytes": 81641228,
+      "sha256": "6f16d41a4dd1ff2b4e686808d14a269a4a6a21c215f00622129c7e65e0cd1e5b",
+      "tier": "rebuild",
+      "source": "aact"
+    },
+    {
+      "path": "data/aact/results_raw_outcomes.csv",
+      "zenodo_name": "data__aact__results_raw_outcomes.csv",
+      "bytes": 73915887,
+      "sha256": "eb36c6c7bcc030ec72d9e5ae8f28a07a1ffb7697195dc40962bbca787fb27f10",
+      "tier": "rebuild",
+      "source": "aact"
+    },
+    {
+      "path": "data/drugcentral/dc_dbversion.csv",
+      "zenodo_name": "data__drugcentral__dc_dbversion.csv",
+      "bytes": 43,
+      "sha256": "baae011bdaf2e7c6930c403c18683c067bb162ebad91e1247df4cfa7b1dedc18",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_structures.csv",
+      "zenodo_name": "data__drugcentral__dc_structures.csv",
+      "bytes": 326168,
+      "sha256": "be65c88c848e26658cffc320450f116af60c3c52c9901cea0d4f7affb690d368",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_approval.csv",
+      "zenodo_name": "data__drugcentral__dc_approval.csv",
+      "bytes": 165274,
+      "sha256": "32da9ac6b7289feca04b12716ece7be7796343cecd4f6c896602d291bd038ba7",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_approval_type.csv",
+      "zenodo_name": "data__drugcentral__dc_approval_type.csv",
+      "bytes": 291,
+      "sha256": "787da1c9388e26aad1982187b2973cb5a871d9fa23c3c802d54436dbf468b906",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_identifier.csv",
+      "zenodo_name": "data__drugcentral__dc_identifier.csv",
+      "bytes": 2861863,
+      "sha256": "735b8acf3bad35a597ac400a34895140b31fc1f6a30f3deef7f72d2d67056686",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_synonyms.csv",
+      "zenodo_name": "data__drugcentral__dc_synonyms.csv",
+      "bytes": 1021213,
+      "sha256": "3a602abee0acef3713be4a4c89982b7a1e59556ed532b59a3979e47de9ed5012",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_omop_relationship.csv",
+      "zenodo_name": "data__drugcentral__dc_omop_relationship.csv",
+      "bytes": 4280188,
+      "sha256": "ca0bbdb245fb2335c3ece0bf7525365a2223e737af5938256fca4d9dbd17bfa3",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_ob_product.csv",
+      "zenodo_name": "data__drugcentral__dc_ob_product.csv",
+      "bytes": 8925699,
+      "sha256": "d6889cc006bb4a38d8a84dab929f85a6dabce6ee547fe2074004e54fd2fa69b4",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_struct2obprod.csv",
+      "zenodo_name": "data__drugcentral__dc_struct2obprod.csv",
+      "bytes": 3222298,
+      "sha256": "b0e90a3ee62312733b5e96864815d8cd8b79a3f142ccf4c6465703075e950eba",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_struct2parent.csv",
+      "zenodo_name": "data__drugcentral__dc_struct2parent.csv",
+      "bytes": 3323,
+      "sha256": "0c34c0a0033d87598e65f9933a9e492815696070308940004b14c259728d61f3",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_doid.csv",
+      "zenodo_name": "data__drugcentral__dc_doid.csv",
+      "bytes": 883426,
+      "sha256": "63bfdd5b127bbca5fd1252c239f8784f7b98f8e040100499b72c94aa2634b48f",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/dc_doid_xref.csv",
+      "zenodo_name": "data__drugcentral__dc_doid_xref.csv",
+      "bytes": 1218077,
+      "sha256": "f94e93e4dac27a646d76c4ed5b83c84ccd34b199cd1138a06c0d2bf98bc15659",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/drugcentral.manifest.json",
+      "zenodo_name": "data__drugcentral__drugcentral.manifest.json",
+      "bytes": 9626,
+      "sha256": "8e14299a5aa01b574c64d47d05aed0d8efb3742a0b1a8a0af6335ac2c0f68479",
+      "tier": "run",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugcentral/Drugcentral_2026-09-25.pgdump",
+      "zenodo_name": "data__drugcentral__Drugcentral_2026-09-25.pgdump",
+      "bytes": 1378106682,
+      "sha256": "5afea88f6a1916f250c28c10ab988e7464ca6fd5ccf2c42f080600473de732dc",
+      "tier": "rebuild",
+      "source": "drugcentral"
+    },
+    {
+      "path": "data/drugsatfda/ActionTypes_Lookup.txt",
+      "zenodo_name": "data__drugsatfda__ActionTypes_Lookup.txt",
+      "bytes": 2916,
+      "sha256": "6958952b336953914a099a85fbf2804a3c035de816098f17b5b8c857ad2b35f8",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/ApplicationDocs.txt",
+      "zenodo_name": "data__drugsatfda__ApplicationDocs.txt",
+      "bytes": 11129797,
+      "sha256": "9120b22b4d23d203eb336f912686e2a85cb6c8ae90451123879de6e821b82f32",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/Applications.txt",
+      "zenodo_name": "data__drugsatfda__Applications.txt",
+      "bytes": 782098,
+      "sha256": "3884a9dd98cb73ea5f58d7a3f98bcc37d491ba90deabecf3726876ef40f7f2ef",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/ApplicationsDocsType_Lookup.txt",
+      "zenodo_name": "data__drugsatfda__ApplicationsDocsType_Lookup.txt",
+      "bytes": 1795,
+      "sha256": "7825896648cb3798efc4823792223f818e5dab396a2eed7e3e04c1c78825547f",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/Join_Submission_ActionTypes_Lookup.txt",
+      "zenodo_name": "data__drugsatfda__Join_Submission_ActionTypes_Lookup.txt",
+      "bytes": 6934437,
+      "sha256": "2f8661c84a223e342f0af782df1c6cefbe779ef7b8ebc6646de24353ddc12888",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/MarketingStatus.txt",
+      "zenodo_name": "data__drugsatfda__MarketingStatus.txt",
+      "bytes": 734658,
+      "sha256": "d768c3794b14987c17a3e5a6f069e8a542ac4a80c515ddc56984a4241dba61b9",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/MarketingStatus_Lookup.txt",
+      "zenodo_name": "data__drugsatfda__MarketingStatus_Lookup.txt",
+      "bytes": 160,
+      "sha256": "97999fe0d679c81d56669c365d1ff579065368835a68f1f92098e602cb3b0d60",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/Products.txt",
+      "zenodo_name": "data__drugsatfda__Products.txt",
+      "bytes": 4653425,
+      "sha256": "a43b3ccaeb621cd17e3ea3008e3e9dd7eb70736676740b00021b7b1b41847fde",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/SubmissionClass_Lookup.txt",
+      "zenodo_name": "data__drugsatfda__SubmissionClass_Lookup.txt",
+      "bytes": 1305,
+      "sha256": "cc136b40fa73c8167905b96e381df886ac82ff7f7d29542d34a1a4859523bfd1",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/SubmissionPropertyType.txt",
+      "zenodo_name": "data__drugsatfda__SubmissionPropertyType.txt",
+      "bytes": 9306303,
+      "sha256": "ffb709bd615f84832f0ae85f0960b9b4bee0be9551b5e79b7cae925efaaf4bee",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/Submissions.txt",
+      "zenodo_name": "data__drugsatfda__Submissions.txt",
+      "bytes": 9361449,
+      "sha256": "67fc58a38dd16d192499fe31b1ed3cfd465e68e269e2371b4f68fae7c456f3f4",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/drugsatfda/TE.txt",
+      "zenodo_name": "data__drugsatfda__TE.txt",
+      "bytes": 456375,
+      "sha256": "e3c054881bd0c70f14c30d14b0631a8d6506d4b4dea5e1e421c767d19a57f322",
+      "tier": "run",
+      "source": "drugsatfda"
+    },
+    {
+      "path": "data/ontology/mondo_xref.csv",
+      "zenodo_name": "data__ontology__mondo_xref.csv",
+      "bytes": 4403104,
+      "sha256": "eda31a32c95c51a456258312ecfc6986cda433f66549fe428443abf8dbf44b01",
+      "tier": "run",
+      "source": "ontology"
+    },
+    {
+      "path": "data/labels/scheme_sheet.csv",
+      "zenodo_name": "data__labels__scheme_sheet.csv",
+      "bytes": 4127,
+      "sha256": "eec7604482b87e3d638a02c71459da4904d7150d1ec2395d0ff5d6b9e0fa8b7d",
+      "tier": "run",
+      "source": "hand_labels"
+    },
+    {
+      "path": "data/labels/scheme_key.csv",
+      "zenodo_name": "data__labels__scheme_key.csv",
+      "bytes": 3094,
+      "sha256": "bf0ca4ccae3893d639f6af5a7bb7d3ddb93301b58c698251789820220473a28a",
+      "tier": "run",
+      "source": "hand_labels"
+    },
+    {
+      "path": "data/labels/scheme_instructions.txt",
+      "zenodo_name": "data__labels__scheme_instructions.txt",
+      "bytes": 2207,
+      "sha256": "3ec699ea529e21aeb0a3808164c5d333406b0f97ae98b9871991bc01f53d6915",
+      "tier": "run",
+      "source": "hand_labels"
+    },
+    {
+      "path": "data/labels/confirm_sheet.csv",
+      "zenodo_name": "data__labels__confirm_sheet.csv",
+      "bytes": 7921,
+      "sha256": "87d947561d4bc8d24ccb51925cf87a0b20bda1ca23c855892c7b37625835f42e",
+      "tier": "run",
+      "source": "hand_labels"
+    },
+    {
+      "path": "data/labels/confirm_key.csv",
+      "zenodo_name": "data__labels__confirm_key.csv",
+      "bytes": 6741,
+      "sha256": "8f83489e138ef662aadc529424ebc5ca7869e92a0492d3425fb728d76100e8b0",
+      "tier": "run",
+      "source": "hand_labels"
+    },
+    {
+      "path": "data/labels/confirm_instructions.txt",
+      "zenodo_name": "data__labels__confirm_instructions.txt",
+      "bytes": 1878,
+      "sha256": "c0953d7db19df8963fd712ef4383f4c31994bbe8c037974fcbc517a75c378060",
+      "tier": "run",
+      "source": "hand_labels"
+    }
+  ]
+}

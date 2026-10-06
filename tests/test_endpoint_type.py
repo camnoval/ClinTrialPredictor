@@ -21,7 +21,7 @@ from trial_pos.services.endpoint_type import (
     CANDIDATE_APPLICABLE_FLIPS, CLASS_SUCCESS_MEANING, CONFIRM_SAMPLE_PER_CONTROL_CLASS,
     CLASS_KIND_WORDS, CLASS_SUCCESS_SHORT, CLAUSE_COPRIMARY_TEMPLATE, is_coprimary,
     TRAINING_EXCLUDED_GATE_REFUSED, TRAINING_EXCLUSION_DOC, TRAINING_EXCLUSION_REASONS,
-    TRAINING_NOT_EXCLUDED, training_exclusion,
+    TRAINING_NOT_EXCLUDED, training_exclusion, endpoint_text_key,
     DOSE_FINDING_SPLIT_UNTESTED, GATING_CRITERIA, QUALIFIED_CLASSES, requires_clause,
     SERVING_GATE_HAS_NO_OUTCOME_REFERENCE, TRAINING_EXCLUSION_MIN_EFFECT,
     TRAINING_EXCLUSION_PREDICTED_DIRECTION,
@@ -744,3 +744,12 @@ def test_the_serving_half_is_recorded_as_having_no_outcome_reference():
     # Recorded so that the absence of an end-to-end test for the serving gate is not later
     # mistaken for an oversight and "fixed" by inventing a proxy outcome.
     assert SERVING_GATE_HAS_NO_OUTCOME_REFERENCE is True
+
+
+def test_texts_sharing_a_text_key_get_the_same_class():
+    # the sampler collapses on endpoint_text_key; that is only safe if the rule cannot
+    # tell two such texts apart
+    for a, b in (("Maximum  tolerated dose", " Maximum tolerated\tdose"),
+                 ("Cmax\nof drug", "Cmax of drug"), ("", "   ")):
+        assert endpoint_text_key(a) == endpoint_text_key(b)
+        assert classify_title(a) == classify_title(b)

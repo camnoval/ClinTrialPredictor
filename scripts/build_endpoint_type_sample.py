@@ -1,38 +1,32 @@
 #!/usr/bin/env python3
 """Audit the endpoint-type rule, then write the stratified hand-labelling sample.
 
-READS ONLY. Writes the two sample files and nothing else.
+READS ONLY. Writes the two sample files and the instructions, and nothing else.
 
 WHY THE AUDIT COMES FIRST
 =========================
 Every figure this prints is the KEYWORD RULE's output, not a measurement of endpoint types.
-That distinction is the whole reason the sample exists: the handoff's 63% phase 1
-pharmacokinetic figure came from a throwaway regex that is not in the repo, and a different
-keyword list moves it by more than ten points. So the sections below are labelled as the
-rule's readings, and none of them should enter the handoff as a fact until the scoring step
-reports agreement against the hand labels.
-
 What the audit is for is sizing and stratification: which cells exist, how big they are,
 how often the precedence order had to decide anything, and how many trials the ANY/ALL
-roll-up choice moves. Those are properties of the rule and the corpus, and they are what
-the allocation needs.
+roll-up choice moves.
 
 SAMPLING UNIT AND FRAME
 =======================
-The unit is one PRIMARY OUTCOME, not one trial: outcomes are what carry text, and a trial
-with four primaries contributes four labelling decisions. The frame is DRUG TRIALS, any
+The unit is one DISTINCT, non-blank primary-outcome text within a trial
+(`sampling.sampling_units`). A trial that registers the same text under two
+design_outcome_index values contributes one unit, not two. The frame is DRUG TRIALS, any
 phase, with at least one primary outcome text -- not the endpoint-met eligible population,
 because the gate has to work on whatever somebody pastes, including a trial that posted
 nothing.
 
+The trial-level gate sections (3 and 4) read every registered primary row, as the serving
+gate does; only the per-outcome counts and the sample read units.
+
 THE ALLOCATION IS DELIBERATELY NOT PROPORTIONAL
 ===============================================
-Pharmacokinetic primary endpoints are a low single-digit share of pivotal-phase outcomes,
-and that cell is the entire argument for gating per trial rather than per phase. A
-proportional sample of 200 would put a handful of them in front of a human. So allocation
-is square-root of stratum size with a floor, and the CONSEQUENCE is that the pooled kappa
-over the whole sample is not the population figure. The weights in the key file are what
-recovers it, through `agreement.weighted_summary`.
+Square-root of stratum size with a floor, over stratum group x predicted class
+(`sampling.STRATUM_GROUPS`, settled in rev 8 section 12.12). The pooled agreement over
+the sample is therefore not the population figure; the weights in the key file recover it.
 
 Usage (PowerShell), one at a time:
 
@@ -53,17 +47,19 @@ if str(ROOT / "src") not in sys.path:
 
 from trial_pos.services.endpoint_label import HEADLINE_TIERS  # noqa: E402
 from trial_pos.services.endpoint_type import (  # noqa: E402
-    CLASS_DOC, CLASS_OTHER, ENDPOINT_CLASSES, GATE_KAPPA_MINIMUM, GATE_ROLLUPS,
-    LABELLER_CLASS_DOC,
-    GATE_VERDICTS, LABELLER_CLASSES, REPORTABLE_KAPPA_MINIMUM, ROLLUP_ALL, ROLLUP_ANY,
+    CLASS_DOC, ENDPOINT_CLASSES, GATE_KAPPA_MINIMUM, GATE_ROLLUPS, GATING_CRITERIA,
+    LABELLER_CLASS_DOC, GATE_VERDICTS, LABELLER_CLASSES, MAX_FALSE_REFUSAL_SHARE,
+    MIN_ALLOWANCE_PRECISION, MIN_STRATUM_FOR_VERDICT, ROLLUP_ALL, ROLLUP_ANY,
     DEFAULT_GATE_ROLLUP, class_coverage, classify_title, gate_coverage, gate_versus_tier,
-    matched_classes, multi_match_rate, trial_gate_from_titles,
+    matched_classes, trial_gate_from_titles,
 )
+from trial_pos.services.population import tribool  # noqa: E402
 from trial_pos.services.sampling import (  # noqa: E402
     DEFAULT_DUPLICATE_COUNT, DEFAULT_MIN_PER_STRATUM, DEFAULT_SAMPLE_SALT,
-    DEFAULT_SAMPLE_SIZE, PHASE_GROUPS, PHASE_GROUP_DOC, allocation_report,
-    choose_duplicates, duplicate_pairs, phase_group, presentation_rows, select,
-    sqrt_allocation, stratum_weights,
+    DEFAULT_SAMPLE_SIZE, PHASE_GROUPS, PHASE_GROUP_DOC, STRATUM_GROUPS,
+    STRATUM_GROUP_OF_PHASE_GROUP, UNIT_SKIP_KINDS, allocation_report, choose_duplicates,
+    duplicate_pairs, phase_group, presentation_rows, sampling_units, select,
+    sqrt_allocation, stratum_group, stratum_weights,
 )
 
 # The two source layouts this accepts, and how each names the fields. Detected from the
@@ -79,9 +75,9 @@ RESULTS_FIELDS = {"nct": "outcome_nct_id", "index": "outcome_id", "text": "outco
 
 LABEL_COLUMNS = ("label_id", "primary_endpoint_text", "time_frame", "context",
                  "endpoint_class", "notes")
-KEY_COLUMNS = ("label_id", "nct_id", "outcome_key", "stratum", "phase_group",
-               "predicted_class", "matched_classes", "copy_index", "duplicate_group",
-               "stratum_weight")
+KEY_COLUMNS = ("label_id", "nct_id", "outcome_key", "stratum", "stratum_group",
+               "phase_group", "predicted_class", "matched_classes", "copy_index",
+               "duplicate_group", "stratum_weight")
 
 STRATUM_SEPARATOR = "|"
 
@@ -95,12 +91,7 @@ def _pct(n, d) -> str:
 
 
 def read_csv_rows(path: Path):
-    """Stream a CSV with the `csv` module, never pandas.
-
-    pandas destroys the literal string "NA" on read and turns empty cells into float NaN,
-    which is truthy (lessons 5 and 6). Both have already caused wrong numbers in this
-    project, and neither is worth risking for a file this shape.
-    """
+    """Stream a CSV with the `csv` module, never pandas (lessons 5 and 6)."""
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             yield row
@@ -122,12 +113,8 @@ def detect_layout(path: Path) -> tuple:
 
 
 def load_labels(path: Path) -> dict:
-    """nct_id -> the few label-file fields this script needs.
-
-    Only phase, the drug flag and tier_min are read. Nothing here touches the label itself:
-    the endpoint-type class is GATE-ONLY and must never become a feature, so this script
-    has no reason to carry the label around beside it.
-    """
+    """nct_id -> phase, the drug flag and tier_min. The label itself is never read: the
+    endpoint-type class is GATE-ONLY and must never sit beside it."""
     out = {}
     for row in read_csv_rows(path):
         out[row["nct_id"].strip().upper()] = {
@@ -138,118 +125,104 @@ def load_labels(path: Path) -> dict:
     return out
 
 
-def load_outcomes(path: Path, fields: dict, labels: dict, drug_only: bool) -> tuple:
-    """-> ({nct: [outcome dicts in file order]}, counters).
+def _in_frame(meta: dict, drug_only: bool) -> bool:
+    return not drug_only or tribool(meta["is_drug_trial"]) is True
 
-    Outcomes are kept in FILE order, which for the design-outcomes pull is registry order
-    within a trial. Order matters only for the outcome key, never for the gate: every
-    roll-up here is order-independent by construction.
+
+def load_outcomes(path: Path, fields: dict, labels: dict, drug_only: bool) -> tuple:
+    """-> ({nct: [outcome dicts in file order]}, counters). One entry per OUTCOME KEY.
+
+    The results-side file is one row per outcome x ANALYSIS, so a repeated key is skipped
+    and counted here. Repeated TEXT under different keys is a different collapse and
+    happens in `sampling_units`.
     """
     by_trial: dict = defaultdict(list)
     seen: set = set()
-    skipped_not_in_labels = 0
-    skipped_not_drug = 0
-    blank_text = 0
-    repeated_rows = 0
+    counters = Counter()
     for row in read_csv_rows(path):
         nct = (row.get(fields["nct"]) or "").strip().upper()
         if not nct:
             continue
         meta = labels.get(nct)
         if meta is None:
-            skipped_not_in_labels += 1
+            counters["not_in_labels"] += 1
             continue
-        if drug_only and meta["is_drug_trial"] != "True":
-            skipped_not_drug += 1
+        if not _in_frame(meta, drug_only):
+            counters["not_drug"] += 1
             continue
         key = f"{nct}#{(row.get(fields['index']) or len(by_trial[nct]) + 1)}"
-        # ONE ROW PER OUTCOME, enforced here rather than assumed. The design-outcomes pull
-        # produces exactly that, but the results-side file is one row per outcome x
-        # ANALYSIS, so an outcome with four analyses would otherwise be counted four
-        # times: inflating every class share, inflating the multi-match denominator, and
-        # putting the same key in a stratum four times over so it could be drawn twice.
-        # Caught by smoke-testing on the real file; a fixture with one analysis per
-        # outcome would have hidden it.
         if key in seen:
-            repeated_rows += 1
+            counters["repeated_outcome_key"] += 1
             continue
         seen.add(key)
-        text = (row.get(fields["text"]) or "").strip()
-        if not text:
-            blank_text += 1
         by_trial[nct].append({
             "key": key,
-            "text": text,
+            "text": (row.get(fields["text"]) or "").strip(),
             "time_frame": (row.get(fields["time_frame"]) or "").strip(),
             "description": (row.get(fields["description"]) or "").strip(),
         })
-    return dict(by_trial), {"not_in_labels": skipped_not_in_labels,
-                            "not_drug": skipped_not_drug,
-                            "blank_text": blank_text,
-                            "repeated_rows": repeated_rows}
+    return dict(by_trial), counters
 
 
-def report_source(layout: str, path: Path, counters: dict, by_trial: dict,
-                   labels: dict, drug_only: bool) -> None:
+def report_source(layout: str, path: Path, counters: dict, by_trial: dict, units: dict,
+                  skipped: dict, labels: dict, drug_only: bool) -> None:
     print(_rule("1. SOURCE AND COVERAGE"))
     print(f"  file   : {path}")
     print(f"  layout : {layout}")
     if layout == LAYOUT_RESULTS:
-        print("\n  !! THIS IS THE RESULTS-SIDE FIELD. It exists only for trials that")
-        print("     posted results -- 12.2% of phase 1 drug trials -- and it is edited")
-        print("     at posting time. A classifier validated on it cannot be deployed")
-        print("     against a trial with no posted results, which is the case the")
-        print("     endpoint flag exists for. Use it to compare the two fields on the")
-        print("     overlap, not to build the sample that decides the gate.")
-    frame_trials = sum(1 for meta in labels.values()
-                       if not drug_only or meta["is_drug_trial"] == "True")
-    n_outcomes = sum(len(rows) for rows in by_trial.values())
-    print(f"\n  trials in the label file            : {len(labels)}")
-    print(f"  trials in the SAMPLING FRAME        : {frame_trials}"
+        print("\n  !! THIS IS THE RESULTS-SIDE FIELD. It exists only for trials that posted")
+        print("     results, so a sample drawn from it says nothing about the trials the")
+        print("     gate mostly serves. Use it to compare fields on the overlap.")
+    frame_trials = sum(1 for meta in labels.values() if _in_frame(meta, drug_only))
+    n_rows = sum(len(rows) for rows in by_trial.values())
+    n_units = sum(len(rows) for rows in units.values())
+    print(f"\n  trials in the label file              : {len(labels)}")
+    print(f"  trials in the SAMPLING FRAME          : {frame_trials}"
           f"{'  (is_drug_trial true)' if drug_only else '  (all trials)'}")
-    print(f"  frame trials WITH endpoint text     : {len(by_trial)} "
+    print(f"  frame trials with a primary row       : {len(by_trial)} "
           f"({_pct(len(by_trial), frame_trials)})")
-    print(f"  primary outcome rows read           : {n_outcomes}")
-    print(f"  rows skipped, trial not in labels   : {counters['not_in_labels']}")
-    print(f"  rows skipped, not a drug trial      : {counters['not_drug']}")
-    print(f"  rows collapsed, same outcome twice  : {counters['repeated_rows']}")
-    print(f"  rows with BLANK endpoint text       : {counters['blank_text']}")
-    print("\n  A frame trial with no endpoint text is UNKNOWN, not zero: the gate must")
-    print("  return undeterminable for it rather than refusing an estimate. The share")
-    print("  matters because it bounds what the gate can ever speak for.")
+    print(f"  frame trials with a sampling unit     : {len(units)} "
+          f"({_pct(len(units), frame_trials)})")
+    print(f"  rows skipped, trial not in labels     : {counters['not_in_labels']}")
+    print(f"  rows skipped, not a drug trial        : {counters['not_drug']}")
+    print(f"  rows skipped, outcome key repeated    : {counters['repeated_outcome_key']}")
+    print(f"  primary outcome rows kept (gate input): {n_rows}")
+    for kind in UNIT_SKIP_KINDS:
+        print(f"    of which not a unit, {kind:26s}: {skipped[kind]}")
+    print(f"  SAMPLING UNITS                        : {n_units}")
+    print("\n  A frame trial with no endpoint text is UNKNOWN, not zero: the gate returns")
+    print("  undeterminable for it. The share bounds what the gate can ever speak for.")
     print("\n  COVERAGE BY PHASE GROUP (frame trials)")
-    print(f"    {'group':16s} {'frame':>9s} {'with text':>11s} {'share':>8s} "
-          f"{'outcomes':>10s} {'per trial':>10s}")
+    print(f"    {'group':16s} {'frame':>9s} {'with unit':>11s} {'share':>8s} "
+          f"{'units':>10s} {'per trial':>10s}")
     frame_by_group: Counter = Counter()
     for meta in labels.values():
-        if drug_only and meta["is_drug_trial"] != "True":
-            continue
-        frame_by_group[phase_group(meta["phase"])] += 1
-    with_text: Counter = Counter()
-    outcomes_by_group: Counter = Counter()
-    for nct, rows in by_trial.items():
+        if _in_frame(meta, drug_only):
+            frame_by_group[phase_group(meta["phase"])] += 1
+    with_unit: Counter = Counter()
+    units_by_group: Counter = Counter()
+    for nct, rows in units.items():
         group = phase_group(labels[nct]["phase"])
-        with_text[group] += 1
-        outcomes_by_group[group] += len(rows)
+        with_unit[group] += 1
+        units_by_group[group] += len(rows)
     for group in PHASE_GROUPS:
         frame = frame_by_group[group]
         if not frame:
             continue
-        per_trial = (outcomes_by_group[group] / with_text[group]) if with_text[group] else 0
-        print(f"    {group:16s} {frame:9d} {with_text[group]:11d} "
-              f"{_pct(with_text[group], frame):>8s} {outcomes_by_group[group]:10d} "
+        per_trial = (units_by_group[group] / with_unit[group]) if with_unit[group] else 0
+        print(f"    {group:16s} {frame:9d} {with_unit[group]:11d} "
+              f"{_pct(with_unit[group], frame):>8s} {units_by_group[group]:10d} "
               f"{per_trial:10.2f}")
     for group in PHASE_GROUPS:
         if frame_by_group[group]:
-            print(f"      {group}: {PHASE_GROUP_DOC[group]}")
+            print(f"      {group} -> stratum {STRATUM_GROUP_OF_PHASE_GROUP[group]}: "
+                  f"{PHASE_GROUP_DOC[group]}")
 
 
-def report_classes(by_trial: dict, labels: dict, show: int) -> dict:
-    """Per-outcome class distribution by phase group. Returns the stratum membership."""
-    print(_rule("2. WHAT THE KEYWORD RULE READS (its output, NOT a measurement)"))
-    print("  These are the rule's readings. The hypothesis under test is that they are")
-    print("  roughly right; the hand labels are what decides. Nothing in this section")
-    print("  belongs in the handoff as a fact.")
+def report_classes(units: dict, labels: dict, show: int) -> dict:
+    """Per-unit class distribution by stratum group. Returns the stratum membership."""
+    print(_rule("2. WHAT THE KEYWORD RULE READS, per sampling unit (its output)"))
+    print("  The rule's readings, not a measurement of endpoint types.")
     print("\n  For reference, what each class means:")
     for cls in ENDPOINT_CLASSES:
         print(f"    {cls:22s} {CLASS_DOC[cls][:120]}")
@@ -257,48 +230,42 @@ def report_classes(by_trial: dict, labels: dict, show: int) -> dict:
     members: dict = defaultdict(list)
     per_group: dict = defaultdict(Counter)
     all_titles: list = []
-    for nct, rows in by_trial.items():
-        group = phase_group(labels[nct]["phase"])
+    for nct, rows in units.items():
+        group = stratum_group(labels[nct]["phase"])
         for row in rows:
             cls = classify_title(row["text"])
             per_group[group][cls] += 1
             all_titles.append(row["text"])
             members[f"{group}{STRATUM_SEPARATOR}{cls}"].append(row["key"])
 
-    print(f"\n  {'group':14s} {'outcomes':>9s} " +
+    print(f"\n  {'stratum group':22s} {'units':>9s} " +
           " ".join(f"{cls[:10]:>11s}" for cls in ENDPOINT_CLASSES))
-    for group in PHASE_GROUPS:
+    for group in STRATUM_GROUPS:
         counts = per_group.get(group)
         if not counts:
             continue
         total = sum(counts.values())
         cells = " ".join(f"{counts[cls]:5d} {_pct(counts[cls], total):>5s}"
                          for cls in ENDPOINT_CLASSES)
-        print(f"  {group:14s} {total:9d} {cells}")
+        print(f"  {group:22s} {total:9d} {cells}")
 
     coverage = class_coverage(all_titles)
-    rate = multi_match_rate(coverage)
-    print(f"\n  outcomes matching MORE THAN ONE class: {coverage['multi_match']} "
+    print(f"\n  units matching MORE THAN ONE class: {coverage['multi_match']} "
           f"({_pct(coverage['multi_match'], coverage['total'])})")
-    print("  This is how much work the precedence order is doing. Near zero and a")
-    print("  disagreement with the hand labels is about the PATTERNS; large and the")
-    print("  ORDER is deciding, which is a judgment rather than a fact.")
+    print("  How much work the precedence order is doing. Near zero and a disagreement")
+    print("  with hand labels is about the PATTERNS; large and the ORDER is deciding.")
     if coverage["multi_match_pairs"]:
         print("\n  top competing pairs (winner first):")
         pairs = sorted(coverage["multi_match_pairs"].items(), key=lambda kv: -kv[1])
         for (winner, loser), count in pairs[:show]:
             print(f"    {winner:22s} over {loser:22s} {count:7d}")
-    print(f"\n  rows with blank text (classified {CLASS_OTHER}): "
-          f"{coverage['empty_text']}")
     return dict(members)
 
 
 def report_gate(by_trial: dict, labels: dict) -> None:
-    print(_rule("3. TRIAL-LEVEL GATE, AND WHAT THE ROLL-UP CHOICE COSTS"))
-    print("  The gate is per TRIAL; the classes are per OUTCOME. The roll-up that joins")
-    print("  them is the SAME choice section 8.4 has outstanding for the label, and the")
-    print(f"  default here is '{DEFAULT_GATE_ROLLUP}' because the strict label uses")
-    print("  any_primary_met. If 8.4 moves, this moves with it -- a test enforces that.")
+    print(_rule("3. TRIAL-LEVEL GATE over every registered primary row"))
+    print(f"  Default roll-up '{DEFAULT_GATE_ROLLUP}', matching the strict label's")
+    print("  any_primary_met; a test enforces the pairing.")
     records = {rollup: [] for rollup in GATE_ROLLUPS}
     by_group = {rollup: defaultdict(Counter) for rollup in GATE_ROLLUPS}
     moved = 0
@@ -337,18 +304,12 @@ def report_gate(by_trial: dict, labels: dict) -> None:
             print(f"    {group:14s} {cells}")
     print(f"\n  TRIALS THE ROLL-UP CHOICE MOVES: {moved} "
           f"({_pct(moved, len(by_trial))})")
-    print("  That is the size of the outstanding 8.4 decision as it reaches this gate.")
 
 
 def report_gate_versus_tier(by_trial: dict, labels: dict) -> None:
     print(_rule("4. CROSS-CHECK: the gate against the label the trial actually carries"))
-    print("  A SECOND signal, independent of the hand labels and free. A trial the gate")
-    print("  refuses which nonetheless carries a tier A/B label is a case where the")
-    print("  sponsor DID apply a threshold to that endpoint, so either the rule misread")
-    print("  the endpoint or the endpoint really was tested.")
-    print("\n  This is NOT ground truth, and only one cell carries information: the")
-    print("  ABSENCE of a label mostly means nothing was posted, which is a disclosure")
-    print("  fact rather than an endpoint-type fact. So no kappa is computed here.")
+    print("  Not ground truth. Only the refused-but-labelled cell carries information:")
+    print("  an absent label mostly means nothing was posted. No kappa is computed.")
     rows = []
     for nct, outcomes in by_trial.items():
         record = trial_gate_from_titles([row["text"] for row in outcomes])
@@ -370,9 +331,6 @@ def report_gate_versus_tier(by_trial: dict, labels: dict) -> None:
                                            "undeterminable_and_unlabelled"))):
         yes, no = out[pair[0]], out[pair[1]]
         print(f"  {name:20s} {yes:10d} {no:12d} {_pct(yes, yes + no):>16s}")
-    print("\n  READ THE FIRST ROW. Those trials were refused by the rule and labelled by")
-    print("  the sponsor's own analysis. A large count there is the rule over-refusing,")
-    print("  and it is the cheapest evidence available before any hand labelling.")
 
 
 def report_allocation(members: dict, sample_size: int, min_per_stratum: int,
@@ -384,32 +342,33 @@ def report_allocation(members: dict, sample_size: int, min_per_stratum: int,
     print(f"  sample size        : {sample_size}")
     print(f"  floor per stratum  : {min_per_stratum}")
     print(f"  strata (non-empty) : {len(sizes)}")
-    print(f"  population         : {sum(sizes.values())} outcomes")
-    print("\n  NOT PROPORTIONAL, deliberately. The decisive cells -- a pivotal-phase")
-    print("  pharmacokinetic endpoint, an early-phase efficacy endpoint -- are small, and")
-    print("  a proportional sample would put a handful of each in front of a human. The")
-    print("  consequence: the POOLED kappa over this sample is NOT the population")
-    print("  figure. The weight column is what recovers it.")
-    print(f"\n  {'stratum':34s} {'N':>8s} {'n':>5s} {'pop share':>10s} "
+    print(f"  population         : {sum(sizes.values())} units")
+    print("\n  NOT PROPORTIONAL. The pooled agreement over this sample is not the")
+    print("  population figure; the weight column recovers it.")
+    print(f"\n  {'stratum':40s} {'N':>8s} {'n':>5s} {'pop share':>10s} "
           f"{'samp share':>11s} {'weight':>9s}")
     rows = allocation_report(sizes, allocation, weights)
     for row in rows[:show]:
         weight = row["weight"]
-        print(f"  {row['stratum']:34s} {row['population']:8d} {row['allocated']:5d} "
+        print(f"  {row['stratum']:40s} {row['population']:8d} {row['allocated']:5d} "
               f"{row['population_share']:9.2%} {row['sample_share']:10.2%} "
               f"{'-' if weight is None else f'{weight:9.2f}'}")
     if len(rows) > show:
         print(f"  ... {len(rows) - show} further strata not shown "
               f"(--show to see more)")
+    verdict_ready = sum(1 for n in allocation.values() if n >= MIN_STRATUM_FOR_VERDICT)
     print(f"\n  allocated {sum(allocation.values())} of {sample_size} requested")
+    print(f"  strata allocated at least MIN_STRATUM_FOR_VERDICT ({MIN_STRATUM_FOR_VERDICT}): "
+          f"{verdict_ready} of {len(allocation)}")
+    print("  A stratum below it is printed and gets no verdict of its own.")
     return allocation, weights
 
 
-def write_files(members: dict, allocation: dict, weights: dict, by_trial: dict,
-                salt: str, duplicates_wanted: int, out_path: Path, key_path: Path,
-                instructions_path: Path, sample_size: int) -> None:
+def write_files(members: dict, allocation: dict, weights: dict, units: dict,
+                labels: dict, salt: str, duplicates_wanted: int, out_path: Path,
+                key_path: Path, instructions_path: Path) -> None:
     lookup = {}
-    for nct, rows in by_trial.items():
+    for nct, rows in units.items():
         for row in rows:
             lookup[row["key"]] = (nct, row)
     selected = select(members, allocation, salt)
@@ -418,6 +377,7 @@ def write_files(members: dict, allocation: dict, weights: dict, by_trial: dict,
     pairs = duplicate_pairs(rows)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    key_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(LABEL_COLUMNS))
         writer.writeheader()
@@ -435,38 +395,34 @@ def write_files(members: dict, allocation: dict, weights: dict, by_trial: dict,
         writer = csv.DictWriter(handle, fieldnames=list(KEY_COLUMNS))
         writer.writeheader()
         for row in rows:
-            nct, _outcome = lookup[row["key"]]
+            nct, outcome = lookup[row["key"]]
             group, predicted = row["stratum"].split(STRATUM_SEPARATOR, 1)
             writer.writerow({
                 "label_id": row["label_id"],
                 "nct_id": nct,
                 "outcome_key": row["key"],
                 "stratum": row["stratum"],
-                "phase_group": group,
+                "stratum_group": group,
+                "phase_group": phase_group(labels[nct]["phase"]),
                 "predicted_class": predicted,
-                "matched_classes": "|".join(
-                    matched_classes(lookup[row["key"]][1]["text"])),
+                "matched_classes": "|".join(matched_classes(outcome["text"])),
                 "copy_index": row["copy_index"],
                 "duplicate_group": row["duplicate_group"],
                 "stratum_weight": f"{weights.get(row['stratum'], ''):}",
             })
+    instructions_path.parent.mkdir(parents=True, exist_ok=True)
     instructions_path.write_text(_instructions(len(rows), len(pairs)), encoding="utf-8")
 
     print(_rule("6. FILES WRITTEN"))
     print(f"  labelling file : {out_path}")
-    print(f"    {len(rows)} rows to label ({sum(allocation.values())} distinct outcomes "
+    print(f"    {len(rows)} rows to label ({sum(allocation.values())} distinct units "
           f"+ {len(pairs)} second presentations)")
     print(f"  key file       : {key_path}")
     print("    DO NOT OPEN THIS WHILE LABELLING. It holds the predicted class, the")
-    print("    phase and which rows are repeats. Knowing any of those while labelling")
-    print("    biases the reference the rule is measured against, and the phase one")
-    print("    biases it toward the hypothesis under test.")
+    print("    phase and which rows are repeats.")
     print(f"  instructions   : {instructions_path}")
-    print(f"\n  {len(pairs)} outcomes appear TWICE under unrelated ids, shuffled apart.")
-    print("  That measures your own self-agreement, which is the ceiling any rule can")
-    print(f"  reach against these labels. A rule at {GATE_KAPPA_MINIMUM:.2f} against")
-    print("  labels whose self-agreement is 0.65 is close to the ceiling; the same rule")
-    print("  against 0.95 is not, and only the repeat rows can tell those apart.")
+    print(f"\n  {len(pairs)} units appear TWICE under unrelated ids, shuffled apart, to")
+    print("  check the labeller's own consistency.")
 
 
 def _instructions(n_rows: int, n_pairs: int) -> str:
@@ -495,40 +451,29 @@ def _instructions(n_rows: int, n_pairs: int) -> str:
         "",
         "## Rules that keep the measurement honest",
         "",
-        "1. **Use `unclear` when you mean it.** Forcing a choice on a genuinely",
-        "   ambiguous title adds noise that gets blamed on the rule afterwards. Those",
-        "   rows are counted and excluded from agreement, which is the correct handling.",
-        "2. **Do not look up the trial.** You see three things: the endpoint text, its",
-        "   time frame, and its description. The deployed tool has all three; the",
-        "   keyword rule currently reads only the first, which makes your labels",
-        "   slightly better informed than the rule and the resulting agreement a LOWER",
-        "   bound on what a rule using all three could reach. Going beyond these three",
-        "   -- opening the registry record, reading the results -- would measure a rule",
-        "   that does not exist.",
+        "1. **Use `unclear` when you mean it.** Those rows are counted and excluded from",
+        "   agreement, which is the correct handling.",
+        "2. **Do not look up the trial.** You see the endpoint text, its time frame and",
+        "   its description. The keyword rule reads only the first, so agreement is a",
+        "   lower bound on what a rule using all three could reach.",
         "3. **Do not open the key file.** It holds the predicted class and the phase.",
-        "   Seeing either turns agreement into confirmation.",
         "4. **Label in one or two sittings, not ten.** Drift across sessions shows up as",
         "   disagreement and is indistinguishable from the rule being wrong.",
         "",
         "## The repeated rows",
         "",
         f"{n_pairs} endpoints appear twice, under unrelated ids and far apart in the",
-        "file. You are not meant to spot them. They measure your own consistency, which",
-        "is the ceiling any classifier can reach against your labels: without it, a",
-        "mediocre agreement score cannot be attributed to the rule rather than to the",
-        "difficulty of the task.",
+        "file. You are not meant to spot them. They check your own consistency.",
         "",
-        "## Thresholds, stated before the labels exist",
+        "## What gates, stated before the labels exist",
         "",
-        f"- Agreement at or above **{GATE_KAPPA_MINIMUM:.2f}** (Cohen's kappa on the",
-        "  binary refuse-or-not collapse) lets the rule decide what users see.",
-        f"- Between **{REPORTABLE_KAPPA_MINIMUM:.2f}** and",
-        f"  **{GATE_KAPPA_MINIMUM:.2f}**, the rule is reported and gates nothing.",
-        f"- Below **{REPORTABLE_KAPPA_MINIMUM:.2f}**, the rule or the class scheme is",
-        "  wrong and the endpoint clause on the user-facing flag stays empty.",
+        "Both, not their average:",
         "",
-        "These were fixed in advance on purpose. A number that arrives without a",
-        "criterion gets rationalised into acceptability.",
+        f"- **{GATING_CRITERIA[0]}** at or above **{MIN_ALLOWANCE_PRECISION:.2f}**",
+        f"- **{GATING_CRITERIA[1]}** at or below **{MAX_FALSE_REFUSAL_SHARE:.2f}**",
+        "",
+        f"Cohen's kappa is reported beside them (reference {GATE_KAPPA_MINIMUM:.2f}) and",
+        "gates nothing.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -550,22 +495,17 @@ def main() -> int:
     ap.add_argument("--instructions", type=Path,
                     default=Path("data") / "labels" / "endpoint_type_labelling.md")
     ap.add_argument("--sample-size", type=int, default=DEFAULT_SAMPLE_SIZE,
-                    help="outcomes to label, before the repeated rows. Default: "
-                         "%(default)s")
+                    help="units to label, before the repeated rows. Default: %(default)s")
     ap.add_argument("--min-per-stratum", type=int, default=DEFAULT_MIN_PER_STRATUM,
-                    help="floor so no cell is represented by a number too small to "
-                         "read. Default: %(default)s")
+                    help="floor per stratum. Default: %(default)s")
     ap.add_argument("--duplicates", type=int, default=DEFAULT_DUPLICATE_COUNT,
-                    help="how many of the selected outcomes are presented a second time, "
-                         "to measure the labeller's own self-agreement. Default: "
-                         "%(default)s")
+                    help="units presented a second time for the self-consistency check. "
+                         "Default: %(default)s")
     ap.add_argument("--salt", default=DEFAULT_SAMPLE_SALT,
-                    help="selection salt. The sample is reproducible from this value "
-                         "alone; change it for an independent second sample. Default: "
-                         "%(default)s")
+                    help="selection salt; change it for an independent second sample. "
+                         "Default: %(default)s")
     ap.add_argument("--all-trials", dest="drug_only", action="store_false", default=True,
-                    help="do not restrict the frame to is_drug_trial (scoping is "
-                         "drug-only, so this is a diagnostic)")
+                    help="do not restrict the frame to is_drug_trial (diagnostic)")
     ap.add_argument("--audit-only", action="store_true",
                     help="print the audit, write nothing")
     ap.add_argument("--show", type=int, default=14,
@@ -593,20 +533,24 @@ def main() -> int:
     print(f"  floor per stratum  : {args.min_per_stratum}")
     print(f"  repeated rows      : {args.duplicates}")
     print(f"  selection salt     : {args.salt!r}")
+    print(f"  stratum groups     : {', '.join(STRATUM_GROUPS)}")
     print(f"  roll-up default    : {DEFAULT_GATE_ROLLUP}")
-    print(f"  kappa gate         : {GATE_KAPPA_MINIMUM:.2f} "
-          f"(reportable from {REPORTABLE_KAPPA_MINIMUM:.2f})")
-    print("  unit of labelling  : one PRIMARY OUTCOME, not one trial")
+    print(f"  gating criteria    : {GATING_CRITERIA[0]} >= {MIN_ALLOWANCE_PRECISION:.2f}, "
+          f"{GATING_CRITERIA[1]} <= {MAX_FALSE_REFUSAL_SHARE:.2f}")
+    print(f"  verdict floor      : {MIN_STRATUM_FOR_VERDICT} per stratum")
+    print("  unit of labelling  : one DISTINCT primary-outcome text per trial")
 
     layout, fields = detect_layout(args.titles)
     labels = load_labels(args.labels)
     by_trial, counters = load_outcomes(args.titles, fields, labels, args.drug_only)
-    if not by_trial:
-        print("\n!! no outcomes survived the frame. Nothing to sample.")
+    units, skipped = sampling_units(by_trial)
+    if not units:
+        print("\n!! no sampling units survived the frame. Nothing to sample.")
         return 3
 
-    report_source(layout, args.titles, counters, by_trial, labels, args.drug_only)
-    members = report_classes(by_trial, labels, args.show)
+    report_source(layout, args.titles, counters, by_trial, units, skipped, labels,
+                  args.drug_only)
+    members = report_classes(units, labels, args.show)
     report_gate(by_trial, labels)
     report_gate_versus_tier(by_trial, labels)
     allocation, weights = report_allocation(members, args.sample_size,
@@ -614,13 +558,13 @@ def main() -> int:
     if args.audit_only:
         print("\n  --audit-only: nothing written.")
         return 0
-    write_files(members, allocation, weights, by_trial, args.salt, args.duplicates,
-                args.out, args.key, args.instructions, args.sample_size)
+    write_files(members, allocation, weights, units, labels, args.salt, args.duplicates,
+                args.out, args.key, args.instructions)
     print(_rule("WHAT THIS DOES NOT DO"))
-    print("  No kappa is computed here -- there are no hand labels yet. Nothing from")
-    print("  this run reaches fdaaa.compose_flag: the endpoint clause stays unfilled")
-    print("  until the scoring step reports agreement clearing the pre-registered")
-    print("  threshold, which is the whole reason the clause was left as a parameter.")
+    print("  It computes no agreement: there are no hand labels for this sample yet, and")
+    print("  no scorer reads this key file. The gate it samples is LIVE --")
+    print("  endpoint_type.CLASS_GATE reaches users through fdaaa.trial_flag -- so a")
+    print("  disagreement found here is a disagreement with what users are shown.")
     return 0
 
 

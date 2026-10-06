@@ -656,6 +656,12 @@ def _text(raw) -> str:
     return re.sub(r"\s+", " ", str(raw)).strip()
 
 
+def endpoint_text_key(raw) -> str:
+    """The identity two endpoint texts share when the rule reads them as one input: its own
+    whitespace normalisation, nothing more."""
+    return _text(raw)
+
+
 def matched_classes(title) -> tuple:
     """Every class whose pattern fires on this endpoint text, in precedence order.
 

@@ -19,3 +19,5 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+# staging folder for a Zenodo upload (scripts/build_data_registry.py --stage)
+zenodo_upload/

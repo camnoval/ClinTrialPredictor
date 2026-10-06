@@ -65,7 +65,7 @@ label, not here.
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
+from typing import Callable, Optional
 
 from trial_pos.services.aact_fields import registered_after_primary_completion
 from trial_pos.services.endpoint_label import HEADLINE_TIERS
@@ -384,6 +384,63 @@ def eligible_for_endpoint_met(row: dict,
     if verdict["verdict"] == ELIGIBLE and _gate_refused(row):
         return _verdict(False, REASON_GATE_REFUSED)
     return verdict
+
+
+# ---- the label inside the endpoint-met population --------------------------
+# `endpoint_met_strict` as written: label_row emits 1 / 0 / None and the CSV writer renders
+# them "1" / "0" / "". Anything else on a row that reached the label condition raises.
+OUTCOME_MET = "met"
+OUTCOME_NOT_MET = "not_met"
+ENDPOINT_MET_OUTCOMES = (OUTCOME_MET, OUTCOME_NOT_MET)
+_STRICT_TOKENS = {"1": OUTCOME_MET, "0": OUTCOME_NOT_MET}
+
+# The endpoint-met reasons applied AFTER the label condition. A row removed by one of these
+# carries a usable label, so its removal changes the class balance; every earlier reason
+# removes a row with no label to count.
+POST_LABEL_REASONS = (REASON_RETROSPECTIVE_REGISTRATION, REASON_REGISTRATION_TIMING_UNKNOWN,
+                      REASON_GATE_REFUSED)
+
+
+def strict_outcome(row: dict) -> str:
+    """The strict label as an outcome token. Raises on blank or unrecognised: a caller asks
+    only for rows that reached the label condition, where neither can occur legitimately."""
+    raw = row.get("endpoint_met_strict")
+    token = "" if raw is None or isinstance(raw, bool) else str(raw).strip()
+    if token not in _STRICT_TOKENS:
+        raise ValueError(f"endpoint_met_strict={raw!r} is not one of "
+                         f"{sorted(_STRICT_TOKENS)}")
+    return _STRICT_TOKENS[token]
+
+
+def endpoint_met_outcome_counts(rows, stratum: Optional[Callable] = None,
+                                headline_only: bool = DEFAULT_ENDPOINT_HEADLINE_ONLY) -> dict:
+    """Met / not-met counts for every row that reached the label condition.
+
+    `dispositions` keys ELIGIBLE and each POST_LABEL_REASONS entry; `labelled` is their sum,
+    the population before the post-label exclusions. `strata` splits the ELIGIBLE row by
+    `stratum(row)` when given. `minority` is the eligible population's smaller class.
+    """
+    dispositions = {d: {o: 0 for o in ENDPOINT_MET_OUTCOMES}
+                    for d in (ELIGIBLE,) + POST_LABEL_REASONS}
+    strata: dict = {}
+    for row in rows:
+        record = eligible_for_endpoint_met(row, headline_only)
+        if record["verdict"] == ELIGIBLE:
+            key = ELIGIBLE
+        elif record["reason"] in POST_LABEL_REASONS:
+            key = record["reason"]
+        else:
+            continue
+        outcome = strict_outcome(row)
+        dispositions[key][outcome] += 1
+        if key == ELIGIBLE and stratum is not None:
+            bucket = strata.setdefault(stratum(row), {o: 0 for o in ENDPOINT_MET_OUTCOMES})
+            bucket[outcome] += 1
+    labelled = {o: sum(d[o] for d in dispositions.values()) for o in ENDPOINT_MET_OUTCOMES}
+    eligible = dispositions[ELIGIBLE]
+    smaller = min(ENDPOINT_MET_OUTCOMES, key=lambda o: (eligible[o], o))
+    return {"dispositions": dispositions, "labelled": labelled, "strata": strata,
+            "minority": (smaller, eligible[smaller]), "headline_only": headline_only}
 
 
 def eligible_for_advancement(row: dict, snapshot: date,

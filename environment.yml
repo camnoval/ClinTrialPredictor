@@ -1,0 +1,10 @@
+# Local environment. The run tier needs only the package; the AACT pulls also need psycopg2
+# and AACT credentials, and the DrugCentral extraction needs pg_restore (postgresql>=16).
+name: trial-pos
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -e .

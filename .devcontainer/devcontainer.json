@@ -1,0 +1,7 @@
+{
+  "name": "trial-pos",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "hostRequirements": { "storage": "32gb" },
+  "postCreateCommand": "pip install -e . && python scripts/bootstrap.py",
+  "customizations": { "vscode": { "extensions": ["ms-python.python"] } }
+}

@@ -57,20 +57,22 @@ from typing import Hashable, Iterable, Optional
 from trial_pos.services.eligibility import (
     POST_APPROVAL_PHASES, PIVOTAL_PHASES, normalize_phase,
 )
+from trial_pos.services.endpoint_type import endpoint_text_key
 
 # ---- defaults, every one a flag on the script -----------------------------
-# 200 is the operator's stated budget. It is small for a five-class scheme -- the standard
-# error of a kappa on 200 items is around 0.05, so 0.60 and 0.66 are not distinguishable --
-# which is why the allocation spends it on the decisive cells rather than spreading it.
-DEFAULT_SAMPLE_SIZE = 200
+# Rev 7 section 12.9, decisions 5 and 6: about 100 rows and 12 repeats. At this size no
+# stratum reaches endpoint_type.MIN_STRATUM_FOR_VERDICT (rev 8 section 12.12); the sampler
+# prints how many do rather than asserting it.
+DEFAULT_SAMPLE_SIZE = 100
 
-# Every non-empty stratum gets at least this many, so no cell is represented by a number
-# too small to read. Below roughly this size a stratum's own kappa is noise, and the floor
-# is what makes the per-stratum table worth printing at all.
-DEFAULT_MIN_PER_STRATUM = 6
+# Every non-empty stratum gets at least this many. Sized so the floors of every
+# STRATUM_GROUPS x endpoint-class cell fit inside DEFAULT_SAMPLE_SIZE, which a test pins:
+# a floor the budget cannot pay makes `sqrt_allocation` raise on the default run.
+DEFAULT_MIN_PER_STRATUM = 5
 
-# How many of the selected items are presented twice for the self-agreement ceiling.
-DEFAULT_DUPLICATE_COUNT = 40
+# How many of the selected items are presented twice for the self-agreement check. A
+# smell test at this size, not a ceiling (section 12.9 decision 6).
+DEFAULT_DUPLICATE_COUNT = 12
 
 # The salt. A flag rather than a constant so a second, independent sample can be drawn
 # without editing code, and so the sample is reproducible from the printed value alone.
@@ -115,7 +117,7 @@ PHASE_GROUP_MEMBERS = {
 }
 
 PHASE_GROUP_DOC = {
-    PHASE_GROUP_PHASE1: ("early phase 1, phase 1, and phase 1/2. The stratum the 63% "
+    PHASE_GROUP_PHASE1: ("early phase 1, phase 1, and phase 1/2. The stratum the phase-1 "
                          "pharmacokinetic hypothesis is about"),
     PHASE_GROUP_PHASE2: "phase 2 alone, kept separate as the transition stratum",
     PHASE_GROUP_PIVOTAL: ("phase 3 and phase 2/3. The stratum where a pharmacokinetic "
@@ -140,6 +142,69 @@ def phase_group(raw) -> str:
         if phase in members:
             return group
     return PHASE_GROUP_UNKNOWN
+
+
+# ---- stratification groups, SETTLED (rev 8 section 12.12) -------------------
+# phase1 / phase2+pivotal / post_approval+unknown, chosen on within-stratum homogeneity of
+# endpoint type. Coarser than PHASE_GROUPS, which stays in the key file so pivotal remains
+# reportable post hoc.
+STRATUM_GROUP_PHASE1 = "phase1"
+STRATUM_GROUP_PHASE2_PIVOTAL = "phase2_pivotal"
+STRATUM_GROUP_POST_APPROVAL_UNKNOWN = "post_approval_unknown"
+
+STRATUM_GROUPS = (STRATUM_GROUP_PHASE1, STRATUM_GROUP_PHASE2_PIVOTAL,
+                  STRATUM_GROUP_POST_APPROVAL_UNKNOWN)
+
+STRATUM_GROUP_OF_PHASE_GROUP = {
+    PHASE_GROUP_PHASE1: STRATUM_GROUP_PHASE1,
+    PHASE_GROUP_PHASE2: STRATUM_GROUP_PHASE2_PIVOTAL,
+    PHASE_GROUP_PIVOTAL: STRATUM_GROUP_PHASE2_PIVOTAL,
+    PHASE_GROUP_POST_APPROVAL: STRATUM_GROUP_POST_APPROVAL_UNKNOWN,
+    PHASE_GROUP_UNKNOWN: STRATUM_GROUP_POST_APPROVAL_UNKNOWN,
+}
+
+
+def stratum_group(raw) -> str:
+    """AACT phase value -> its sampling stratum group, through `phase_group`."""
+    return STRATUM_GROUP_OF_PHASE_GROUP[phase_group(raw)]
+
+
+# ---- the sampling unit ------------------------------------------------------
+# One DISTINCT, non-blank primary-outcome text per trial. A trial can register the same
+# text under several design_outcome_index values, usually one per cohort; keyed on the
+# index those are separate units, so a class count inflates and the same question can be
+# drawn twice. Blank text is not a unit because there is nothing to label. Both are counted.
+SKIP_BLANK_TEXT = "blank_text"
+SKIP_REPEATED_TEXT = "repeated_text_within_trial"
+UNIT_SKIP_KINDS = (SKIP_BLANK_TEXT, SKIP_REPEATED_TEXT)
+
+
+def sampling_units(by_trial: dict, text_field: str = "text",
+                   text_key=endpoint_text_key) -> tuple:
+    """{trial: [outcome dicts]} -> ({trial: [one outcome per distinct text]}, {kind: n}).
+
+    The first outcome in input order represents its text. Scoped to the trial: the same
+    text in two trials is two units, each with its own context. A trial left with no unit
+    is absent from the result.
+    """
+    skipped = {kind: 0 for kind in UNIT_SKIP_KINDS}
+    out: dict = {}
+    for trial, outcomes in by_trial.items():
+        seen: set = set()
+        kept = []
+        for outcome in outcomes:
+            key = text_key(outcome.get(text_field))
+            if not key:
+                skipped[SKIP_BLANK_TEXT] += 1
+                continue
+            if key in seen:
+                skipped[SKIP_REPEATED_TEXT] += 1
+                continue
+            seen.add(key)
+            kept.append(outcome)
+        if kept:
+            out[trial] = kept
+    return out, skipped
 
 
 # ---- deterministic ordering -----------------------------------------------

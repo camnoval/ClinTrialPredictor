@@ -53,7 +53,9 @@ from trial_pos.services.eligibility import (  # noqa: E402
     TARGETS, TARGET_ENDPOINT_MET, TARGET_MARKET, eligibility_coverage,
     eligibility_for_row, eligible_for_endpoint_met, merge_gate_exclusion,
     merge_registration_timing, phase_class,
+    ENDPOINT_MET_OUTCOMES, POST_LABEL_REASONS, endpoint_met_outcome_counts,
 )
+from trial_pos.services.sampling import PHASE_GROUPS, phase_group  # noqa: E402
 from trial_pos.services.aact_fields import output_name  # noqa: E402
 from trial_pos.services.eligibility import (  # noqa: E402
     GATE_EXCLUSION_FIELD, REGISTRATION_SUBMITTED_FIELD,
@@ -166,6 +168,35 @@ def report_eligibility(coverage: dict) -> None:
                 print(f"        {REASON_DOC.get(reason, '(undocumented)')}")
     print("\n  'ineligible' alone is not a finding. A scoping exclusion will not change;")
     print("  an open window shrinks every year the snapshot advances. Read the reasons.")
+
+
+def _outcome_cells(bucket: dict) -> str:
+    n = sum(bucket.values())
+    cells = " ".join(f"{bucket[o]:9d}" for o in ENDPOINT_MET_OUTCOMES)
+    return f"{n:9d} {cells}  " + " ".join(f"{_pct(bucket[o], n):>8s}"
+                                         for o in ENDPOINT_MET_OUTCOMES)
+
+
+def report_class_balance(counts: dict) -> None:
+    """The events count: both classes inside the endpoint-met training population."""
+    header = " ".join(f"{o:>9s}" for o in ENDPOINT_MET_OUTCOMES)
+    shares = " ".join(f"{'%' + o:>8s}" for o in ENDPOINT_MET_OUTCOMES)
+    print(f"  headline tier required: {counts['headline_only']}")
+    print(f"\n    {'disposition':36s} {'n':>9s} {header}  {shares}")
+    for disposition, bucket in counts["dispositions"].items():
+        print(f"    {disposition:36s} {_outcome_cells(bucket)}")
+    print(f"    {'labelled, before the rows above':36s} {_outcome_cells(counts['labelled'])}")
+    print(f"\n  The {ELIGIBLE!r} row is the training population. The other rows carried a")
+    print(f"  label and were removed by {len(POST_LABEL_REASONS)} exclusions applied after the label")
+    print("  condition; 'labelled' is the population before them.")
+    print(f"\n  BY PHASE GROUP, {ELIGIBLE} only")
+    print(f"    {'group':36s} {'n':>9s} {header}  {shares}")
+    for group in PHASE_GROUPS:
+        bucket = counts["strata"].get(group)
+        if bucket:
+            print(f"    {group:36s} {_outcome_cells(bucket)}")
+    smaller, n = counts["minority"]
+    print(f"\n  minority class, {ELIGIBLE}: {smaller} {n}")
 
 
 
@@ -321,6 +352,11 @@ def main() -> int:
         print("  carry a strict label from an interval-only verdict. Reported, and NOT")
         print("  in the modelling population: tier C under-calls positives relative to")
         print("  A/B, so pooling would shift the base rate. --include-tier-c to fold in.")
+
+    print("\n  ENDPOINT-MET CLASS BALANCE (the events count for the model)")
+    report_class_balance(endpoint_met_outcome_counts(
+        rows, stratum=lambda r: phase_group(r.get("phase")),
+        headline_only=not args.include_tier_c))
 
     _rule("2. MARKET WINDOW SERIES (3/5/10 on the SAME pivotal population)")
     print("  The horizon question, finally like-for-like. 3 vs 10 across DIFFERENT")
