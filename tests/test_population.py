@@ -35,6 +35,8 @@ from trial_pos.services.population import (
     MODALITY_SIGNALS, SPONSOR_COLS, entity_coverage, has_advanced_therapy,
     is_drug_like_modality, is_known_agency_class, is_known_responsible_party_type,
     modality_signals, normalize_agency_class, normalize_responsible_party_type,
+    AGENCY_NON_CLASSES, RESPONSIBLE_PARTY_TYPES, SPONSOR_NOT_RECORDED,
+    classified_agency_class, lead_sponsor_bucket,
     parse_agency_classes, sponsor_agreement, sponsor_signals,
     CONDITION_FIELDS, DRUG_NAME_FIELDS, ENTITY_COVERAGE_FIELDS, JOINT_MESH_FIELDS,
     empty_entity_coverage, merge_entity_coverage,
@@ -825,6 +827,47 @@ def test_unrecognised_class_is_flagged_rather_than_dropped():
     assert is_known_agency_class("") is None          # absent makes no claim
 
 
+def test_old_and_current_registry_spellings_of_a_party_type_are_one_known_token():
+    # AACT now spells these with underscores; the constant once listed the old spellings,
+    # so every PI and sponsor-investigator trial read as unrecognised vocabulary.
+    pairs = (("Principal Investigator", "PRINCIPAL_INVESTIGATOR"),
+             ("Sponsor-Investigator", "SPONSOR_INVESTIGATOR"),
+             ("Sponsor", "SPONSOR"))
+    for old, new in pairs:
+        assert normalize_responsible_party_type(old) == normalize_responsible_party_type(new)
+        assert is_known_responsible_party_type(old) is True
+        assert is_known_responsible_party_type(new) is True
+    assert {normalize_responsible_party_type(n) for _o, n in pairs} \
+        == set(RESPONSIBLE_PARTY_TYPES)
+
+
+def test_aact_non_classes_are_recognised_but_not_a_category():
+    assert AGENCY_NON_CLASSES <= AGENCY_CLASSES
+    for token in AGENCY_NON_CLASSES:
+        assert is_known_agency_class(token.upper()) is True
+        assert classified_agency_class(token.upper()) is None
+    assert classified_agency_class("INDUSTRY") == "industry"
+    assert classified_agency_class("") is None
+    # drift stays visible: an unmet real class is still a class
+    assert classified_agency_class("SOVEREIGN_WEALTH_FUND") == "sovereign_wealth_fund"
+
+
+def test_an_absent_lead_never_shares_a_bucket_with_a_registry_token():
+    assert SPONSOR_NOT_RECORDED not in AGENCY_CLASSES
+    assert normalize_agency_class(SPONSOR_NOT_RECORDED) not in AGENCY_CLASSES
+    assert lead_sponsor_bucket(None) == lead_sponsor_bucket("") == SPONSOR_NOT_RECORDED
+    for token in AGENCY_CLASSES:
+        assert lead_sponsor_bucket(token) != SPONSOR_NOT_RECORDED
+
+
+def test_sponsor_agreement_separates_an_absent_lead_from_aact_unknown():
+    rows = [{"lead_sponsor_class": "unknown", "responsible_party_type": "sponsor"},
+            {"responsible_party_type": "sponsor"}]
+    joint = sponsor_agreement(rows)["joint"]
+    assert joint[("unknown", "sponsor")] == 1
+    assert joint[(SPONSOR_NOT_RECORDED, "sponsor")] == 1
+
+
 def test_collaborator_classes_are_a_set_not_a_single_value():
     # a trial can have several collaborators of different classes
     assert parse_agency_classes("NIH|INDUSTRY|NIH") == ("industry", "nih")
@@ -851,7 +894,7 @@ def test_multiple_leads_are_kept_not_silently_reduced_to_one():
 
 def test_responsible_party_type_normalised_and_flagged():
     assert (normalize_responsible_party_type("Principal Investigator")
-            == "principal investigator")
+            == "principal_investigator")
     assert is_known_responsible_party_type("Sponsor") is True
     assert is_known_responsible_party_type("Data Monitoring Committee") is False
     assert is_known_responsible_party_type(None) is None

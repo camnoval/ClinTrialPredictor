@@ -8,12 +8,10 @@ something a threshold was applied to. Much of early-phase research reports a VAL
 -- an AUC, a Cmax, a maximum tolerated dose -- and for those trials the question has no
 answer to estimate, so a probability is not a cautious estimate, it is a category error.
 
-`fdaaa.compose_flag` already takes the endpoint clause as a PARAMETER and has been left
-unfilled on purpose, because inventing the clause would assert a measurement nobody made.
-This module is what fills it, and it does not reach the flag until its agreement against
-hand labels clears the threshold in `GATE_KAPPA_MINIMUM` (see `scripts/` for the scoring
-step). A keyword rule that decides what the tool refuses to answer is a verdict-producing
-threshold like any other.
+This module supplies the endpoint half of the user-facing flag; `fdaaa.trial_flag` applies
+it. It reached the flag once `GATING_CRITERIA` passed on hand labels
+(`build_confirm_sample.py --score`). A keyword rule that decides what the tool refuses to
+answer is a verdict-producing threshold like any other.
 
 IT GATES PER TRIAL, NOT PER PHASE
 =================================
@@ -197,12 +195,12 @@ GATE_VERDICTS = (GATE_APPLICABLE, GATE_NOT_APPLICABLE, GATE_UNDETERMINABLE)
 GATE_DOC = {
     GATE_APPLICABLE: ("at least one primary endpoint is the shape the endpoint-met label "
                       "was built for, so the estimate has something to be about"),
-    GATE_NOT_APPLICABLE: ("every readable primary endpoint is reported as a value rather "
-                          "than tested against a threshold. The tool DECLINES and says "
-                          "which mechanism"),
-    GATE_UNDETERMINABLE: ("the rule could not read the endpoint text. The estimate is "
-                          "shown with the flags it would otherwise carry, and the "
-                          "endpoint clause is SILENT rather than invented"),
+    GATE_NOT_APPLICABLE: ("the endpoints read leave nothing threshold-tested to estimate: "
+                          "under ANY every primary is value-reporting, under ALL at least "
+                          "one is. The tool DECLINES and says which mechanism"),
+    GATE_UNDETERMINABLE: ("the rule could not read some or all of the endpoint text. The "
+                          "estimate is shown; the endpoint clause is SILENT unless some "
+                          "primaries WERE read as value-reporting, and then says so"),
 }
 
 CLASS_GATE = {
@@ -262,11 +260,13 @@ REASON_NO_ENDPOINT_TEXT = "no_primary_endpoint_text"
 REASON_ALL_UNTESTABLE = "no_primary_endpoint_is_threshold_tested"
 REASON_MIXED_UNDER_ALL = "some_primary_endpoints_are_not_threshold_tested"
 REASON_UNREADABLE = "endpoint_text_not_classifiable"
+REASON_UNTESTABLE_BESIDE_UNREADABLE = "untestable_primaries_beside_unclassifiable_ones"
 REASON_TESTABLE = "at_least_one_primary_endpoint_is_threshold_tested"
 REASON_ALL_TESTABLE = "every_primary_endpoint_is_threshold_tested"
 
 GATE_REASONS = (REASON_NO_ENDPOINT_TEXT, REASON_ALL_UNTESTABLE, REASON_MIXED_UNDER_ALL,
-                REASON_UNREADABLE, REASON_TESTABLE, REASON_ALL_TESTABLE)
+                REASON_UNREADABLE, REASON_UNTESTABLE_BESIDE_UNREADABLE, REASON_TESTABLE,
+                REASON_ALL_TESTABLE)
 
 REASON_DOC = {
     REASON_NO_ENDPOINT_TEXT: ("the trial registered no primary outcome text this module "
@@ -277,6 +277,10 @@ REASON_DOC = {
                              "primary endpoint tested, and at least one is not"),
     REASON_UNREADABLE: ("no pattern matched any primary endpoint, so the rule has no "
                         "reading to offer either way"),
+    REASON_UNTESTABLE_BESIDE_UNREADABLE: (
+        "ANY only: some primaries read as value-reporting, none read as testable, and at "
+        "least one could not be classified. The unread one may be the tested endpoint, so "
+        "this is UNDETERMINABLE with a clause, not a refusal"),
     REASON_TESTABLE: "at least one primary endpoint is the shape the label was built for",
     REASON_ALL_TESTABLE: "every primary endpoint is the shape the label was built for",
 }
@@ -484,6 +488,35 @@ TRAINING_EXCLUSION_MIN_EFFECT = None
 # interim measure there even once a model exists.
 SERVING_GATE_HAS_NO_OUTCOME_REFERENCE = True
 
+# ---- training exclusion, DECIDED 2026-10-04 --------------------------------
+# A trial the gate refuses is excluded from endpoint-met training even when it carries a
+# headline label, because the serving gate will decline every trial like it: a label the
+# tool would refuse to show is a label it does not trust. "Label overrides the gate" was
+# rejected because it changes nothing at serving, where no label exists yet.
+#
+# Measured before the REASON_UNTESTABLE_BESIDE_UNREADABLE change (audit_serving_flag.py,
+# project machine): 424 refused-yet-labelled drug trials, 333 all-pharmacokinetic; that
+# change moves the other 91 to undeterminable. Several genuine-PK labels in its 25-trial
+# sample came from drug-drug interaction tests, where "met" means an interaction was found
+# -- inverted, not noisy.
+#
+# KNOWN COST, accepted: read by eye, 9 of 25 in the post-change sample (all 333 now all-
+# PK) measured something other than the drug -- an AUC of FEV1 (four), of pain
+# intensity, of nasal cross-sectional area, of postprandial glucose; serum cortisol;
+# troponin. A pattern carve-out was declined as too likely to be fitted to the sample
+# that suggested it, so those labels are excluded too and those trials declined at
+# serving.
+#
+# Excluded rows stay IDENTIFIABLE by the reason below, so the pre-registered comparison
+# (TRAINING_EXCLUSION_PREDICTED_DIRECTION) can still train with them included.
+TRAINING_EXCLUDED_GATE_REFUSED = "gate_refused"
+TRAINING_NOT_EXCLUDED = "not_excluded"
+TRAINING_EXCLUSION_REASONS = (TRAINING_EXCLUDED_GATE_REFUSED,)
+TRAINING_EXCLUSION_DOC = {
+    TRAINING_EXCLUDED_GATE_REFUSED: ("the serving gate declines this trial, so its label "
+                                     "is not trusted for training either"),
+}
+
 # ---- fields this module emits, all gate-only (R7) -------------------------
 GATE_ONLY_FIELDS = (
     "endpoint_type_class",
@@ -496,11 +529,13 @@ GATE_ONLY_FIELDS = (
     "endpoint_type_n_untestable",
     "endpoint_type_n_unreadable",
     "endpoint_type_mixed",
+    "endpoint_type_training_exclusion",
 )
 
 GATE_ONLY_DOC = (
-    "Every field here may decide whether an endpoint estimate is DISPLAYED and may never "
-    "enter the endpoint-met feature matrix. The class is derived from the same "
+    "Every field here may decide whether an endpoint estimate is DISPLAYED, and whether a "
+    "trial's row is ELIGIBLE for endpoint-met training, and may never enter the "
+    "endpoint-met feature matrix. The class is derived from the same "
     "primary-outcome text the label's analysis rows hang off, and the trial-level gate "
     "shares the label's any/all roll-up, so a feature built from these would sit adjacent "
     "to the label rather than upstream of it."
@@ -695,9 +730,10 @@ def trial_gate(classes: Iterable[str], rollup: str = DEFAULT_GATE_ROLLUP) -> dic
     endpoints are pharmacokinetic" is what the mixed-trial sentence needs and it cannot be
     recovered from the verdict afterwards.
 
-    ANY: applicable as soon as one endpoint is testable. Not-applicable only when at least
-    one endpoint was READ as untestable and none was readable as testable -- if the only
-    thing we have is unreadable text, the verdict is undeterminable, not a refusal.
+    ANY: applicable as soon as one endpoint is testable. Not-applicable only when EVERY
+    endpoint was read as untestable. An unreadable endpoint beside untestable ones makes
+    the verdict undeterminable, because the unread one may be the tested endpoint; the
+    clause then names the untestable ones (REASON_UNTESTABLE_BESIDE_UNREADABLE).
 
     ALL: applicable only when every endpoint is testable; not-applicable when every endpoint
     is untestable OR the mix contains an untestable one, since a trial-level "all endpoints
@@ -731,6 +767,9 @@ def trial_gate(classes: Iterable[str], rollup: str = DEFAULT_GATE_ROLLUP) -> dic
             record.update(gate=GATE_APPLICABLE,
                           reason=REASON_ALL_TESTABLE if n_testable == n
                           else REASON_TESTABLE)
+        elif n_untestable > 0 and n_unreadable > 0:
+            record.update(gate=GATE_UNDETERMINABLE,
+                          reason=REASON_UNTESTABLE_BESIDE_UNREADABLE)
         elif n_untestable > 0:
             record.update(gate=GATE_NOT_APPLICABLE, reason=REASON_ALL_UNTESTABLE)
         else:
@@ -753,6 +792,14 @@ def trial_gate_from_titles(titles: Iterable, rollup: str = DEFAULT_GATE_ROLLUP) 
     return trial_gate(classify_titles(titles), rollup)
 
 
+def training_exclusion(record: dict) -> str:
+    """Gate record -> why the trial is excluded from endpoint-met training, or
+    TRAINING_NOT_EXCLUDED. Never blank: "not excluded" and "not computed" differ."""
+    if refuses_estimate(record.get("gate")):
+        return TRAINING_EXCLUDED_GATE_REFUSED
+    return TRAINING_NOT_EXCLUDED
+
+
 def gate_record_fields(record: dict) -> dict:
     """Gate record -> the flat, CSV-safe fields named in GATE_ONLY_FIELDS.
 
@@ -772,6 +819,7 @@ def gate_record_fields(record: dict) -> dict:
         "endpoint_type_n_untestable": record["n_untestable"],
         "endpoint_type_n_unreadable": record["n_unreadable"],
         "endpoint_type_mixed": record["mixed"],
+        "endpoint_type_training_exclusion": training_exclusion(record),
     }
 
 
@@ -806,6 +854,16 @@ CLAUSE_MIXED_TEMPLATE = (
     "so this estimate reflects the {n_testable} of {n_primary} that {be_testable} "
     "tested.")
 
+# The undeterminable case where something WAS read. Without it the user would see a number
+# with no sign that most of the trial's primaries are value-reporting -- the false
+# allowance the gating criteria weight most heavily. Stating it lowers the cost of being
+# wrong, which is what licensed the change from refusal (lesson 66).
+CLAUSE_UNREAD_BESIDE_UNTESTABLE_TEMPLATE = (
+    "{n_untestable} of this trial's {n_primary} primary endpoints {be_untestable} "
+    "{article}{mechanism} {measurement_word} with no threshold to clear. This estimate "
+    "rests on {others}, which could not be classified, and applies only if {pronoun} "
+    "{be_unreadable} tested against a threshold.")
+
 # What "met its primary endpoint" MEANS for a class that is allowed but qualified. One
 # entry per QUALIFIED_CLASSES, checked total by a test, because a qualified class with no
 # sentence would show a bare number -- which is precisely the thing the qualified flip was
@@ -824,6 +882,31 @@ CLASS_SUCCESS_MEANING = {
         "This trial's primary endpoint is safety or tolerability -- a rate of adverse "
         "events, toxicities or abnormal findings. Meeting it means the rate was "
         "acceptable against the trial's own criterion, not that the treatment worked."),
+}
+
+# The CO-PRIMARY form, used when the trial registered any primary outside the qualified
+# class that names the clause. CLASS_SUCCESS_MEANING says "this trial's primary endpoint
+# is ...", which is false for a phase 3 trial with an efficacy primary and a safety
+# co-primary. Keyed by roll-up because what success means for the whole trial depends on
+# it: under ANY the qualified endpoint alone can carry a "met"; under ALL it cannot.
+CLASS_KIND_WORDS = {
+    CLASS_DOSE_FINDING: ("a dose-finding measurement", "dose-finding measurements"),
+    CLASS_SAFETY: ("a safety or tolerability measurement",
+                   "safety or tolerability measurements"),
+}
+
+CLASS_SUCCESS_SHORT = {
+    CLASS_DOSE_FINDING: "only that a tolerable dose was identified",
+    CLASS_SAFETY: "only that an adverse-event rate was acceptable",
+}
+
+CLAUSE_COPRIMARY_TEMPLATE = {
+    ROLLUP_ANY: ("{n_kind} of this trial's {n_primary} primary endpoints {be} {kind}. "
+                 "This estimate counts meeting any one primary endpoint as success, so it "
+                 "may reflect {meaning}, not that the treatment worked."),
+    ROLLUP_ALL: ("{n_kind} of this trial's {n_primary} primary endpoints {be} {kind}. "
+                 "This estimate counts success only if every primary endpoint is met, "
+                 "{ref} included."),
 }
 
 # One word per REFUSING class, for the sentence a user reads. Bioequivalence was removed
@@ -852,10 +935,12 @@ def _dominant_qualified(record: dict) -> Optional[str]:
 def requires_clause(record: dict) -> bool:
     """Does this gate record REQUIRE a clause beside its number?
 
-    True exactly when the trial is allowed and at least one primary belongs to a qualified
-    class. Exposed so a caller can assert the clause is present rather than discovering it
+    True when the trial is allowed and at least one primary belongs to a qualified class,
+    or when untestable primaries sit beside unclassifiable ones. Exposed so a caller can assert the clause is present rather than discovering it
     is missing, which is the failure the qualified flip was designed to avoid.
     """
+    if record.get("reason") == REASON_UNTESTABLE_BESIDE_UNREADABLE:
+        return True
     return (record.get("gate") == GATE_APPLICABLE
             and _dominant_qualified(record) is not None)
 
@@ -899,17 +984,57 @@ def _plural(n: int, singular: str, plural: str) -> str:
     return singular if n == 1 else plural
 
 
+def is_coprimary(record: dict, qualified: str) -> bool:
+    """Did the trial register any primary outside the qualified class naming the clause?"""
+    return set(record.get("classes", ())) != {qualified}
+
+
+def _unread_beside_untestable_clause(record: dict) -> str:
+    n_untestable = record["n_untestable"]
+    n_unreadable = record["n_unreadable"]
+    return CLAUSE_UNREAD_BESIDE_UNTESTABLE_TEMPLATE.format(
+        n_untestable=n_untestable,
+        n_primary=record["n_primary"],
+        be_untestable=_plural(n_untestable, "is", "are"),
+        article=_plural(n_untestable, "a ", ""),
+        mechanism=MECHANISM_WORD.get(_dominant_untestable(record), "value-reporting"),
+        measurement_word=_plural(n_untestable, "measurement", "measurements"),
+        others=_plural(n_unreadable, "the other one", f"the other {n_unreadable}"),
+        pronoun=_plural(n_unreadable, "it", "they"),
+        be_unreadable=_plural(n_unreadable, "was", "were"),
+    )
+
+
+def _qualified_clause(record: dict, qualified: str) -> str:
+    """The single-class sentence, or the co-primary form when it would be false."""
+    if not is_coprimary(record, qualified):
+        return CLASS_SUCCESS_MEANING[qualified]
+    n_kind = sum(1 for c in record["classes"] if c == qualified)
+    singular, plural = CLASS_KIND_WORDS[qualified]
+    return CLAUSE_COPRIMARY_TEMPLATE[record["rollup"]].format(
+        n_kind=n_kind,
+        n_primary=record["n_primary"],
+        be=_plural(n_kind, "is", "are"),
+        kind=_plural(n_kind, singular, plural),
+        meaning=CLASS_SUCCESS_SHORT[qualified],
+        ref=_plural(n_kind, "that one", "those"),
+    )
+
+
 def endpoint_clause(record: dict) -> Optional[str]:
     """The clause passed to `fdaaa.compose_flag` BESIDE a number that is shown.
 
     Three cases produce one, and the order matters:
 
       QUALIFIED   the trial is allowed because its primaries are dose-finding or safety.
-                  The clause states what success MEANT for that kind of endpoint. This is
+                  The clause states what success MEANT for that kind of endpoint -- in the
+                  co-primary form when other kinds of primary are also registered. This is
                   MANDATORY -- the flip of those two classes in CLASS_GATE was approved on
                   the explicit condition that a clause accompanies the number, so a bare
                   number for a qualified class is a regression, not a simplification.
       MIXED       some primaries testable, some not. The existing sentence.
+      UNREAD      undeterminable, some primaries read as value-reporting and the rest
+                  unclassifiable. Also mandatory: see requires_clause.
       otherwise   None. A plain applicable trial has nothing to caveat and an
                   undeterminable one has nothing measured, so the flag never gains a
                   sentence the classifier did not earn.
@@ -918,16 +1043,16 @@ def endpoint_clause(record: dict) -> Optional[str]:
     primary alongside a pharmacokinetic one -- and in that case what success meant is more
     useful to the reader than how many endpoints were excluded.
 
-    `compose_flag` is unchanged: it already takes this as a parameter. The precondition for
-    wiring it in used to be a kappa clearing `GATE_KAPPA_MINIMUM`; that threshold has been
-    demoted to a reported diagnostic, so the condition is now `GATING_CRITERIA` -- both
-    bars passing on hand labels, which the confirming sample recorded above does.
+    Reaches the user through `fdaaa.trial_flag`, which raises if a record that
+    `requires_clause` produces a flag without this text.
     """
+    if record.get("reason") == REASON_UNTESTABLE_BESIDE_UNREADABLE:
+        return _unread_beside_untestable_clause(record)
     if record.get("gate") != GATE_APPLICABLE:
         return None
     qualified = _dominant_qualified(record)
     if qualified is not None:
-        return CLASS_SUCCESS_MEANING[qualified]
+        return _qualified_clause(record, qualified)
     if not record.get("mixed"):
         return None
     cls = _dominant_untestable(record)

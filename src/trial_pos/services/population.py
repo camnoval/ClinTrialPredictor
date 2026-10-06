@@ -819,8 +819,23 @@ def modality_signals(row: dict) -> dict:
 AGENCY_CLASSES = frozenset({"nih", "industry", "other", "fed", "other_gov", "indiv",
                             "network", "ambig", "unknown"})
 
-RESPONSIBLE_PARTY_TYPES = frozenset({"sponsor", "principal investigator",
-                                     "sponsor-investigator"})
+# AACT's non-classes. Recognised tokens -- so `is_known_agency_class` is True for them,
+# which is vocabulary drift detection working as designed -- but not a statement of what
+# the sponsor IS. Anything that treats the class as a category goes through
+# `classified_agency_class`, which reads these as unknown.
+AGENCY_NON_CLASSES = frozenset({"unknown", "ambig"})
+
+# Bucket for a trial with NO lead-sponsor value. Distinct from UNKNOWN on purpose: UNKNOWN
+# is "unknown", which is also AACT's own agency class once normalised, so using it here
+# put "the registry says unknown" and "there was no sponsor row" in one cell. The second
+# is how the section 0.3 incident first looked.
+SPONSOR_NOT_RECORDED = "not_recorded"
+
+# Canonical form is AACT's current spelling, lowercased: underscores. Older registry text
+# used spaces and a hyphen ("Principal Investigator", "Sponsor-Investigator"), which
+# `normalize_responsible_party_type` folds into the same tokens.
+RESPONSIBLE_PARTY_TYPES = frozenset({"sponsor", "principal_investigator",
+                                     "sponsor_investigator"})
 
 SPONSOR_COLS = ("lead_sponsor_class", "collaborator_classes", "responsible_party_type",
                 "lead_sponsor_class_known", "responsible_party_type_known")
@@ -858,17 +873,23 @@ def parse_agency_classes(raw) -> tuple:
 def normalize_responsible_party_type(raw) -> Optional[str]:
     """AACT responsible_party_type -> a lowercased token, or None when absent.
 
-    Same passthrough discipline as `normalize_agency_class`: an unrecognised party type is
-    a finding about the registry, not a value to discard.
+    Spaces and hyphens fold to underscores, so the old and current registry spellings of
+    one party type are one token. Same passthrough discipline as `normalize_agency_class`:
+    an unrecognised party type is a finding about the registry, not a value to discard.
     """
     text = _text(raw)
     if text is None:
         return None
-    return text.strip().lower() or None
+    token = text.strip().lower().replace("-", "_").replace(" ", "_")
+    return token or None
 
 
 def is_known_agency_class(raw) -> Optional[bool]:
     """Is this value in the vocabulary we expected? None when absent.
+
+    "Known" means RECOGNISED TOKEN, not "the sponsor's class is known": AACT's 'unknown'
+    and 'ambig' are recognised, so this is True for them. Use `classified_agency_class`
+    for the class itself.
 
     Carried as its own column so the audit can report vocabulary drift as a COUNT rather
     than requiring someone to eyeball the class distribution. False does not mean bad
@@ -878,6 +899,26 @@ def is_known_agency_class(raw) -> Optional[bool]:
     if token is None:
         return None
     return token in AGENCY_CLASSES
+
+
+def classified_agency_class(raw) -> Optional[str]:
+    """The sponsor's class as a category, or None when it is not known.
+
+    None for an absent value AND for AACT's non-classes, because "the registry could not
+    classify this sponsor" is unknown, not a category alongside industry and NIH. An
+    unrecognised token passes through: it is a real class the constant has not met yet.
+    """
+    token = normalize_agency_class(raw)
+    if token is None or token in AGENCY_NON_CLASSES:
+        return None
+    return token
+
+
+def lead_sponsor_bucket(raw) -> str:
+    """Grouping key for a lead-sponsor value in an audit table. Never collides with a
+    registry token: an absent value is SPONSOR_NOT_RECORDED, not UNKNOWN."""
+    text = _text(raw)
+    return text if text is not None else SPONSOR_NOT_RECORDED
 
 
 def is_known_responsible_party_type(raw) -> Optional[bool]:
@@ -929,7 +970,7 @@ def sponsor_agreement(rows) -> dict:
             coverage["party_only"] += 1
         else:
             coverage["neither"] += 1
-        key = (lead or UNKNOWN, party or UNKNOWN)
+        key = (lead_sponsor_bucket(lead), party or UNKNOWN)
         joint[key] = joint.get(key, 0) + 1
     return {"joint": joint, "coverage": coverage}
 

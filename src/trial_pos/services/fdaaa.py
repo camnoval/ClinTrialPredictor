@@ -58,6 +58,9 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
+from trial_pos.services.endpoint_type import (
+    decline_sentence, endpoint_clause, refuses_estimate, requires_clause,
+)
 from trial_pos.services.population import (
     ERA_FINAL_RULE, ERA_PRE_FDAAA, UNKNOWN, era_for_row, tribool,
 )
@@ -235,15 +238,12 @@ def applicability_coverage(rows, era_fallback: bool = True) -> dict:
 #   1. the statute never asked. A phase-1-only drug trial is excluded from the FDAAA
 #      results-submission requirement, so its non-posting is lawful and the labelled slice
 #      is thin here for a reason that has nothing to do with the trial's quality.
-#   2. the question does not apply. 63% of phase 1 primary endpoints are pharmacokinetic or
-#      dose-finding measurements -- AUC, Cmax, MTD -- which are reported as values rather
-#      than tested against a threshold, so "did it meet its primary endpoint" has no
-#      answer to estimate.
+#   2. the endpoint. Supplied by `endpoint_type`, never derived here: a decline sentence
+#      INSTEAD of a number for a refusing class, or a clause BESIDE the number for a
+#      qualified or mixed trial. `trial_flag` is the entry point that applies both.
 #
-# The second needs the endpoint-type classifier, which is not built yet. Until it is, only
-# FLAG_FDAAA_EXEMPT can be attached from data on hand; `compose_flag` takes the endpoint
-# clause as an argument rather than inventing one, so the missing half is visibly missing
-# instead of silently omitted.
+# FLAG_THIN_TRAINING is attached by the FDAAA sentences only. Its text compares against "a
+# later-phase trial", so an endpoint clause on a phase 3 trial must not trigger it.
 FLAG_FDAAA_EXEMPT = (
     "Phase 1 trials are exempt from the FDAAA results-reporting requirement, so few of "
     "them post the statistical analysis this estimate is trained on."
@@ -261,20 +261,43 @@ FLAG_NOT_REQUIRED_TO_POST = (
 
 
 def compose_flag(applicability: dict, endpoint_clause: Optional[str] = None) -> str:
-    """Build the user-facing caveat from the applicability verdict and, when available, the
-    endpoint-type clause.
+    """Caveat text beside a SHOWN number. "" when there is nothing to flag.
 
-    Returns "" when there is nothing to flag. `endpoint_clause` is a parameter rather than
-    something this module derives, because the endpoint-type classifier does not exist yet
-    and a flag that invented the clause would be asserting a measurement nobody made.
+    Low-level: it cannot tell whether a clause was required. Callers holding a gate record
+    use `trial_flag`, which can.
     """
     parts = []
     if applicability.get("reason") == REASON_PHASE_1_ONLY:
         parts.append(FLAG_FDAAA_EXEMPT)
     elif applicability.get("verdict") == NOT_APPLICABLE:
         parts.append(FLAG_NOT_REQUIRED_TO_POST)
+    fdaaa_flagged = bool(parts)
     if endpoint_clause:
         parts.append(endpoint_clause)
-    if parts:
+    if fdaaa_flagged:
         parts.append(FLAG_THIN_TRAINING)
     return " ".join(parts)
+
+
+def trial_flag(applicability: dict, gate_record: dict) -> dict:
+    """One trial -> what the user sees: {estimate_shown, flag, clause_required}.
+
+    Refused: no number, and the flag IS the decline sentence -- the FDAAA caveats describe
+    a number that is not shown. Otherwise the number is shown with `compose_flag`'s text,
+    carrying the endpoint clause when the gate record has one.
+
+    Fails closed both ways: a refusal with no stated reason, or a qualified trial whose
+    clause did not reach the flag, raises rather than returning a silent refusal or a bare
+    number.
+    """
+    if refuses_estimate(gate_record.get("gate")):
+        sentence = decline_sentence(gate_record)
+        if not sentence:
+            raise ValueError(f"refused with no decline sentence: {gate_record!r}")
+        return {"estimate_shown": False, "flag": sentence, "clause_required": False}
+    required = requires_clause(gate_record)
+    clause = endpoint_clause(gate_record)
+    flag = compose_flag(applicability, clause)
+    if required and not (clause and clause in flag):
+        raise ValueError(f"qualified trial would show a bare number: {gate_record!r}")
+    return {"estimate_shown": True, "flag": flag, "clause_required": required}

@@ -12,7 +12,14 @@ phase memberships from the phase sets, and verdicts from the verdict constants.
 from __future__ import annotations
 
 from datetime import timedelta
+from itertools import combinations_with_replacement
 
+import trial_pos.services.fdaaa as fdaaa_module
+from trial_pos.services.endpoint_type import (
+    CLASS_GATE, CLASS_OTHER, CLASS_SUCCESS_MEANING, ENDPOINT_CLASSES, GATE_APPLICABLE,
+    GATE_NOT_APPLICABLE, GATE_ROLLUPS, GATE_UNDETERMINABLE, QUALIFIED_CLASSES,
+    decline_sentence, endpoint_clause, requires_clause, trial_gate,
+)
 from trial_pos.services.fdaaa import (
     APPLICABLE, APPLICABILITY_REASONS, APPLICABILITY_VERDICTS, FLAG_FDAAA_EXEMPT,
     FLAG_NOT_REQUIRED_TO_POST, FLAG_THIN_TRAINING, NOT_APPLICABLE, PHASE1_ONLY_PHASES,
@@ -20,7 +27,7 @@ from trial_pos.services.fdaaa import (
     REASON_HOOK_US_EXPORT, REASON_HOOK_US_FACILITY, REASON_NO_REGULATED_PRODUCT,
     REASON_PHASE_1_ONLY, REASON_PHASE_UNKNOWN, REASON_PRE_STATUTE,
     REASON_PRODUCT_UNKNOWN, UNDETERMINABLE, VERDICT_DOC, applicability_coverage,
-    applicability_for_row, compose_flag, product_in_scope, visible_hook,
+    applicability_for_row, compose_flag, product_in_scope, trial_flag, visible_hook,
 )
 from trial_pos.services.population import FDAAA_RESULTS_EFFECTIVE
 
@@ -229,12 +236,18 @@ def test_an_applicable_trial_with_no_endpoint_clause_gets_no_flag():
 
 
 def test_the_endpoint_clause_is_supplied_not_invented():
-    # the endpoint-type classifier does not exist yet; a flag that fabricated this clause
-    # would assert a measurement nobody made
     clause = "This trial's primary endpoint is a measurement rather than a threshold test."
     flag = compose_flag(applicability_for_row(_row()), endpoint_clause=clause)
     assert clause in flag
-    assert FLAG_THIN_TRAINING in flag
+
+
+def test_an_endpoint_clause_alone_does_not_attach_the_thin_training_sentence():
+    # FLAG_THIN_TRAINING compares against "a later-phase trial". On an applicable phase 3
+    # trial that comparison is false, so only the FDAAA sentences may bring it in.
+    clause = "endpoint clause"
+    assert compose_flag(applicability_for_row(_row()), clause) == clause
+    phase1 = compose_flag(applicability_for_row(_row(phase="PHASE1")), clause)
+    assert FLAG_THIN_TRAINING in phase1
 
 
 def test_both_clauses_appear_together_when_both_apply():
@@ -242,6 +255,117 @@ def test_both_clauses_appear_together_when_both_apply():
     flag = compose_flag(applicability_for_row(_row(phase="PHASE1")),
                         endpoint_clause=clause)
     assert FLAG_FDAAA_EXEMPT in flag and clause in flag
+
+
+# ---- trial_flag: the endpoint clause wired in -----------------------------
+# One applicability fixture per flag path, so every endpoint case is crossed with each.
+APPLICABILITY_FIXTURES = (_row(), _row(phase="PHASE1"), _row(drug="f", device="f"))
+FDAAA_SENTENCES = (FLAG_FDAAA_EXEMPT, FLAG_NOT_REQUIRED_TO_POST, FLAG_THIN_TRAINING)
+MAX_PRIMARIES_ENUMERATED = 3
+
+
+def _all_gate_records():
+    """Every multiset of classes up to MAX_PRIMARIES_ENUMERATED, under every roll-up."""
+    for size in range(1, MAX_PRIMARIES_ENUMERATED + 1):
+        for classes in combinations_with_replacement(ENDPOINT_CLASSES, size):
+            for rollup in GATE_ROLLUPS:
+                yield trial_gate(list(classes), rollup)
+    for rollup in GATE_ROLLUPS:
+        yield trial_gate([], rollup)
+
+
+def test_a_qualified_trial_carries_its_success_meaning():
+    for endpoint_class in QUALIFIED_CLASSES:
+        record = trial_gate([endpoint_class])
+        for row in APPLICABILITY_FIXTURES:
+            out = trial_flag(applicability_for_row(row), record)
+            assert out["estimate_shown"] is True
+            assert out["clause_required"] is True
+            assert CLASS_SUCCESS_MEANING[endpoint_class] in out["flag"], endpoint_class
+
+
+def test_no_qualified_trial_ever_shows_a_bare_number():
+    # The flips were approved on condition that a clause accompanies the number. Iterates
+    # the vocabulary so a new class or roll-up cannot open a path around it.
+    checked = 0
+    for record in _all_gate_records():
+        if not requires_clause(record):
+            continue
+        for row in APPLICABILITY_FIXTURES:
+            out = trial_flag(applicability_for_row(row), record)
+            assert out["estimate_shown"] is True
+            assert endpoint_clause(record) in out["flag"], record
+            checked += 1
+    assert checked > 0
+
+
+def test_an_unqualified_plain_trial_carries_nothing():
+    plain = [c for c, g in CLASS_GATE.items()
+             if g == GATE_APPLICABLE and c not in QUALIFIED_CLASSES]
+    assert plain
+    for endpoint_class in plain:
+        out = trial_flag(applicability_for_row(_row()), trial_gate([endpoint_class]))
+        assert out == {"estimate_shown": True, "flag": "", "clause_required": False}
+
+
+def test_a_refused_trial_carries_the_decline_sentence_instead():
+    refusing = [c for c, g in CLASS_GATE.items() if g == GATE_NOT_APPLICABLE]
+    assert refusing
+    for endpoint_class in refusing:
+        record = trial_gate([endpoint_class])
+        for row in APPLICABILITY_FIXTURES:
+            out = trial_flag(applicability_for_row(row), record)
+            assert out["estimate_shown"] is False
+            assert out["flag"] == decline_sentence(record)
+            for sentence in FDAAA_SENTENCES:
+                assert sentence not in out["flag"]
+
+
+def test_every_refusal_in_the_vocabulary_states_a_reason():
+    for record in _all_gate_records():
+        if record["gate"] != GATE_NOT_APPLICABLE:
+            continue
+        out = trial_flag(applicability_for_row(_row()), record)
+        assert out["estimate_shown"] is False and out["flag"], record
+
+
+def test_an_undeterminable_trial_shows_the_number_with_a_silent_endpoint_clause():
+    for record in (trial_gate([CLASS_OTHER]), trial_gate([])):
+        assert record["gate"] == GATE_UNDETERMINABLE
+        for row in APPLICABILITY_FIXTURES:
+            applicability = applicability_for_row(row)
+            out = trial_flag(applicability, record)
+            assert out["estimate_shown"] is True
+            assert out["flag"] == compose_flag(applicability)
+
+
+def test_trial_flag_raises_rather_than_show_a_bare_qualified_number():
+    record = trial_gate([QUALIFIED_CLASSES[0]])
+    original = fdaaa_module.endpoint_clause
+    fdaaa_module.endpoint_clause = lambda _record: None
+    try:
+        trial_flag(applicability_for_row(_row()), record)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a qualified trial with no clause did not raise")
+    finally:
+        fdaaa_module.endpoint_clause = original
+
+
+def test_trial_flag_raises_rather_than_refuse_silently():
+    refusing = [c for c, g in CLASS_GATE.items() if g == GATE_NOT_APPLICABLE]
+    record = trial_gate([refusing[0]])
+    original = fdaaa_module.decline_sentence
+    fdaaa_module.decline_sentence = lambda _record: None
+    try:
+        trial_flag(applicability_for_row(_row()), record)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a refusal with no decline sentence did not raise")
+    finally:
+        fdaaa_module.decline_sentence = original
 
 
 # ---- the guard that matters: the PULL must not import this --------------

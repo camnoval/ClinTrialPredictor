@@ -19,6 +19,9 @@ from trial_pos.services.endpoint_label import (
 )
 from trial_pos.services.endpoint_type import (
     CANDIDATE_APPLICABLE_FLIPS, CLASS_SUCCESS_MEANING, CONFIRM_SAMPLE_PER_CONTROL_CLASS,
+    CLASS_KIND_WORDS, CLASS_SUCCESS_SHORT, CLAUSE_COPRIMARY_TEMPLATE, is_coprimary,
+    TRAINING_EXCLUDED_GATE_REFUSED, TRAINING_EXCLUSION_DOC, TRAINING_EXCLUSION_REASONS,
+    TRAINING_NOT_EXCLUDED, training_exclusion,
     DOSE_FINDING_SPLIT_UNTESTED, GATING_CRITERIA, QUALIFIED_CLASSES, requires_clause,
     SERVING_GATE_HAS_NO_OUTCOME_REFERENCE, TRAINING_EXCLUSION_MIN_EFFECT,
     TRAINING_EXCLUSION_PREDICTED_DIRECTION,
@@ -32,6 +35,7 @@ from trial_pos.services.endpoint_type import (
     LABELLER_CLASS_DOC,
     MECHANISM_WORD, REASON_ALL_TESTABLE, REASON_ALL_UNTESTABLE, REASON_DOC,
     REASON_MIXED_UNDER_ALL, REASON_NO_ENDPOINT_TEXT, REASON_TESTABLE, REASON_UNREADABLE,
+    REASON_UNTESTABLE_BESIDE_UNREADABLE,
     REPORTABLE_KAPPA_MINIMUM, ROLLUP_ALL, ROLLUP_ANY, class_coverage, classify_title,
     classify_titles, collapse_to_gate, decline_sentence, endpoint_clause,
     gate_coverage, gate_for_class, gate_record_fields, gate_versus_tier, matched_classes,
@@ -282,11 +286,49 @@ def test_no_primary_outcomes_is_undeterminable_with_its_own_reason():
     assert record["n_primary"] == 0
 
 
-def test_unreadable_plus_untestable_refuses_under_any():
-    # one endpoint read as a value-reporting measurement, one unreadable: ANY has no
-    # testable endpoint to point at, so the refusal stands on the one it could read
+def test_unreadable_beside_untestable_is_undeterminable_under_any():
+    # CHANGED 2026-10-04 from a refusal. The unread primary may be the tested one -- the
+    # audit's sample found a real efficacy endpoint there in 4 of 5 -- and refusing
+    # asserts a reading nobody made.
     record = trial_gate([CLASS_PHARMACOKINETIC, CLASS_OTHER], ROLLUP_ANY)
+    assert record["gate"] == GATE_UNDETERMINABLE
+    assert record["reason"] == REASON_UNTESTABLE_BESIDE_UNREADABLE
+    assert decline_sentence(record) is None
+
+
+def test_unreadable_beside_untestable_still_refuses_under_all():
+    # Under ALL one value-reporting primary already decides "were all met": no answer.
+    record = trial_gate([CLASS_PHARMACOKINETIC, CLASS_OTHER], ROLLUP_ALL)
     assert record["gate"] == GATE_NOT_APPLICABLE
+    assert record["reason"] == REASON_MIXED_UNDER_ALL
+
+
+def test_every_untestable_only_trial_still_refuses_under_any():
+    refusing = [c for c, g in CLASS_GATE.items() if g == GATE_NOT_APPLICABLE]
+    for endpoint_class in refusing:
+        for n in range(1, 4):
+            assert trial_gate([endpoint_class] * n)["gate"] == GATE_NOT_APPLICABLE
+
+
+def test_unreadable_beside_untestable_requires_a_clause_that_names_both_counts():
+    for n_untestable in range(1, 4):
+        for n_unreadable in range(1, 4):
+            classes = ([CLASS_PHARMACOKINETIC] * n_untestable
+                       + [CLASS_OTHER] * n_unreadable)
+            record = trial_gate(classes, ROLLUP_ANY)
+            assert requires_clause(record) is True
+            clause = endpoint_clause(record)
+            assert clause.startswith(f"{n_untestable} of this trial's {len(classes)} ")
+            others = "one" if n_unreadable == 1 else str(n_unreadable)
+            assert f"the other {others}," in clause
+            assert MECHANISM_WORD[CLASS_PHARMACOKINETIC] in clause
+            assert (" was tested" if n_unreadable == 1 else " were tested") in clause
+
+
+def test_an_unreadable_only_trial_stays_silent():
+    record = trial_gate([CLASS_OTHER, CLASS_OTHER], ROLLUP_ANY)
+    assert requires_clause(record) is False
+    assert endpoint_clause(record) is None
 
 
 def test_counts_partition_the_primary_outcomes():
@@ -531,10 +573,92 @@ def test_a_refused_trial_never_requires_a_clause():
 def test_qualified_outranks_mixed_in_the_clause():
     # A dose-finding primary beside a pharmacokinetic one is both qualified and mixed.
     # What success MEANT is more useful to a reader than how many endpoints were excluded,
-    # so qualified is checked first -- asserted here rather than left to reading order.
+    # so qualified is checked first. It is also co-primary, so it takes that form.
     record = trial_gate([CLASS_DOSE_FINDING, CLASS_PHARMACOKINETIC])
     assert record["mixed"] is True
-    assert endpoint_clause(record) == CLASS_SUCCESS_MEANING[CLASS_DOSE_FINDING]
+    clause = endpoint_clause(record)
+    assert CLASS_SUCCESS_SHORT[CLASS_DOSE_FINDING] in clause
+    assert MECHANISM_WORD[CLASS_PHARMACOKINETIC] not in clause
+
+
+def test_coprimary_vocabularies_cover_exactly_the_qualified_classes_and_rollups():
+    assert set(CLASS_KIND_WORDS) == set(QUALIFIED_CLASSES)
+    assert set(CLASS_SUCCESS_SHORT) == set(QUALIFIED_CLASSES)
+    assert set(CLAUSE_COPRIMARY_TEMPLATE) == set(GATE_ROLLUPS)
+
+
+def test_a_qualified_class_beside_an_efficacy_primary_never_claims_to_be_the_endpoint():
+    # The sentence the co-primary form exists to replace: "This trial's primary endpoint
+    # is safety ..." on a trial that also registered an efficacy primary.
+    for endpoint_class in QUALIFIED_CLASSES:
+        for rollup in GATE_ROLLUPS:
+            record = trial_gate([CLASS_EFFICACY, endpoint_class], rollup)
+            clause = endpoint_clause(record)
+            assert clause != CLASS_SUCCESS_MEANING[endpoint_class]
+            assert f"{record['n_primary']} primary endpoints" in clause
+            assert CLASS_KIND_WORDS[endpoint_class][0] in clause
+
+
+def test_the_single_class_sentence_survives_repeats_of_the_same_class():
+    for endpoint_class in QUALIFIED_CLASSES:
+        record = trial_gate([endpoint_class] * 3)
+        assert is_coprimary(record, endpoint_class) is False
+        assert endpoint_clause(record) == CLASS_SUCCESS_MEANING[endpoint_class]
+
+
+def test_every_coprimary_clause_states_its_counts_with_matching_grammar():
+    from itertools import combinations_with_replacement
+    checked = 0
+    for size in range(2, 4):
+        for classes in combinations_with_replacement(ENDPOINT_CLASSES, size):
+            for rollup in GATE_ROLLUPS:
+                record = trial_gate(list(classes), rollup)
+                if not requires_clause(record) or record["gate"] != GATE_APPLICABLE:
+                    continue
+                qualified = next(c for c in CLASS_PRECEDENCE
+                                 if c in classes and c in QUALIFIED_CLASSES)
+                if not is_coprimary(record, qualified):
+                    continue
+                clause = endpoint_clause(record)
+                n_kind = classes.count(qualified)
+                singular, plural = CLASS_KIND_WORDS[qualified]
+                expected = (f"{n_kind} of this trial's {len(classes)} primary endpoints "
+                            f"{'is' if n_kind == 1 else 'are'} "
+                            f"{singular if n_kind == 1 else plural}.")
+                assert clause.startswith(expected), (classes, rollup, clause)
+                checked += 1
+    assert checked > 0
+
+
+def test_the_any_and_all_coprimary_clauses_say_different_things():
+    classes = [CLASS_EFFICACY, CLASS_SAFETY]
+    any_clause = endpoint_clause(trial_gate(classes, ROLLUP_ANY))
+    all_clause = endpoint_clause(trial_gate(classes, ROLLUP_ALL))
+    assert any_clause != all_clause
+    assert CLASS_SUCCESS_SHORT[CLASS_SAFETY] in any_clause
+    assert CLASS_SUCCESS_SHORT[CLASS_SAFETY] not in all_clause
+
+
+def test_training_excludes_exactly_what_serving_refuses():
+    # Training and serving agree by construction: a trial is dropped from training if and
+    # only if the gate would decline it for a user.
+    from itertools import combinations_with_replacement
+    for size in range(0, 4):
+        for classes in combinations_with_replacement(ENDPOINT_CLASSES, size):
+            for rollup in GATE_ROLLUPS:
+                record = trial_gate(list(classes), rollup)
+                excluded = training_exclusion(record) != TRAINING_NOT_EXCLUDED
+                assert excluded is refuses_estimate(record["gate"]), (classes, rollup)
+
+
+def test_training_exclusion_vocabulary_is_documented_and_never_blank():
+    assert set(TRAINING_EXCLUSION_DOC) == set(TRAINING_EXCLUSION_REASONS)
+    assert TRAINING_NOT_EXCLUDED not in TRAINING_EXCLUSION_REASONS
+    assert training_exclusion(trial_gate([CLASS_EFFICACY])) == TRAINING_NOT_EXCLUDED
+    refused = trial_gate([CLASS_PHARMACOKINETIC])
+    assert training_exclusion(refused) == TRAINING_EXCLUDED_GATE_REFUSED
+    assert gate_record_fields(refused)["endpoint_type_training_exclusion"] \
+        == TRAINING_EXCLUDED_GATE_REFUSED
 
 
 def test_the_dose_finding_split_is_recorded_but_not_acted_on():
