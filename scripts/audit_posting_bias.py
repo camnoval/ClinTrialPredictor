@@ -51,7 +51,15 @@ from trial_pos.services.eligibility import (  # noqa: E402
     DEFAULT_ADVANCEMENT_WINDOW_YEARS, DEFAULT_MARKET_WINDOW_YEARS, ELIGIBLE,
     ELIGIBILITY_DOC, ELIGIBILITY_VERDICTS, MARKET_WINDOW_YEARS_REPORTED, REASON_DOC,
     TARGETS, TARGET_ENDPOINT_MET, TARGET_MARKET, eligibility_coverage,
-    eligibility_for_row, eligible_for_endpoint_met, phase_class,
+    eligibility_for_row, eligible_for_endpoint_met, merge_gate_exclusion,
+    merge_registration_timing, phase_class,
+)
+from trial_pos.services.aact_fields import output_name  # noqa: E402
+from trial_pos.services.eligibility import (  # noqa: E402
+    GATE_EXCLUSION_FIELD, REGISTRATION_SUBMITTED_FIELD,
+)
+from trial_pos.services.endpoint_type import (  # noqa: E402
+    DEFAULT_GATE_ROLLUP, TRAINING_EXCLUDED_GATE_REFUSED, classify_title,
 )
 from trial_pos.services.endpoint_label import HEADLINE_TIERS  # noqa: E402
 from trial_pos.services.fdaaa import (  # noqa: E402
@@ -66,6 +74,7 @@ from trial_pos.services.posting_bias import (  # noqa: E402
 )
 from trial_pos.services.population import (  # noqa: E402
     FDAAA_COMPONENTS, JOINT_MESH_FIELDS, UNKNOWN, empty_entity_coverage,
+    lead_sponsor_bucket,
     entity_coverage, era_for_row, merge_entity_coverage, tribool,
 )
 
@@ -93,6 +102,37 @@ def read_csv(path: Path):
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             yield row
+
+
+def load_submitted_dates(path: Path) -> dict:
+    """nct_id -> first-submitted date from the fields file. Missing file: fail, because
+    eligibility refuses unmerged rows and a silent skip would admit retrospective ones."""
+    if not path.exists():
+        raise SystemExit(f"!! not found: {path}. Run scripts\\pull_aact_fields.py first; "
+                         "eligibility needs the first-submitted date.")
+    column = output_name("studies", REGISTRATION_SUBMITTED_FIELD)
+    out = {}
+    for row in read_csv(path):
+        out[row["nct_id"].strip().upper()] = row[column]
+    return out
+
+
+PRIMARY_OUTCOME = "primary"
+
+
+def load_primary_classes(path: Path) -> dict:
+    """nct_id -> endpoint classes of its registered PRIMARY outcomes. Missing file: fail,
+    because endpoint-met eligibility refuses rows without the gate verdict."""
+    if not path.exists():
+        raise SystemExit(f"!! not found: {path}. Endpoint-met eligibility needs the gate "
+                         "verdict, which needs the registered primary outcome text.")
+    out: dict = {}
+    for row in read_csv(path):
+        if (row.get("outcome_type") or "").strip() != PRIMARY_OUTCOME:
+            continue
+        nct = (row.get("nct_id") or "").strip().upper()
+        out.setdefault(nct, []).append(classify_title((row.get("measure") or "").strip()))
+    return out
 
 
 def load_entities(path: Path) -> dict:
@@ -146,7 +186,7 @@ def _tri(value) -> str:
 STRATIFIERS = (
     ("phase", lambda r: (r.get("phase") or UNKNOWN)),
     ("era", _era_of),
-    ("lead_sponsor_class", lambda r: (r.get("lead_sponsor_class") or UNKNOWN)),
+    ("lead_sponsor_class", lambda r: lead_sponsor_bucket(r.get("lead_sponsor_class"))),
     ("responsible_party_type", lambda r: (r.get("responsible_party_type") or UNKNOWN)),
     # FDAAA_COMPONENTS is a tuple of (name, table, column, kind, why) records, not bare
     # names -- read off the constant rather than assumed, after the first version of this
@@ -221,6 +261,10 @@ def main() -> int:
     parser.add_argument("--labels", default=Path("data/aact/trial_labels.csv"), type=Path)
     parser.add_argument("--entities", default=Path("data/aact/trial_entities.csv"),
                         type=Path)
+    parser.add_argument("--fields", default=Path("data/aact/trial_registration_fields.csv"),
+                        type=Path, help="source of the first-submitted date")
+    parser.add_argument("--titles", default=Path("data/aact/trial_design_outcomes.csv"),
+                        type=Path, help="registered primary outcome text, for the gate")
     parser.add_argument("--snapshot", required=True,
                         help="ISO date fixing 'now' for every window. REQUIRED and never "
                              "read from the clock: the same trial's eligibility would "
@@ -243,6 +287,8 @@ def main() -> int:
     _rule("SETTINGS -- every value that changes a number below")
     print(f"  labels             : {args.labels}")
     print(f"  entities           : {args.entities}")
+    print(f"  registration fields: {args.fields}")
+    print(f"  primary outcome text: {args.titles}  (gate roll-up {DEFAULT_GATE_ROLLUP})")
     print(f"  snapshot ('now')   : {snapshot}")
     print(f"  market window      : {args.market_window} years")
     print(f"  advancement window : {args.advancement_window} years")
@@ -253,7 +299,13 @@ def main() -> int:
         print(f"\n  !! {args.entities} not found -- MeSH matchability will be skipped.")
         print("     Run the pull to produce it; the eligibility sections still hold.")
 
-    rows = list(read_csv(args.labels))
+    submitted = load_submitted_dates(args.fields)
+    rows = merge_registration_timing(read_csv(args.labels), submitted)
+    rows = merge_gate_exclusion(rows, load_primary_classes(args.titles))
+    print(f"  first-submitted date merged: {sum(1 for r in rows if r['nct_id'].strip().upper() in submitted)} "
+          f"of {len(rows)} label rows")
+    refused = sum(1 for r in rows if r[GATE_EXCLUSION_FIELD] == TRAINING_EXCLUDED_GATE_REFUSED)
+    print(f"  gate verdict merged: {refused} label rows refused by the gate, labelled or not")
 
     _rule("1. ELIGIBILITY BY TARGET (the denominator, decided before any rate)")
     report_eligibility(eligibility_coverage(rows, snapshot, args.market_window,
@@ -286,8 +338,8 @@ def main() -> int:
     print("  window arithmetic is wrong and nothing below can be trusted.")
 
     _rule("3. MeSH MATCHABILITY INSIDE THE MARKET-ELIGIBLE COHORT")
-    print("  The 63.0% both-MeSH figure was measured over ALL drug trials. This cohort is")
-    print("  pivotal-phase with a closed window, so its denominator is different and its")
+    print("  The both-MeSH rate over ALL drug trials (left column) is not this cohort's:")
+    print("  it is pivotal-phase with a closed window, so its denominator is different and its")
     print("  MeSH coverage is a separate question -- older trials have had longer to be")
     print("  indexed, and indexing practice has also changed. Measured, not assumed.")
     if not entities:
@@ -385,13 +437,17 @@ def main() -> int:
     print("  real question, while its drug's approval answers the other two in advance.")
 
     _rule("6. DISCLOSURE RATE BY STRATUM -- is the labelled slice selected?")
-    print("  This is the project's credibility. The endpoint-met label exists for 14,368")
-    print("  of 221,887 drug trials. If disclosure is flat across these variables the")
+    drug_rows = [r for r in rows if tribool(r.get("is_drug_trial")) is True]
+    labelled = sum(1 for r in drug_rows if (r.get("tier_min") or "") in HEADLINE_TIERS
+                   and str(r.get("endpoint_met_strict") or "").strip() != "")
+    print(f"  This is the project's credibility. A headline endpoint-met label exists for "
+          f"{labelled}")
+    print(f"  of {len(drug_rows)} drug trials ({_pct(labelled, len(drug_rows))}). If "
+          "disclosure is flat across these variables the")
     print("  slice is near-random and the model can claim to transport; if it is graded,")
     print("  the model speaks for a sub-population and the domain has to say which.")
     print("  Computed INSIDE the endpoint-met scope (drug trials only), because a rate")
-    print("  over all 460,569 would answer a question no model asks.")
-    drug_rows = [r for r in rows if tribool(r.get("is_drug_trial")) is True]
+    print(f"  over all {len(rows)} would answer a question no model asks.")
     print(f"\n  drug trials: {len(drug_rows)}")
     report_disclosure(drug_rows, snapshot, args.show)
 

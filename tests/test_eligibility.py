@@ -18,17 +18,39 @@ from trial_pos.services.eligibility import (
     REASON_PHASE_UNKNOWN, REASON_POST_APPROVAL, REASON_READOUT_NOT_ACTUAL,
     REASON_WINDOW_OPEN, TARGETS, TARGET_ADVANCEMENT, TARGET_ENDPOINT_MET, TARGET_MARKET,
     UNDETERMINABLE, UNDETERMINABLE_REASONS, eligibility_coverage, eligibility_for_row,
+    REASON_RETROSPECTIVE_REGISTRATION, REASON_REGISTRATION_TIMING_UNKNOWN,
+    REGISTRATION_SUBMITTED_FIELD, merge_registration_timing, registration_timing,
+    GATE_EXCLUSION_FIELD, REASON_GATE_REFUSED, merge_gate_exclusion,
     eligible_for_advancement, eligible_for_endpoint_met, eligible_for_market,
     normalize_phase, phase_class, readout_date, window_closed,
 )
 from trial_pos.services.endpoint_label import HEADLINE_TIERS
+from trial_pos.services.endpoint_type import (
+    CLASS_EFFICACY, CLASS_OTHER, CLASS_PHARMACOKINETIC, TRAINING_EXCLUDED_GATE_REFUSED,
+    TRAINING_NOT_EXCLUDED,
+)
 from trial_pos.services.population import NOT_APPLICABLE, UNKNOWN
 
 SNAPSHOT = date(2026, 9, 20)
 
 
-def _row(phase="PHASE3", years_ago=None, actual=True, drug=True, strict="1", tier=None):
+# Fixture defaults: a labelled trial read out this long ago, registered this long before.
+DEFAULT_READOUT_YEARS_AGO = 10
+DEFAULT_REGISTERED_YEARS_BEFORE_READOUT = 1
+_OMIT = object()
+
+
+def _row(phase="PHASE3", years_ago=DEFAULT_READOUT_YEARS_AGO, actual=True, drug=True,
+         strict="1", tier=None,
+         registered_years_before=DEFAULT_REGISTERED_YEARS_BEFORE_READOUT, submitted=None,
+         gate=None):
     """A trial row, with its readout placed relative to the snapshot.
+
+    Defaults to a REALISTIC labelled trial: a past actual readout and a registration a year
+    before it. `years_ago=None` removes the completion date; `registered_years_before`
+    negative registers after it; `submitted=""` blanks the date and `submitted=_OMIT`
+    leaves the key out, which is the unmerged row the module must refuse. `gate` is the
+    merged gate verdict, defaulting to not excluded; `gate=_OMIT` leaves it out.
 
     `years_ago` is derived from the snapshot rather than written as a literal date, so
     moving SNAPSHOT cannot leave a test asserting against a stale calendar.
@@ -39,10 +61,21 @@ def _row(phase="PHASE3", years_ago=None, actual=True, drug=True, strict="1", tie
     """
     row = {"phase": phase, "is_drug_trial": drug, "endpoint_met_strict": strict,
            "tier_min": tier if tier is not None else HEADLINE_TIERS[0]}
+    if gate is not _OMIT:
+        row[GATE_EXCLUSION_FIELD] = TRAINING_NOT_EXCLUDED if gate is None else gate
     if years_ago is not None:
         readout = SNAPSHOT.replace(year=SNAPSHOT.year - years_ago)
         row["primary_completion_date"] = readout.isoformat()
         row["primary_completion_date_type"] = "Actual" if actual else "Estimated"
+    if submitted is _OMIT:
+        return row
+    if submitted is not None:
+        row[REGISTRATION_SUBMITTED_FIELD] = submitted
+    elif years_ago is not None:
+        registered = SNAPSHOT.replace(year=SNAPSHOT.year - years_ago - registered_years_before)
+        row[REGISTRATION_SUBMITTED_FIELD] = registered.isoformat()
+    else:
+        row[REGISTRATION_SUBMITTED_FIELD] = ""
     return row
 
 
@@ -88,7 +121,7 @@ def test_readout_requires_an_actual_date():
     # a clock cannot start from a plan
     assert readout_date(_row(years_ago=10, actual=True)) is not None
     assert readout_date(_row(years_ago=10, actual=False)) is None
-    assert readout_date(_row()) is None                     # no date at all
+    assert readout_date(_row(years_ago=None)) is None       # no date at all
 
 
 def test_window_closes_exactly_at_the_boundary():
@@ -333,3 +366,104 @@ def test_coverage_records_whether_it_required_a_headline_tier():
     assert eligibility_coverage([row], SNAPSHOT)["endpoint_headline_only"] is True
     assert eligibility_coverage([row], SNAPSHOT,
                                headline_only=False)["endpoint_headline_only"] is False
+
+# ---- retrospective registration, DECIDED 2026-10-06 -----------------------
+def _eligible_everywhere_but_for_registration(**kw):
+    """A pivotal drug trial that every target admits when registered prospectively."""
+    return _row(phase=sorted(PIVOTAL_PHASES)[0], **kw)
+
+
+def test_the_fixture_default_is_eligible_for_every_target():
+    # otherwise the tests below could pass because something else excluded the row
+    for record in eligibility_for_row(_eligible_everywhere_but_for_registration(),
+                                      SNAPSHOT).values():
+        assert record["verdict"] == ELIGIBLE, record
+
+
+def test_a_retrospectively_registered_trial_is_excluded_from_every_target():
+    row = _eligible_everywhere_but_for_registration(registered_years_before=-1)
+    assert registration_timing(row) is True
+    for target, record in eligibility_for_row(row, SNAPSHOT).items():
+        assert (record["verdict"], record["reason"]) \
+            == (INELIGIBLE, REASON_RETROSPECTIVE_REGISTRATION), target
+
+
+def test_unknown_registration_timing_is_undeterminable_not_admitted():
+    row = _eligible_everywhere_but_for_registration(submitted="")
+    for target, record in eligibility_for_row(row, SNAPSHOT).items():
+        assert (record["verdict"], record["reason"]) \
+            == (UNDETERMINABLE, REASON_REGISTRATION_TIMING_UNKNOWN), target
+
+
+def test_an_unmerged_row_raises_rather_than_passing_as_prospective():
+    row = _eligible_everywhere_but_for_registration(submitted=_OMIT)
+    for fn in (lambda r: eligible_for_endpoint_met(r),
+               lambda r: eligible_for_advancement(r, SNAPSHOT),
+               lambda r: eligible_for_market(r, SNAPSHOT)):
+        try:
+            fn(row)
+        except ValueError:
+            continue
+        raise AssertionError("an unmerged row was given a verdict")
+
+
+def test_the_registration_check_runs_last_so_other_reasons_count_unchanged():
+    # a non-drug trial registered late is counted as non-drug, not as retrospective
+    row = _row(drug=False, registered_years_before=-1)
+    for record in eligibility_for_row(row, SNAPSHOT).values():
+        assert record["reason"] == REASON_NOT_DRUG_TRIAL
+    late_open = _row(years_ago=0, registered_years_before=-1)
+    assert eligible_for_market(late_open, SNAPSHOT)["reason"] == REASON_WINDOW_OPEN
+
+
+def test_merge_fills_from_the_fields_file_and_blanks_what_it_lacks():
+    rows = [{"nct_id": "nct1"}, {"nct_id": "NCT2"}]
+    merged = merge_registration_timing(rows, {"NCT1": "2010-01-01"})
+    assert merged[0][REGISTRATION_SUBMITTED_FIELD] == "2010-01-01"
+    assert merged[1][REGISTRATION_SUBMITTED_FIELD] == ""
+    assert REGISTRATION_SUBMITTED_FIELD not in rows[0]      # inputs not mutated
+
+
+# ---- the gate refusal, inside the one predicate ---------------------------
+def test_a_gate_refused_trial_is_excluded_from_endpoint_met_only():
+    row = _eligible_everywhere_but_for_registration(gate=TRAINING_EXCLUDED_GATE_REFUSED)
+    verdicts = eligibility_for_row(row, SNAPSHOT)
+    assert (verdicts[TARGET_ENDPOINT_MET]["verdict"],
+            verdicts[TARGET_ENDPOINT_MET]["reason"]) == (INELIGIBLE, REASON_GATE_REFUSED)
+    # the gate asks whether the endpoint had a threshold; the other targets do not
+    assert verdicts[TARGET_ADVANCEMENT]["verdict"] == ELIGIBLE
+    assert verdicts[TARGET_MARKET]["verdict"] == ELIGIBLE
+
+
+def test_the_gate_check_runs_after_registration_so_its_count_is_unchanged():
+    row = _eligible_everywhere_but_for_registration(registered_years_before=-1,
+                                                     gate=TRAINING_EXCLUDED_GATE_REFUSED)
+    assert eligible_for_endpoint_met(row)["reason"] == REASON_RETROSPECTIVE_REGISTRATION
+
+
+def test_endpoint_met_refuses_an_unmerged_or_unrecognised_gate_value():
+    for row in (_row(gate=_OMIT), _row(gate="probably_fine")):
+        try:
+            eligible_for_endpoint_met(row)
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted {row.get(GATE_EXCLUSION_FIELD, '<absent>')!r}")
+
+
+def test_advancement_and_market_do_not_need_the_gate_field():
+    row = _row(gate=_OMIT)
+    eligible_for_advancement(row, SNAPSHOT)
+    eligible_for_market(row, SNAPSHOT)
+
+
+def test_merge_gate_exclusion_uses_the_gate_itself():
+    rows = [{"nct_id": "nct1"}, {"nct_id": "NCT2"}, {"nct_id": "NCT3"}, {"nct_id": "NCT4"}]
+    classes = {"NCT1": [CLASS_PHARMACOKINETIC],
+               "NCT2": [CLASS_PHARMACOKINETIC, CLASS_OTHER],
+               "NCT3": [CLASS_EFFICACY]}
+    merged = merge_gate_exclusion(rows, classes)
+    values = [m[GATE_EXCLUSION_FIELD] for m in merged]
+    # all-PK refuses; PK beside unreadable is undeterminable since B2; no text is undeterminable
+    assert values == [TRAINING_EXCLUDED_GATE_REFUSED, TRAINING_NOT_EXCLUDED,
+                      TRAINING_NOT_EXCLUDED, TRAINING_NOT_EXCLUDED]
+    assert GATE_EXCLUSION_FIELD not in rows[0]

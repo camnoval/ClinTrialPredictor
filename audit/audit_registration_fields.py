@@ -50,6 +50,8 @@ DAYS_PER_YEAR = 365
 TOP_DISAGREEMENTS = 12
 DRUG_TRUE = "True"
 STRICT_NEGATIVE = "0"
+STRICT_MET = "1"
+SMALL_CELL = 100
 
 F = {  # fields-file columns this audit reads
     "submitted": "studies__study_first_submitted_date",
@@ -177,6 +179,20 @@ def main() -> int:
         rows = [n for n in labelled if era_of(fields[n][F["submitted"]]) == era]
         if rows:
             _tri_row(f"    {era}", (retro(n) for n in rows))
+    print("\n  met rate, headline-labelled, retrospective vs prospective WITHIN phase group")
+    print(f"    {'phase group':16s} {'retro n':>8s} {'retro met':>10s} {'pro n':>8s} "
+          f"{'pro met':>8s} {'gap, pts':>9s}")
+    for g, _n in groups.most_common():
+        cells = {}
+        for side in (True, False):
+            members = [n for n in labelled if phase_group(labels[n]["phase"]) == g
+                       and retro(n) is side]
+            met = sum(1 for n in members if labels[n]["endpoint_met_strict"] == STRICT_MET)
+            cells[side] = (len(members), met)
+        (rn, rm), (pn, pm) = cells[True], cells[False]
+        gap = (f"{100.0 * (rm / rn - pm / pn):+.1f}" if rn and pn else "n/a")
+        print(f"    {g:16s} {rn:8d} {_pct(rm, rn):>10s} {pn:8d} {_pct(pm, pn):>8s} {gap:>9s}")
+    print(f"    (retro n under {SMALL_CELL} gives a gap too noisy to read on its own)")
     lags = [registration_lag_days(fields[n][F["submitted"]], fields[n][F["pcd"]])
             for n in labelled if retro(n) is True]
     print(f"\n  lag in days, headline-labelled retrospective: {_quantiles(lags, LAG_QUANTILES)}")

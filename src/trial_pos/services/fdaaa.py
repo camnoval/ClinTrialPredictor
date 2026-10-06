@@ -104,9 +104,8 @@ REASON_DOC = {
     REASON_PRE_STATUTE: ("primary completion predates the FDAAA results-submission "
                          "obligation, so no obligation existed to breach"),
     REASON_PHASE_1_ONLY: ("a phase-1-only study of a drug is excluded from the definition "
-                          "of an applicable clinical trial. This is the single largest "
-                          "source of confident NOT-APPLICABLE and it explains much of the "
-                          "16.9% phase 1 posting rate"),
+                          "of an applicable clinical trial, which is a large part of why "
+                          "phase 1 posts so much less than later phases"),
     REASON_NO_REGULATED_PRODUCT: ("the sponsor declared neither an FDA-regulated drug nor "
                                   "device, so the trial is outside the product scope"),
     REASON_HOOK_US_FACILITY: "at least one recorded study site in the United States",

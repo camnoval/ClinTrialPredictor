@@ -67,7 +67,12 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
+from trial_pos.services.aact_fields import registered_after_primary_completion
 from trial_pos.services.endpoint_label import HEADLINE_TIERS
+from trial_pos.services.endpoint_type import (
+    DEFAULT_GATE_ROLLUP, TRAINING_EXCLUDED_GATE_REFUSED, TRAINING_EXCLUSION_REASONS,
+    TRAINING_NOT_EXCLUDED, training_exclusion, trial_gate,
+)
 from trial_pos.services.population import (
     NOT_APPLICABLE, UNKNOWN, is_actual_date, parse_date, tribool,
 )
@@ -121,15 +126,20 @@ REASON_NOT_PIVOTAL = "not_a_pivotal_phase"
 REASON_NO_ANALYSIS_POSTED = "no_primary_analysis_posted"
 REASON_NOT_HEADLINE_TIER = "label_rests_on_a_non_headline_tier"
 REASON_WINDOW_OPEN = "window_has_not_closed"
+REASON_RETROSPECTIVE_REGISTRATION = "registered_after_primary_completion"
+REASON_GATE_REFUSED = "endpoint_gate_refuses_this_trial"
 
 # Why the answer is not knowable, as distinct from the answer being no.
 REASON_PHASE_UNKNOWN = "phase_absent_or_unrecognised"
 REASON_READOUT_NOT_ACTUAL = "readout_date_is_planned_or_absent"
+REASON_REGISTRATION_TIMING_UNKNOWN = "registration_timing_unknown"
 
 INELIGIBILITY_REASONS = (REASON_NOT_DRUG_TRIAL, REASON_POST_APPROVAL,
                          REASON_NOT_PIVOTAL, REASON_NO_ANALYSIS_POSTED,
-                         REASON_NOT_HEADLINE_TIER, REASON_WINDOW_OPEN)
-UNDETERMINABLE_REASONS = (REASON_PHASE_UNKNOWN, REASON_READOUT_NOT_ACTUAL)
+                         REASON_NOT_HEADLINE_TIER, REASON_WINDOW_OPEN,
+                         REASON_RETROSPECTIVE_REGISTRATION, REASON_GATE_REFUSED)
+UNDETERMINABLE_REASONS = (REASON_PHASE_UNKNOWN, REASON_READOUT_NOT_ACTUAL,
+                          REASON_REGISTRATION_TIMING_UNKNOWN)
 
 REASON_DOC = {
     REASON_NOT_DRUG_TRIAL: ("scoping is drug-only: intervention_type carries neither drug "
@@ -151,6 +161,18 @@ REASON_DOC = {
     REASON_WINDOW_OPEN: ("readout + W is later than the snapshot, so this trial has not had "
                          "the same time to succeed as the rest of the training set. "
                          "EXCLUDED, never labelled 0"),
+    REASON_RETROSPECTIVE_REGISTRATION: (
+        "first submitted to the registry after its primary completion, so every "
+        "registration field was written knowing the outcome, and no trial scored at serving "
+        "-- always before readout -- can look like it. Every target. DECIDED 2026-10-06"),
+    REASON_GATE_REFUSED: (
+        "endpoint-met only: the serving gate declines this trial because its primaries are "
+        "value-reporting, so a label the tool would refuse to show is not trained on. "
+        "endpoint_type.training_exclusion, applied here so one predicate decides the "
+        "population. DECIDED 2026-10-04"),
+    REASON_REGISTRATION_TIMING_UNKNOWN: (
+        "first-submitted or primary-completion date absent, so whether the record was "
+        "written before the outcome cannot be decided"),
     REASON_PHASE_UNKNOWN: ("phase is absent, 'NA', or a value this module does not know. "
                            "Not assumed early, because that would silently widen the "
                            "market population"),
@@ -236,6 +258,88 @@ def window_closed(row: dict, snapshot: date, window_years: int) -> Optional[bool
     return closes <= snapshot
 
 
+# The registry's first-submitted date. Not in trial_labels.csv: it comes from
+# trial_registration_fields.csv and is merged onto label rows by `merge_registration_timing`.
+REGISTRATION_SUBMITTED_FIELD = "study_first_submitted_date"
+PRIMARY_COMPLETION_FIELD = "primary_completion_date"
+PRIMARY_COMPLETION_TYPE_FIELD = "primary_completion_date_type"
+
+
+def _require_registration_field(row: dict) -> None:
+    """Fail closed: a row that was never merged must not pass as prospectively registered.
+    A blank value is allowed and is undeterminable; an ABSENT key is a caller error."""
+    if REGISTRATION_SUBMITTED_FIELD not in row:
+        raise ValueError(f"row lacks {REGISTRATION_SUBMITTED_FIELD!r}: merge "
+                         "trial_registration_fields.csv with merge_registration_timing "
+                         "before asking for eligibility")
+
+
+def registration_timing(row: dict) -> Optional[bool]:
+    """True when the trial was registered after its primary completion. Tri-state."""
+    _require_registration_field(row)
+    return registered_after_primary_completion(row.get(REGISTRATION_SUBMITTED_FIELD),
+                                               row.get(PRIMARY_COMPLETION_FIELD),
+                                               row.get(PRIMARY_COMPLETION_TYPE_FIELD))
+
+
+# The gate's training verdict, merged onto label rows by `merge_gate_exclusion`. Needed by
+# endpoint-met only: the other targets do not ask whether the endpoint had a threshold.
+GATE_EXCLUSION_FIELD = "endpoint_type_training_exclusion"
+_GATE_EXCLUSION_VALUES = frozenset(TRAINING_EXCLUSION_REASONS) | {TRAINING_NOT_EXCLUDED}
+
+
+def _gate_refused(row: dict) -> bool:
+    """Fail closed both ways: an unmerged row raises, and so does a value outside the
+    gate's vocabulary, rather than either being read as 'not excluded'."""
+    if GATE_EXCLUSION_FIELD not in row:
+        raise ValueError(f"row lacks {GATE_EXCLUSION_FIELD!r}: merge the gate verdict with "
+                         "merge_gate_exclusion before asking for endpoint-met eligibility")
+    value = row[GATE_EXCLUSION_FIELD]
+    if value not in _GATE_EXCLUSION_VALUES:
+        raise ValueError(f"{GATE_EXCLUSION_FIELD}={value!r} is not one of "
+                         f"{sorted(_GATE_EXCLUSION_VALUES)}")
+    return value == TRAINING_EXCLUDED_GATE_REFUSED
+
+
+def merge_gate_exclusion(rows, classes_by_nct: dict,
+                         rollup: str = DEFAULT_GATE_ROLLUP) -> list:
+    """Copy each row with the gate's training verdict. `classes_by_nct` maps a trial to its
+    PRIMARY endpoint classes; a trial absent from it has no registered primary text, which
+    is trial_gate([]) -- undeterminable, so not excluded. That is the gate's own answer
+    for no text, not a default chosen here."""
+    out = []
+    for row in rows:
+        merged = dict(row)
+        nct = str(row.get("nct_id") or "").strip().upper()
+        record = trial_gate(list(classes_by_nct.get(nct, ())), rollup)
+        merged[GATE_EXCLUSION_FIELD] = training_exclusion(record)
+        out.append(merged)
+    return out
+
+
+def merge_registration_timing(rows, submitted_by_nct: dict) -> list:
+    """Copy each row with the first-submitted date from the fields file. A trial missing
+    from that file gets a BLANK -- counted as undeterminable, never as prospective."""
+    out = []
+    for row in rows:
+        merged = dict(row)
+        nct = str(row.get("nct_id") or "").strip().upper()
+        merged[REGISTRATION_SUBMITTED_FIELD] = submitted_by_nct.get(nct, "")
+        out.append(merged)
+    return out
+
+
+def _after_target_rules(row: dict) -> dict:
+    """Applied last, so every other reason counts exactly as before and this one counts
+    trials that would otherwise have been eligible."""
+    retrospective = registration_timing(row)
+    if retrospective is None:
+        return _undeterminable(REASON_REGISTRATION_TIMING_UNKNOWN)
+    if retrospective:
+        return _verdict(False, REASON_RETROSPECTIVE_REGISTRATION)
+    return _verdict(True, "")
+
+
 def _verdict(eligible: bool, reason: str) -> dict:
     return {"verdict": ELIGIBLE if eligible else INELIGIBLE,
             "reason": "" if eligible else reason}
@@ -266,6 +370,8 @@ def eligible_for_endpoint_met(row: dict,
     real question; it is only market and advancement that the drug's existing approval
     answers in advance.
     """
+    _require_registration_field(row)
+    _gate_refused(row)
     if tribool(row.get("is_drug_trial")) is not True:
         return _verdict(False, REASON_NOT_DRUG_TRIAL)
     strict = row.get("endpoint_met_strict")
@@ -273,12 +379,17 @@ def eligible_for_endpoint_met(row: dict,
         return _verdict(False, REASON_NO_ANALYSIS_POSTED)
     if headline_only and (row.get("tier_min") or "") not in HEADLINE_TIERS:
         return _verdict(False, REASON_NOT_HEADLINE_TIER)
-    return _verdict(True, "")
+    verdict = _after_target_rules(row)
+    # Gate last, so the retrospective-registration count reported before it is unchanged.
+    if verdict["verdict"] == ELIGIBLE and _gate_refused(row):
+        return _verdict(False, REASON_GATE_REFUSED)
+    return verdict
 
 
 def eligible_for_advancement(row: dict, snapshot: date,
                              window_years: int = DEFAULT_ADVANCEMENT_WINDOW_YEARS) -> dict:
     """Drug trial with a next phase to reach and a closed lookahead window."""
+    _require_registration_field(row)
     if tribool(row.get("is_drug_trial")) is not True:
         return _verdict(False, REASON_NOT_DRUG_TRIAL)
     klass = phase_class(row.get("phase"))
@@ -291,7 +402,7 @@ def eligible_for_advancement(row: dict, snapshot: date,
         return _undeterminable(REASON_READOUT_NOT_ACTUAL)
     if not closed:
         return _verdict(False, REASON_WINDOW_OPEN)
-    return _verdict(True, "")
+    return _after_target_rules(row)
 
 
 def eligible_for_market(row: dict, snapshot: date,
@@ -301,6 +412,7 @@ def eligible_for_market(row: dict, snapshot: date,
     The phase restriction and the short window travel together and neither is defensible
     alone -- see the module docstring.
     """
+    _require_registration_field(row)
     if tribool(row.get("is_drug_trial")) is not True:
         return _verdict(False, REASON_NOT_DRUG_TRIAL)
     klass = phase_class(row.get("phase"))
@@ -315,7 +427,7 @@ def eligible_for_market(row: dict, snapshot: date,
         return _undeterminable(REASON_READOUT_NOT_ACTUAL)
     if not closed:
         return _verdict(False, REASON_WINDOW_OPEN)
-    return _verdict(True, "")
+    return _after_target_rules(row)
 
 
 def eligibility_for_row(row: dict, snapshot: date,

@@ -204,7 +204,10 @@ TABLES: tuple[TableSpec, ...] = (
         "description": _E,
     }, {
         "measure": ("revised at results posting; byte-identical to the posted title "
-                    "where both exist (rev 8 section 12.15)"),
+                    "where both exist (rev 8 section 12.15). Registry history, checked by "
+                    "hand 2026-10-06: in 3 of 3 posted trials the results-posting version "
+                    "also edited the registered Outcome Measures section, and 2 of 3 edited "
+                    "it during conduct too"),
     }),
 )
 
