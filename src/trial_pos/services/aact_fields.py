@@ -18,7 +18,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Iterable, NamedTuple, Optional
 
-from trial_pos.services.aact_aggregates import AGG_SEPARATOR, IDS_PARAM
+from trial_pos.services.aact_aggregates import AGG_SEPARATOR, IDS_PARAM, ordered_text
 from trial_pos.services.aact_provenance import (
     CARDINALITY_MANY, CARDINALITY_ONE, PROVENANCE_EDITABLE, PROVENANCE_POST_HOC,
     PROVENANCE_REGISTRATION, PROVENANCES, TABLES, provenance_for, table_spec,
@@ -92,7 +92,8 @@ def _key(*columns: str) -> str:
 
 def _agg(expr: str, where: str = "") -> str:
     clause = f" FILTER (WHERE {where})" if where else ""
-    return f"string_agg(DISTINCT {expr}, '{AGG_SEPARATOR}'){clause}"
+    return (f"string_agg(DISTINCT {ordered_text(expr)}, '{AGG_SEPARATOR}' "
+            f"ORDER BY {ordered_text(expr)}){clause}")
 
 
 def _count(expr: str, where: str = "") -> str:
@@ -296,7 +297,7 @@ def chunk_sql(schema: str) -> str:
             if d.table == table:
                 select.append(f"{a}.{d.name} AS {output_name(table, d.name)}")
     return (f"SELECT {', '.join(select)} FROM {schema}.{PARENT_TABLE} {base} "
-            + " ".join(joins) + f" WHERE {base}.nct_id = ANY({ids})")
+            + " ".join(joins) + f" WHERE {base}.nct_id = ANY({ids}) ORDER BY {base}.nct_id")
 
 
 def csv_value(value) -> str:

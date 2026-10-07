@@ -3,11 +3,6 @@
   "zenodo_record": "23197696",
   "doi": "10.5281/zenodo.23197696",
   "sources": {
-    "aact": {
-      "description": "AACT (CTTI) snapshot of ClinicalTrials.gov, and files derived from it by this project's pulls",
-      "license": "ClinicalTrials.gov data; AACT terms of use",
-      "license_checked": false
-    },
     "drugcentral": {
       "description": "DrugCentral release archive and the tables extracted from it",
       "license": "CC BY-SA 4.0 (to be confirmed at drugcentral.org)",
@@ -30,110 +25,6 @@
     }
   },
   "files": [
-    {
-      "path": "data/aact/trial_labels.csv",
-      "zenodo_name": "data__aact__trial_labels.csv",
-      "bytes": 179439307,
-      "sha256": "135d01172a8805bd742c8006f8dac603c75a57d66cc04483e352ecd7f4f17d1c",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_labels.csv.manifest.json",
-      "zenodo_name": "data__aact__trial_labels.csv.manifest.json",
-      "bytes": 224,
-      "sha256": "6de9511c39566f3c09b64a882e8ca5cf2b4ae12cb1317b02de024a2d145b3039",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_entities.csv",
-      "zenodo_name": "data__aact__trial_entities.csv",
-      "bytes": 172534485,
-      "sha256": "70d0fffad6eb6f3a73d63bf81dded0b9803a545c4e4f1aa6d9d44eaea5c78749",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_design_outcomes.csv",
-      "zenodo_name": "data__aact__trial_design_outcomes.csv",
-      "bytes": 308094649,
-      "sha256": "024fb870285fc1426a920ab27adfa7d9793b4eec981c2722a21cf3c480f7496d",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_design_outcomes.csv.manifest.json",
-      "zenodo_name": "data__aact__trial_design_outcomes.csv.manifest.json",
-      "bytes": 90,
-      "sha256": "4f8685e70851cba1ff87349795ba756080e2d96c9bdb3285715e587d52751415",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/recon_raw_counts.csv",
-      "zenodo_name": "data__aact__recon_raw_counts.csv",
-      "bytes": 755932,
-      "sha256": "f0352c744065a81d91b22ecfc85bcecda8a538b90484b8a847b597db2baca053",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/recon_raw_measurements.csv",
-      "zenodo_name": "data__aact__recon_raw_measurements.csv",
-      "bytes": 2961341,
-      "sha256": "6a0fcd851a179d739abafa709eb0476b734ad887b65f0d1f90f6a9c07e28b2ab",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_registration_fields.csv",
-      "zenodo_name": "data__aact__trial_registration_fields.csv",
-      "bytes": 311524620,
-      "sha256": "894f678fc4610e86015965198ff8c3c7a5456b431f8b11dcef9274715666ea61",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_registration_text.csv",
-      "zenodo_name": "data__aact__trial_registration_text.csv",
-      "bytes": 1286848211,
-      "sha256": "001927bab05dadb68fee58b816ab09476993d764a51c309505cd04998b120b37",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_registration_fields.provenance.csv",
-      "zenodo_name": "data__aact__trial_registration_fields.provenance.csv",
-      "bytes": 16045,
-      "sha256": "8cd17bcf09ef68db2db907478dca918cc0e714366ca71584bf1baece76db948f",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/trial_registration_fields.manifest.json",
-      "zenodo_name": "data__aact__trial_registration_fields.manifest.json",
-      "bytes": 6334,
-      "sha256": "ad5a332d833d224f9849fba3b79ab00bc925bc0ebf6b201caea4f51069e56017",
-      "tier": "run",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/results_raw_studies.csv",
-      "zenodo_name": "data__aact__results_raw_studies.csv",
-      "bytes": 81641228,
-      "sha256": "6f16d41a4dd1ff2b4e686808d14a269a4a6a21c215f00622129c7e65e0cd1e5b",
-      "tier": "rebuild",
-      "source": "aact"
-    },
-    {
-      "path": "data/aact/results_raw_outcomes.csv",
-      "zenodo_name": "data__aact__results_raw_outcomes.csv",
-      "bytes": 73915887,
-      "sha256": "eb36c6c7bcc030ec72d9e5ae8f28a07a1ffb7697195dc40962bbca787fb27f10",
-      "tier": "rebuild",
-      "source": "aact"
-    },
     {
       "path": "data/drugcentral/dc_dbversion.csv",
       "zenodo_name": "data__drugcentral__dc_dbversion.csv",

@@ -223,3 +223,16 @@ def test_no_sources_produces_empty_fragments_not_broken_sql():
     selects, joins = build_aggregate_sql(SCHEMA, ())
     assert selects == ""
     assert joins == ""
+
+
+def test_every_aggregate_is_ordered_in_byte_order():
+    import re
+    from trial_pos.services.aact_aggregates import AGG_COLLATION
+    for source in AGGREGATE_SOURCES:
+        for field in source.fields:
+            c = re.escape(f"COLLATE {AGG_COLLATION}")
+            m = re.match(rf"string_agg\(DISTINCT (.+? {c}), '.' ORDER BY (.+? {c})\)",
+                         field.expression)
+            assert m, (source.alias, field.name, field.expression)
+            assert m.group(1) == m.group(2), field.name
+            assert m.group(1).endswith(f"COLLATE {AGG_COLLATION}"), field.name

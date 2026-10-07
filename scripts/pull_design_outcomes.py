@@ -302,6 +302,7 @@ def main() -> int:
                     help="which trials form the population, via the tested predicate in "
                          "services/population.py")
     ap.add_argument("--host", default=HOST)
+    ap.add_argument("--port", type=int, default=PORT)
     ap.add_argument("--db", default=DB)
     ap.add_argument("--schema", default=SCHEMA)
     ap.add_argument("--user", default=os.environ.get("AACT_USER"))
@@ -366,7 +367,7 @@ def main() -> int:
         print("\n!! psycopg2 not installed:  pip install psycopg2-binary")
         return 2
 
-    conn = psycopg2.connect(host=args.host, port=PORT, dbname=args.db, user=args.user,
+    conn = psycopg2.connect(host=args.host, port=args.port, dbname=args.db, user=args.user,
                             password=args.password, sslmode=args.sslmode)
     conn.set_session(readonly=True, autocommit=True)
     try:

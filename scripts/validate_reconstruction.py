@@ -437,6 +437,7 @@ def main() -> int:
     ap.add_argument("--min-bucket", type=int, default=5,
                     help="minimum n for a param_type to appear in the breakdown")
     ap.add_argument("--host", default="aact-db.ctti-clinicaltrials.org")
+    ap.add_argument("--port", type=int, default=5432)
     ap.add_argument("--db", default="aact")
     ap.add_argument("--schema", default="ctgov")
     ap.add_argument("--user", default=os.environ.get("AACT_USER"))
@@ -484,7 +485,7 @@ def main() -> int:
                   "(scripts\\check_aact_connection.py diagnoses failures)")
             return 2
         import psycopg2
-        conn = psycopg2.connect(host=args.host, port=5432, dbname=args.db,
+        conn = psycopg2.connect(host=args.host, port=args.port, dbname=args.db,
                                 user=args.user, password=args.password)
         try:
             print(_rule(f"SCHEMA PROBE (schema '{args.schema}')"))

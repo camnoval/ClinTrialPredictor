@@ -416,7 +416,7 @@ def build_sql(schema: str, studies_cols, calc_cols, outcomes_cols, analyses_cols
     studies_sql = (f"SELECT {s_sel}{', ' + c_sel if c_sel else ''}"
                    f"{', ' + agg_sel if agg_sel else ''} "
                    f"FROM {schema}.studies s{join_calc}{join_agg} "
-                   f"WHERE s.nct_id = ANY(%(ids)s);")
+                   f"WHERE s.nct_id = ANY(%(ids)s) ORDER BY s.nct_id;")
     o_sel = ", ".join(f"o.{c} AS outcome_{c}" for c in outcomes_cols)
     a_sel = ", ".join(f"oa.{c} AS analysis_{c}" for c in analyses_cols)
     # LEFT JOIN so a primary outcome with zero analyses still produces a row -- that is
@@ -425,7 +425,9 @@ def build_sql(schema: str, studies_cols, calc_cols, outcomes_cols, analyses_cols
         f"SELECT {o_sel}, {a_sel} "
         f"FROM {schema}.outcomes o "
         f"LEFT JOIN {schema}.outcome_analyses oa ON oa.outcome_id = o.id "
-        f"WHERE o.nct_id = ANY(%(ids)s) AND lower(o.outcome_type) = 'primary';"
+        f"WHERE o.nct_id = ANY(%(ids)s) AND lower(o.outcome_type) = 'primary' "
+        # surrogate ids are stable WITHIN one snapshot, which is all a pinned rebuild needs
+        f"ORDER BY o.nct_id, o.id, oa.id;"
     )
     return studies_sql, outcomes_sql
 
@@ -1016,6 +1018,7 @@ def main() -> int:
     ap.add_argument("--no-era-fallback", dest="era_fallback", action="store_false",
                     help="leave the era unknown when primary_completion_date is absent")
     ap.add_argument("--host", default="aact-db.ctti-clinicaltrials.org")
+    ap.add_argument("--port", type=int, default=5432)
     ap.add_argument("--db", default="aact")
     ap.add_argument("--schema", default="ctgov")
     ap.add_argument("--user", default=os.environ.get("AACT_USER"))
@@ -1192,7 +1195,7 @@ def main() -> int:
         return 2
 
     import psycopg2
-    conn = psycopg2.connect(host=args.host, port=5432, dbname=args.db,
+    conn = psycopg2.connect(host=args.host, port=args.port, dbname=args.db,
                             user=args.user, password=args.password)
     label_writer = None
     raw_studies_writer = None

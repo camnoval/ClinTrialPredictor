@@ -192,3 +192,9 @@ def test_an_excluded_file_is_listed_with_its_reason_not_as_undeclared():
 def test_a_prefix_exclusion_needs_its_trailing_slash():
     assert exclusion_reason("data/smokeless.csv", (("data/smoke/", "r"),)) is None
     assert exclusion_reason("data/smoke/a.csv", (("data/smoke/", "r"),)) == "r"
+
+
+def test_no_aact_file_is_redistributed():
+    from trial_pos.services.data_registry import SOURCE_AACT
+    assert not [f for f in BUNDLE if f.source == SOURCE_AACT or f.path.startswith("data/aact/")]
+    assert exclusion_reason("data/aact/trial_labels.csv") is not None

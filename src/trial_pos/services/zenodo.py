@@ -79,10 +79,28 @@ def remote_files(deposition: dict) -> dict:
     return out
 
 
+def remote_file_ids(deposition: dict) -> dict:
+    """{filename: file id}, the id the deposition's file-delete endpoint takes."""
+    out = {}
+    for f in deposition.get("files") or []:
+        name = f.get("filename") or f.get("key")
+        if not name or not f.get("id"):
+            raise ZenodoError(f"file entry without a name or id: {sorted(f)}")
+        out[name] = str(f["id"])
+    return out
+
+
+def file_delete_url(record: str, file_id: str) -> str:
+    if not str(file_id).replace("-", "").isalnum():
+        raise ZenodoError(f"file id {file_id!r} is not an id")
+    return f"{deposition_url(record)}/files/{file_id}"
+
+
 def upload_plan(entries: list, local_md5: dict, remote: dict) -> tuple:
     """-> ([(entry, action)], [remote names not in the registry]).
 
-    `entries` are registry file entries; `local_md5` maps zenodo_name -> md5 hex."""
+    `entries` are registry file entries; `local_md5` maps zenodo_name -> md5 hex, and
+    needs only the names already on the draft: nothing else is compared."""
     planned = []
     for e in entries:
         name = e["zenodo_name"]

@@ -125,6 +125,7 @@ def snapshot_proxy(conn, schema: str):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--host", default=DEFAULT_HOST)
+    ap.add_argument("--port", type=int, default=5432)
     ap.add_argument("--db", default="aact")
     ap.add_argument("--schema", default="ctgov")
     ap.add_argument("--user", default=os.environ.get("AACT_USER"))
@@ -167,7 +168,7 @@ def main() -> int:
         return 2
 
     import psycopg2
-    conn = psycopg2.connect(host=args.host, port=5432, dbname=args.db,
+    conn = psycopg2.connect(host=args.host, port=args.port, dbname=args.db,
                             user=args.user, password=args.password)
     started = _now()
     t0 = time.monotonic()

@@ -65,6 +65,17 @@ class AggregateSource(NamedTuple):
     why: str
 
 
+# Byte order, so an aggregate is identical whatever the server's or a local restore's
+# collation. Without an ORDER BY, string_agg's order is unspecified; with the database's
+# default collation it would differ between AACT's server and a Windows restore.
+AGG_COLLATION = '"C"'
+
+
+def ordered_text(expr: str) -> str:
+    """`expr` as text in byte order: the form every aggregated value is sorted in."""
+    return f"({expr})::text COLLATE {AGG_COLLATION}"
+
+
 def _agg(column: str, where: str = "") -> str:
     """DISTINCT pipe-joined aggregate of one column, optionally filtered.
 
@@ -73,7 +84,8 @@ def _agg(column: str, where: str = "") -> str:
     aggregate would make a trial look like it had more sponsors than it does.
     """
     filter_clause = f" FILTER (WHERE {where})" if where else ""
-    return (f"string_agg(DISTINCT {column}, '{AGG_SEPARATOR}'){filter_clause}")
+    return (f"string_agg(DISTINCT {ordered_text(column)}, '{AGG_SEPARATOR}' "
+            f"ORDER BY {ordered_text(column)}){filter_clause}")
 
 
 # AACT's sponsors.lead_or_collaborator value for the lead sponsor, lowercased before

@@ -127,7 +127,9 @@ def test_every_one_table_is_left_joined_on_nct_id_and_the_parent_is_scoped():
         if spec.cardinality == CARDINALITY_ONE and spec.table != PARENT_TABLE:
             assert re.search(rf"LEFT JOIN {SCHEMA}\.{spec.table} t\d+ ON t\d+\.nct_id",
                              sql), spec.table
-    assert sql.rstrip().endswith(f"nct_id = ANY(%({IDS_PARAM})s)")
+    # the parent is scoped to the chunk, and rows come back in nct_id order
+    assert re.search(rf"WHERE (t\d+)\.nct_id = ANY\(%\({IDS_PARAM}\)s\) "
+                     rf"ORDER BY \1\.nct_id$", sql.rstrip()), sql[-120:]
 
 
 def test_every_output_column_is_selected_exactly_once():
@@ -182,3 +184,15 @@ def test_after_an_estimated_completion_is_unknown_not_retrospective():
 def test_missing_dates_are_unknown():
     assert registered_after_primary_completion(None, _D, "ACTUAL") is None
     assert registered_after_primary_completion(_D, None, "ACTUAL") is None
+
+
+def test_every_string_agg_is_ordered_in_byte_order():
+    # without ORDER BY the aggregate's order is unspecified, and under the database's
+    # default collation it differs between AACT's server and a local restore
+    from trial_pos.services.aact_aggregates import AGG_COLLATION
+    sql = chunk_sql(SCHEMA)
+    c = re.escape(f"COLLATE {AGG_COLLATION}")
+    aggs = re.findall(rf"string_agg\(DISTINCT (.+? {c}), '\|' ORDER BY (.+? {c})\)", sql)
+    assert aggs and len(aggs) == sql.count("string_agg(")
+    for arg, order in aggs:
+        assert arg == order and arg.endswith(f"COLLATE {AGG_COLLATION}"), (arg, order)

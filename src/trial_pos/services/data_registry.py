@@ -82,25 +82,11 @@ _DRUGSATFDA_TABLES = ("ActionTypes_Lookup", "ApplicationDocs", "Applications",
                       "SubmissionClass_Lookup", "SubmissionPropertyType", "Submissions",
                       "TE")
 
+# No AACT file is in the bundle: ClinicalTrials.gov's terms ask that a distributed copy be
+# kept current, which a frozen copy cannot be. The AACT tier is rebuilt instead from the
+# pinned monthly archive (aact_snapshot.PINNED), which AACT itself hosts.
 BUNDLE = (
-    _files(SOURCE_AACT, TIER_RUN, (
-        "data/aact/trial_labels.csv",
-        "data/aact/trial_labels.csv.manifest.json",
-        "data/aact/trial_entities.csv",
-        "data/aact/trial_design_outcomes.csv",
-        "data/aact/trial_design_outcomes.csv.manifest.json",
-        "data/aact/recon_raw_counts.csv",
-        "data/aact/recon_raw_measurements.csv",
-        "data/aact/trial_registration_fields.csv",
-        "data/aact/trial_registration_text.csv",
-        "data/aact/trial_registration_fields.provenance.csv",
-        "data/aact/trial_registration_fields.manifest.json",
-    ))
-    + _files(SOURCE_AACT, TIER_REBUILD, (
-        "data/aact/results_raw_studies.csv",
-        "data/aact/results_raw_outcomes.csv",
-    ))
-    + _files(SOURCE_DRUGCENTRAL, TIER_RUN,
+    _files(SOURCE_DRUGCENTRAL, TIER_RUN,
              tuple(f"data/drugcentral/dc_{t}.csv" for t in _DC_TABLES)
              + ("data/drugcentral/drugcentral.manifest.json",))
     + _files(SOURCE_DRUGCENTRAL, TIER_REBUILD, (
@@ -123,7 +109,14 @@ BUNDLE = (
 # are the pinned copy, and FDA keeps no older version to re-download.
 EXCLUDED = (
     ("data/.gitkeep", "placeholder that keeps an empty data/ in git"),
-    ("data/aact/smoke/", "4,000-trial smoke run of the fields pull; disposable (rev 9 section 12.21)"),
+    ("data/aact/", "rebuilt from the pinned AACT archive by scripts/rebuild_aact.py; "
+                   "never redistributed (ClinicalTrials.gov terms)"),
+    ("data/aact_live_20261005/", "the superseded live-database pulls rev 9 rests on; kept "
+                                 "only until the re-baseline is recorded"),
+    ("data/aact_snapshots/", "the pinned AACT archive: fetched from AACT by its URL and "
+                             "checked against aact_snapshot.PINNED, never redistributed"),
+    ("data/pg/", "the local PostgreSQL restore of the AACT snapshot, and its logs"),
+    ("data/aact_rebuild/", "rebuilds of the AACT tier, kept apart for comparison"),
     ("data/drugcentral/Drugcentral_2026-09-25.tables.sql",
      "intermediate: regenerated from the archive by the pg_restore command "
      "extract_drugcentral.py prints"),

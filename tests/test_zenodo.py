@@ -7,7 +7,8 @@ from pathlib import Path
 
 from trial_pos.services.zenodo import (
     ACTION_CONFLICT, ACTION_SKIP, ACTION_UPLOAD, MD5_PREFIX, ZenodoError, deposition_url,
-    editable, md5_file, normalise_md5, record_from_doi, remote_files, upload_plan,
+    editable, file_delete_url, md5_file, normalise_md5, record_from_doi, remote_file_ids,
+    remote_files, upload_plan,
 )
 
 _MD5 = hashlib.md5(b"x").hexdigest()
@@ -69,3 +70,16 @@ def test_plan_uploads_skips_and_flags_conflicts():
         "new": ACTION_UPLOAD, "same": ACTION_SKIP, "diff": ACTION_CONFLICT,
         "size": ACTION_CONFLICT}
     assert extra == ["stray"]
+
+
+def test_plan_needs_local_md5_only_for_names_already_on_the_draft():
+    planned, _ = upload_plan([{"zenodo_name": "new", "bytes": 1}], {}, {})
+    assert [a for _, a in planned] == [ACTION_UPLOAD]
+
+
+def test_remote_file_ids_and_delete_url():
+    dep = {"files": [{"filename": "a", "filesize": 1, "checksum": _MD5, "id": "ab-12"}]}
+    assert remote_file_ids(dep) == {"a": "ab-12"}
+    assert file_delete_url("42", "ab-12").endswith("/deposit/depositions/42/files/ab-12")
+    assert _raises(lambda: file_delete_url("42", "../x"))
+    assert _raises(lambda: remote_file_ids({"files": [{"filename": "a"}]}))
