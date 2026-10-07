@@ -1,0 +1,322 @@
+﻿dir data\drugsatfda | encodings ('utf-8', 'cp1252') | date formats ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%m/%d/%Y %H:%M:%S', '%m/%d/%Y') | windows [3, 5, 10] | DrugCentral data\drugcentral
+
+==============================================================================
+1. FILES
+==============================================================================
+  folder data\drugsatfda: 12 .txt files
+  ActionTypes_Lookup                   rows       59  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    ActionTypes_LookupID, ActionTypes_LookupDescription, SupplCategoryLevel1Code, SupplCategoryLevel2Code
+  ApplicationDocs                      rows    81209  malformed     1  cp1252  modified 2026-10-06T15:07:49
+    ApplicationDocsID, ApplicationDocsTypeID, ApplNo, SubmissionType, SubmissionNo, ApplicationDocsTitle, ApplicationDocsURL, ApplicationDocsDate
+  Applications                         rows    29380  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    ApplNo, ApplType, ApplPublicNotes, SponsorName
+  ApplicationsDocsType_Lookup          rows       62  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    ApplicationDocsType_Lookup_ID, ApplicationDocsType_Lookup_Description
+  Join_Submission_ActionTypes_Lookup   rows   209769  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    SubmissionType, j_submissionActionTypeID, ApplNo, SubmissionNo, ActionTypes_LookupID
+  MarketingStatus                      rows    52473  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    MarketingStatusID, ApplNo, ProductNo
+  MarketingStatus_Lookup               rows        5  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    MarketingStatusID, MarketingStatusDescription
+  Products                             rows    51866  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    ApplNo, ProductNo, Form, Strength, ReferenceDrug, DrugName, ActiveIngredient, ReferenceStandard
+  SubmissionClass_Lookup               rows       28  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    SubmissionClassCodeID, SubmissionClassCode, SubmissionClassCodeDescription
+  SubmissionPropertyType               rows   320338  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    ApplNo, SubmissionType, SubmissionNo, SubmissionPropertyTypeCode, SubmissionPropertyTypeID
+  Submissions                          rows   194026  malformed     0  cp1252  modified 2026-10-06T15:07:49
+    ApplNo, SubmissionClassCodeID, SubmissionType, SubmissionNo, SubmissionStatus, SubmissionStatusDate, SubmissionsPublicNotes, ReviewPriority
+  TE                                   rows    26732  malformed     0  utf-8   modified 2026-10-06T15:07:49
+    ApplNo, ProductNo, MarketingStatusID, TECode
+
+==============================================================================
+2. KEYS AND DUPLICATES
+==============================================================================
+  Applications             key ('ApplNo',): rows 29380  keys 29380  repeated keys 0  exact duplicate rows 0
+  Products                 key ('ApplNo', 'ProductNo'): rows 51866  keys 51866  repeated keys 0  exact duplicate rows 0
+  Submissions              key ('ApplNo', 'SubmissionType', 'SubmissionNo'): rows 194026  keys 194026  repeated keys 0  exact duplicate rows 0
+  SubmissionClass_Lookup   key ('SubmissionClassCodeID',): rows 28  keys 28  repeated keys 0  exact duplicate rows 0
+
+==============================================================================
+3. APPLICATION AND SUBMISSION VOCABULARY
+==============================================================================
+  ApplType: {'ANDA': 22996, 'NDA': 5899, 'BLA': 485}
+
+  SubmissionType x SubmissionStatus: {('SUPPL', 'AP'): 166073, ('ORIG', 'AP'): 26743, ('ORIG', 'TA'): 1161, ('SUPPL', 'TA'): 47, ('ORIG', ''): 1, ('SUPPL', 'CR'): 1}
+  class id blank 11887, absent from the lookup 0
+
+  APPROVED submissions by type and class:
+    type    class code     description                                               n
+    ORIG    (blank)                                                              11645
+    ORIG    UNKNOWN                                                               8799
+    ORIG    TYPE 1         Type 1 - New Molecular Entity                          1796
+    ORIG    TYPE 3         Type 3 - New Dosage Form                               1682
+    ORIG    TYPE 5         Type 5 - New Formulation or New Manufacturer           1246
+    ORIG    N/A            Not Applicable                                          527
+    ORIG    TYPE 4         Type 4 - New Combination                                341
+    ORIG    TYPE 2         Type 2 - New Active Ingredient                          184
+    ORIG    TYPE 6         Type 6 - New Indication (no longer used)                117
+    ORIG    MEDGAS         Medical Gas                                              84
+    ORIG    TYPE 1/4       Type 1 - New Molecular Entity and Type 4 - New Com       81
+    ORIG    TYPE 7         Type 7 - Drug Already Marketed without Approved ND       47
+    ORIG    EFFICACY       Efficacy                                                 41
+    ORIG    TYPE 8         Type 8 - Partial Rx to OTC Switch                        30
+    ORIG    TYPE 3/4       Type 3 - New Dosage Form and Type 4 - New Combinat       29
+    ORIG    TYPE 9         Type 9 - New Indication Submitted as Distinct NDA,       28
+    ORIG    TYPE 10        Type 10 - New Indication Submitted as Distinct NDA       18
+    ORIG    TYPE 2/3       Type 2 - New Active Ingredient and Type 3 - New Do       17
+    ORIG    TYPE 2/4       Type 2 New Active Ingredient and Type 4 New Combin       10
+    ORIG    TYPE 9- BLA    Type 9 - New indication submitted as distinct BLA,       10
+    ORIG    TYPE 4/5       New Combination and New Formulation or New Manufac        6
+    ORIG    S              Supplement                                                2
+    ORIG    LABELING       Labeling                                                  2
+    ORIG    TYPE 10- BLA                                                             1
+    SUPPL   LABELING       Labeling                                              89357
+    SUPPL   MANUF (CMC)    Manufacturing (CMC)                                   67204
+    SUPPL   EFFICACY       Efficacy                                               5613
+    SUPPL   REMS           REMS                                                   3207
+    SUPPL   S              Supplement                                              332
+    SUPPL   BIOEQUIV       Bioequivalence                                          234
+    SUPPL   UNKNOWN                                                                 57
+    SUPPL   BIOSIMILAR                                                              46
+    SUPPL   (blank)                                                                  8
+    SUPPL   TYPE 1         Type 1 - New Molecular Entity                             4
+    SUPPL   N/A            Not Applicable                                            4
+    SUPPL   TYPE 3         Type 3 - New Dosage Form                                  3
+    SUPPL   TYPE 5         Type 5 - New Formulation or New Manufacturer              2
+    SUPPL   TYPE 4         Type 4 - New Combination                                  1
+    SUPPL   TYPE 2         Type 2 - New Active Ingredient                            1
+
+==============================================================================
+4. APPROVAL DATES
+==============================================================================
+  ORIG   approved: 26743  {'dated': 26741, 'undated': 1, 'before 1939-01-01': 1}  earliest 1939-02-09  latest 2026-10-02
+  SUPPL  approved: 166073  {'dated': 166066, 'undated': 7}  earliest 1950-03-31  latest 2026-10-02
+  raw date sample: ['1969-07-16 00:00:00', '1980-05-08 00:00:00', '1987-05-26 00:00:00', '1939-03-09 00:00:00', '1986-12-09 00:00:00']
+
+  latest approval in this source: 2026-10-02
+  A readout's W-year window closes against THIS source only if readout + W
+  falls on or before 2026-10-02:
+    W=3: latest measurable readout 2023-10-02
+    W=5: latest measurable readout 2021-10-02
+    W=10: latest measurable readout 2016-10-02
+
+  applications with >1 approved ORIG, by ApplType: {'NDA': 38, 'ANDA': 127, 'BLA': 19, '?': 1}
+  applications with no approved ORIG, by ApplType: {'ANDA': 3440, 'NDA': 547, 'BLA': 1}
+
+==============================================================================
+5. IS A NEW-INDICATION APPROVAL SEPARABLE?
+==============================================================================
+  The files carry no indication field. A supplement can be tied to an
+  indication only through its class, its public notes, or an attached document.
+
+  class LABELING: 89357 approved supplements, public notes filled 254 (0.3%), 38 distinct notes
+       179  'Please see <a href="https://www.fda.gov/STIC/">www.fda.gov/STIC</a> for labeling requirements on sus'
+         7  'Label for XGEVA'
+         6  'Label for PROLIA'
+         5  'Label for LEMTRADA'
+         5  'Label for PEGINTRON'
+
+  class MANUF (CMC): 67204 approved supplements, public notes filled 6 (0.0%), 3 distinct notes
+         4  'Please see <a href="https://www.fda.gov/STIC/">www.fda.gov/STIC</a> for labeling requirements on sus'
+         1  'Label for HUMULIN R U-100'
+         1  'Label for HUMULIN R U-500'
+
+  class EFFICACY: 5613 approved supplements, public notes filled 31 (0.6%), 21 distinct notes
+         7  'Please see <a href="https://www.fda.gov/STIC/">www.fda.gov/STIC</a> for labeling requirements on sus'
+         3  'Label for PROLIA'
+         2  'Label and Letter for KEVEYIS'
+         2  'Label for PROZAC'
+         1  'Label for CUBICIN'
+
+  class REMS: 3207 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class S: 332 approved supplements, public notes filled 1 (0.3%), 1 distinct notes
+         1  'SLC'
+
+  class BIOEQUIV: 234 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class UNKNOWN: 57 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class BIOSIMILAR: 46 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class ?: 8 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class TYPE 1: 4 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class N/A: 4 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class TYPE 3: 3 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class TYPE 5: 2 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class TYPE 4: 1 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  class TYPE 2: 1 approved supplements, public notes filled 0 (0.0%), 0 distinct notes
+
+  SubmissionPropertyTypeCode: {'Null': 316697, 'Orphan': 3641}
+
+  approved supplements with any attached document: 33025 of 166073 (19.9%)
+  document types: {'Letter': 30250, 'Label': 26512, 'Review': 3637, 'Medication Guide': 1037, 'Pediatric Medical Review': 246, 'Pediatric Clinical Pharmacology Review': 183, 'Pediatric Statistical Review': 147, 'Pediatric Written Request': 97, 'Summary Review': 88, 'Other': 72, 'Pediatric Amendment 1': 64, 'Pediatric Amendment 2': 40, 'Pediatric CDTL Review': 35, 'Patient Package Insert': 31, 'Pediatric Amendment 3': 24, 'Pediatric Amendment 4': 16, 'Pediatric Other': 13, 'Patient Information Sheet': 12, 'Pediatric Amendment 5': 8, 'Pediatric DD Summary Review': 6, 'Pediatric Reissue Amendment 2': 4, 'Other Important Information from FDA': 3, 'Pediatric Reissue Amendment 1': 3, 'Pediatric Medical Addendum': 3, 'Pediatric Amendment 6': 3, 'Pediatric Clinical Pharmacology Addendum': 3, 'FDA Press Release': 2, 'Pediatric Reissue': 2, 'Pediatric Reissue Amendment 3': 2, 'Pediatric Medical Secondary Review': 2, 'Pediatric Addendum': 2, 'Dear Health Professional Letter': 1, 'Exclusivity Letter': 1, 'Pediatric Reissue Amendment 4': 1, 'Pediatric Reissue Amendment 5': 1, 'Pediatric Reissue Amendment 6': 1, 'Pediatric Amendment 7': 1, 'Pediatric Memo': 1, 'REMS': 1}
+
+==============================================================================
+5b. SUPPLEMENT CATEGORIES (action types) -- the indication route
+==============================================================================
+  ActionTypes_Lookup: 59 action types
+      id level 1            level 2                      description
+      59                                                 -  -
+      46                    NOT APPLICABLE               
+       1 BIOEQUIV                                        Bioequivalence
+       3 EFFICACY           ACCEL APP                    Efficacy-Accelerated Approval
+      54 EFFICACY           ANIM RULE                    Efficacy-Animal Rule
+       4 EFFICACY           COMP EFF                     Efficacy-Accelerated Approval Confirmatory Study
+       7 EFFICACY           DOSING                       Efficacy-New Dosing Regimen
+       8 EFFICACY           INDICATION                   Efficacy-New Indication
+       5 EFFICACY           LABEL W CLIN                 Efficacy-Labeling Change With Clinical Data
+       6 EFFICACY           MANU W CLIN                  Efficacy-Manufacturing Change With Clinical Data
+       2 EFFICACY           NOT APPLICABLE               Efficacy
+       9 EFFICACY           PAT POPUL                    Efficacy-New Patient Population
+      11 EFFICACY           PEDIATRIC                    Efficacy-Pediatric
+      10 EFFICACY           ROUTE                        Efficacy-New Route Of Administration
+      12 EFFICACY           RX TO OTC                    Efficacy-Rx To OTC Switch
+      14 LABELING           CONT/CARTON                  Labeling-Container/Carton Labels
+      15 LABELING           CONT/CARTON                  Labeling-Container/Carton Labels
+      16 LABELING           CONT/CARTON                  Labeling-Container/Carton Labels
+      17 LABELING           CONT/CARTON                  Labeling-Container/Carton Labels
+      18 LABELING           MED GUIDE                    Labeling-Medication Guide
+      13 LABELING           NOT APPLICABLE               Labeling
+      19 LABELING           PI                           Labeling-Package Insert
+      20 LABELING           PI                           Labeling-Package Insert
+      21 LABELING           PI                           Labeling-Package Insert
+      22 LABELING           PI                           Labeling-Package Insert
+      23 LABELING           PI                           Labeling-Package Insert
+      24 LABELING           PI                           Labeling-Package Insert
+      25 LABELING           PI                           Labeling-Package Insert
+      26 LABELING           PI                           Labeling-Package Insert
+      27 LABELING           PI                           Labeling-Package Insert
+      47 LABELING           PI                           Labeling-Package Insert
+      48 LABELING           PI                           Labeling-Package Insert
+      49 LABELING           PI                           Labeling-Package Insert
+      28 LABELING           PPI                          Labeling-Patient Package Insert
+      29 LABELING           PROP NAME                    Labeling-Proprietary Name Change
+      30 MANUF (CMC)                                     Manufacturing (CMC)
+      32 MANUF (CMC)        CONT/CARTON                  Manufacturing (CMC)-Container/Carton Labels
+      33 MANUF (CMC)        CONTROL                      Manufacturing (CMC)-Control
+      34 MANUF (CMC)        EXPIRATION                   Manufacturing (CMC)-Expiration Date
+      35 MANUF (CMC)        FACILITY                     Manufacturing (CMC)-Facility
+      36 MANUF (CMC)        FACILITY                     Manufacturing (CMC)-Facility
+      37 MANUF (CMC)        FORMULATION                  Manufacturing (CMC)-Formulation
+      38 MANUF (CMC)        MANU PROC                    Manufacturing (CMC)-Manufacturing Process
+      39 MANUF (CMC)        MICRO-PROC                   Manufacturing (CMC)-Microbiology-Processing
+      31 MANUF (CMC)        NOT APPLICABLE               Manufacturing (CMC)
+      41 MANUF (CMC)        NOT APPLICABLE               Manufacturing (CMC)-Not Applicable
+      42 MANUF (CMC)        PACKAGING                    Manufacturing (CMC)-Packaging
+      43 MANUF (CMC)        PI                           Manufacturing (CMC)-Package Insert
+      44 MANUF (CMC)        PPI                          Manufacturing (CMC)-Patient Package Insert
+      40 MANUF (CMC)        STRENGTH                     Manufacturing (CMC)-New Strength
+      50 REMS               ASSESSMENT                   REMS-Assessment
+      56 REMS               ASSESSMENT                   REMS - ASSESSMENT - MODIFIED
+      51 REMS               MODIFIED                     REMS-Modified
+      55 REMS               MODIFIED                     REMS - MODIFIED - D-N-A
+      58 REMS               MODIFIED                     REMS - MODIFIED - BIFURCATED
+      52 REMS               NOT APPLICABLE               REMS
+      53 REMS               PROPOSAL                     REMS-Proposal
+      57 REMS               PROPOSAL                     REMS - PROPOSAL - D-N-A
+      45 UNSPEC                                          Unspecified
+
+  join rows 209769, submissions keyed 191883, action ids absent from the lookup 299
+  action types per submission: {1: 175840, 2: 14342, 3: 1571, 4: 127, 5: 3}
+  approved supplements with >=1 action type: 165741 of 166073
+
+  ALL approved supplements (166073), by category (a submission with two action types counts twice):
+    LABELING                 PI                                    47581
+    LABELING                 NOT APPLICABLE                        41010
+    MANUF (CMC)                                                    37569
+    MANUF (CMC)              CONTROL                               16468
+    LABELING                 MED GUIDE                              9246
+    LABELING                 CONT/CARTON                            6722
+    MANUF (CMC)              PACKAGING                              4659
+    LABELING                 PPI                                    3848
+    REMS                     MODIFIED                               2786
+    MANUF (CMC)              FACILITY                               2257
+    EFFICACY                 INDICATION                             1907
+    EFFICACY                 LABEL W CLIN                           1471
+    MANUF (CMC)              FORMULATION                            1315
+    MANUF (CMC)              MICRO-PROC                             1210
+    MANUF (CMC)              EXPIRATION                             1012
+    EFFICACY                 PAT POPUL                               795
+    REMS                     PROPOSAL                                712
+    EFFICACY                 DOSING                                  543
+    EFFICACY                 NOT APPLICABLE                          524
+    MANUF (CMC)              MANU PROC                               425
+    (none)                                                           332
+    (orphan)                                                         265
+    BIOEQUIV                                                         217
+    MANUF (CMC)              STRENGTH                                198
+    EFFICACY                 ACCEL APP                               120
+    LABELING                 PROP NAME                                83
+    EFFICACY                 PEDIATRIC                                77
+    UNSPEC                                                            76
+    REMS                     ASSESSMENT                               68
+    EFFICACY                 MANU W CLIN                              58
+    EFFICACY                 RX TO OTC                                52
+    EFFICACY                 ROUTE                                    32
+    EFFICACY                 COMP EFF                                 29
+    REMS                     NOT APPLICABLE                           24
+    MANUF (CMC)              NOT APPLICABLE                           12
+    MANUF (CMC)              PI                                        5
+    EFFICACY                 ANIM RULE                                 3
+
+  class EFFICACY only (5613), by category (a submission with two action types counts twice):
+    EFFICACY                 INDICATION                             1905
+    EFFICACY                 LABEL W CLIN                           1470
+    EFFICACY                 PAT POPUL                               795
+    EFFICACY                 DOSING                                  543
+    EFFICACY                 NOT APPLICABLE                          524
+    EFFICACY                 ACCEL APP                               120
+    EFFICACY                 PEDIATRIC                                77
+    EFFICACY                 MANU W CLIN                              57
+    EFFICACY                 RX TO OTC                                52
+    LABELING                 PI                                       50
+    EFFICACY                 ROUTE                                    32
+    EFFICACY                 COMP EFF                                 29
+    REMS                     PROPOSAL                                 12
+    LABELING                 MED GUIDE                                 7
+    LABELING                 PPI                                       5
+    REMS                     MODIFIED                                  5
+    LABELING                 CONT/CARTON                               4
+    (none)                                                             3
+    EFFICACY                 ANIM RULE                                 3
+    (orphan)                                                           2
+    LABELING                 NOT APPLICABLE                            1
+    REMS                     NOT APPLICABLE                            1
+    REMS                     ASSESSMENT                                1
+    MANUF (CMC)              STRENGTH                                  1
+
+  supplements carrying an action type are dated 1950-03-31 .. 2026-10-02
+  If a level-2 category names a new indication, that supplement is DATED but
+  still does not say WHICH indication; the letter or label does.
+
+==============================================================================
+6. ACTIVE-INGREDIENT KEY
+==============================================================================
+  ActiveIngredient strings containing each separator: {';': 689, '||': 3, ',': 79}
+  distinct ActiveIngredient strings 3350, of which multi-ingredient (';') 689
+  distinct single ingredients 2908; applications per ingredient p50 2 max 535
+  sample: ['abacavir', 'abacavir sulfate', 'abacavir || dolutegravir || lamivudine', 'abacavir, dolutegravir, lamivudine', 'abaloparatide']
+  An ingredient carried by many applications is mostly generics (ANDA): the
+  innovator's first approval is the one the market label needs.
+
+==============================================================================
+7. OVERLAP WITH DRUGCENTRAL (distinct values, no joined rows)
+==============================================================================
+  ApplNo: Drugs@FDA 29380, DrugCentral ob_product 26894, both 26891, DrugCentral-only 3
+  Drugs@FDA applications found in ob_product, by ApplType: {'NDA': 5298, 'ANDA': 21593}
+  single ingredients matching a DrugCentral synonym exactly: 2538 of 2908 (87.3%)
+  The Orange Book holds no BLAs, so biologics need the name route or another key.
+
+==============================================================================
+SUMMARY
+==============================================================================
+  !! ApplicationDocs: 1 malformed rows
+  declared expectations contradicted: 1

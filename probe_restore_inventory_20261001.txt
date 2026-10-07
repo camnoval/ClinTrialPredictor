@@ -1,0 +1,682 @@
+﻿host localhost:54320 db aact schema ctgov | distinct True | id patterns ('mesh', 'unii', 'rxnorm', 'cui', 'appl', 'nda', 'code', 'identifier', 'id_') | IND pattern '\\mIND\\M' | drug types ['biological', 'drug']
+
+==============================================================================
+1. SERVER AND SNAPSHOT
+==============================================================================
+  server_version 18.6
+  datcollate C  datctype C
+  max(studies.updated_at) 2026-10-01 04:14:34.355844
+
+==============================================================================
+2. TABLES (52 base tables)
+==============================================================================
+  table                                            rows    trials  read by a pull
+  baseline_counts                                241299     80320               -
+  baseline_measurements                         2975319     80180               -
+  brief_summaries                                604168    604168             yes
+  browse_conditions                             4386186    477085             yes
+  browse_interventions                          2560601    275491             yes
+  calculated_values                              605150    605150             yes
+  central_contacts                               226859    156416               -
+  conditions                                    1088415    604130             yes
+  countries                                      819275    550603             yes
+  design_group_interventions                    1350217    499941               -
+  design_groups                                 1113776    531382             yes
+  design_outcomes                               3782486    587538             yes
+  designs                                        600358    600358             yes
+  detailed_descriptions                          604168    604168               -
+  documents                                       10839      2874               -
+  drop_withdrawals                               604930     47929               -
+  eligibilities                                  604168    604168             yes
+  facilities                                    3534757    544368             yes
+  facility_contacts                              421944    130430               -
+  facility_investigators                         227255     49052               -
+  id_information                                 800193    605088             yes
+  intervention_other_names                       488013    153291             yes
+  interventions                                 1023633    543791             yes
+  ipd_information_types                           96906     35471               -
+  keywords                                      1631999    384953             yes
+  links                                           76082     56259               -
+  mesh_headings                                     906                         -
+  mesh_terms                                      59746                         -
+  milestones                                     902303     80320               -
+  outcome_analyses                               327352     26865             yes
+  outcome_analysis_groups                        633214     26865               -
+  outcome_counts                                1614519     80320             yes
+  outcome_measurements                          5012388     78019             yes
+  outcomes                                       668544     80320             yes
+  overall_officials                              535466    426891               -
+  participant_flows                               80320     80320               -
+  pending_results                                 33510      9522               -
+  provided_documents                              86271     56271               -
+  reported_event_totals                          606351     80116               -
+  reported_events                              12109655     58964               -
+  responsible_parties                            586718    586718             yes
+  result_agreements                               80320     80320               -
+  result_contacts                                 80320     80320               -
+  result_groups                                 2225832     80320             yes
+  retractions                                       335       306               -
+  search_results                                      0         0               -
+  search_term_results                            515846    236226               -
+  search_terms                                      186                         -
+  sponsors                                       964442    605150             yes
+  studies                                        605150    605150             yes
+  study_references                              1145630    228178               -
+  study_searches                                      0                         -
+
+  tables a pull reads that the restore lacks: none
+
+==============================================================================
+3. COLUMNS
+==============================================================================
+
+  baseline_counts  (241299 rows; declared 0, key 2, direct 0, unread 5)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    result_group_id                              integer                      unread
+    ctgov_group_code                             character varying            unread
+    units                                        character varying            unread
+    scope                                        character varying            unread
+    count                                        integer                      unread
+
+  baseline_measurements  (2975319 rows; declared 0, key 2, direct 0, unread 20)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    result_group_id                              integer                      unread
+    ctgov_group_code                             character varying            unread
+    classification                               character varying            unread
+    category                                     character varying            unread
+    title                                        character varying            unread
+    description                                  text                         unread
+    units                                        character varying            unread
+    param_type                                   character varying            unread
+    param_value                                  character varying            unread
+    param_value_num                              numeric                      unread
+    dispersion_type                              character varying            unread
+    dispersion_value                             character varying            unread
+    dispersion_value_num                         numeric                      unread
+    dispersion_lower_limit                       numeric                      unread
+    dispersion_upper_limit                       numeric                      unread
+    explanation_of_na                            character varying            unread
+    number_analyzed                              integer                      unread
+    number_analyzed_units                        character varying            unread
+    population_description                       character varying            unread
+    calculate_percentage                         character varying            unread
+
+  brief_summaries  (604168 rows; declared 1, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    description                                  text                         declared
+
+  browse_conditions  (4386186 rows; declared 3, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    mesh_term                                    character varying            declared
+    downcase_mesh_term                           character varying            declared
+    mesh_type                                    character varying            declared
+
+  browse_interventions  (2560601 rows; declared 3, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    mesh_term                                    character varying            declared
+    downcase_mesh_term                           character varying            declared
+    mesh_type                                    character varying            declared
+
+  calculated_values  (605150 rows; declared 17, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    number_of_facilities                         integer                      declared
+    number_of_nsae_subjects                      integer                      declared
+    number_of_sae_subjects                       integer                      declared
+    registered_in_calendar_year                  integer                      declared
+    nlm_download_date                            date                         declared
+    actual_duration                              integer                      declared
+    were_results_reported                        boolean                      declared
+    months_to_report_results                     integer                      declared
+    has_us_facility                              boolean                      declared
+    has_single_facility                          boolean                      declared
+    minimum_age_num                              integer                      declared
+    maximum_age_num                              integer                      declared
+    minimum_age_unit                             character varying            declared
+    maximum_age_unit                             character varying            declared
+    number_of_primary_outcomes_to_measure        integer                      declared
+    number_of_secondary_outcomes_to_measure      integer                      declared
+    number_of_other_outcomes_to_measure          integer                      declared
+
+  central_contacts  (226859 rows; declared 0, key 2, direct 0, unread 6)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    contact_type                                 character varying            unread
+    name                                         character varying            unread
+    phone                                        character varying            unread
+    email                                        character varying            unread
+    phone_extension                              character varying            unread
+    role                                         character varying            unread
+
+  conditions  (1088415 rows; declared 2, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    name                                         character varying            declared
+    downcase_name                                character varying            declared
+
+  countries  (819275 rows; declared 2, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    name                                         character varying            declared
+    removed                                      boolean                      declared
+
+  design_group_interventions  (1350217 rows; declared 0, key 2, direct 0, unread 2)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    design_group_id                              integer                      unread
+    intervention_id                              integer                      unread
+
+  design_groups  (1113776 rows; declared 3, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    group_type                                   character varying            declared
+    title                                        character varying            declared
+    description                                  text                         declared
+
+  design_outcomes  (3782486 rows; declared 5, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    outcome_type                                 character varying            declared
+    measure                                      text                         declared
+    time_frame                                   text                         declared
+    population                                   character varying            declared
+    description                                  text                         declared
+
+  designs  (600358 rows; declared 12, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    allocation                                   character varying            declared
+    intervention_model                           character varying            declared
+    observational_model                          character varying            declared
+    primary_purpose                              character varying            declared
+    time_perspective                             character varying            declared
+    masking                                      character varying            declared
+    masking_description                          text                         declared
+    intervention_model_description               text                         declared
+    subject_masked                               boolean                      declared
+    caregiver_masked                             boolean                      declared
+    investigator_masked                          boolean                      declared
+    outcomes_assessor_masked                     boolean                      declared
+
+  detailed_descriptions  (604168 rows; declared 0, key 2, direct 0, unread 1)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    description                                  text                         unread
+
+  documents  (10839 rows; declared 0, key 2, direct 0, unread 4)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    document_id                                  character varying            unread
+    document_type                                character varying            unread
+    url                                          character varying            unread
+    comment                                      text                         unread
+
+  drop_withdrawals  (604930 rows; declared 0, key 2, direct 0, unread 8)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    result_group_id                              integer                      unread
+    ctgov_group_code                             character varying            unread
+    period                                       character varying            unread
+    reason                                       character varying            unread
+    count                                        integer                      unread
+    drop_withdraw_comment                        character varying            unread
+    reason_comment                               character varying            unread
+    count_units                                  integer                      unread
+
+  eligibilities  (604168 rows; declared 12, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    sampling_method                              character varying            declared
+    gender                                       character varying            declared
+    minimum_age                                  character varying            declared
+    maximum_age                                  character varying            declared
+    healthy_volunteers                           boolean                      declared
+    population                                   text                         declared
+    criteria                                     text                         declared
+    gender_description                           text                         declared
+    gender_based                                 boolean                      declared
+    adult                                        boolean                      declared
+    child                                        boolean                      declared
+    older_adult                                  boolean                      declared
+
+  facilities  (3534757 rows; declared 8, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    status                                       character varying            declared
+    name                                         character varying            declared
+    city                                         character varying            declared
+    state                                        character varying            declared
+    zip                                          character varying            declared
+    country                                      character varying            declared
+    latitude                                     numeric                      declared
+    longitude                                    numeric                      declared
+
+  facility_contacts  (421944 rows; declared 0, key 2, direct 0, unread 6)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    facility_id                                  integer                      unread
+    contact_type                                 character varying            unread
+    name                                         character varying            unread
+    email                                        character varying            unread
+    phone                                        character varying            unread
+    phone_extension                              character varying            unread
+
+  facility_investigators  (227255 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    facility_id                                  integer                      unread
+    role                                         character varying            unread
+    name                                         character varying            unread
+
+  id_information  (800193 rows; declared 5, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    id_source                                    character varying            declared
+    id_value                                     character varying            declared
+    id_type                                      character varying            declared
+    id_type_description                          character varying            declared
+    id_link                                      character varying            declared
+
+  intervention_other_names  (488013 rows; declared 2, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    intervention_id                              integer                      declared
+    name                                         character varying            declared
+
+  interventions  (1023633 rows; declared 3, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    intervention_type                            character varying            declared
+    name                                         character varying            declared
+    description                                  text                         declared
+
+  ipd_information_types  (96906 rows; declared 0, key 2, direct 0, unread 1)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    name                                         character varying            unread
+
+  keywords  (1631999 rows; declared 2, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    name                                         character varying            declared
+    downcase_name                                character varying            declared
+
+  links  (76082 rows; declared 0, key 2, direct 0, unread 2)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    url                                          character varying            unread
+    description                                  text                         unread
+
+  mesh_headings  (906 rows; declared 0, key 1, direct 0, unread 3)
+    id                                           integer                      key
+    qualifier                                    character varying            unread
+    heading                                      character varying            unread
+    subcategory                                  character varying            unread
+
+  mesh_terms  (59746 rows; declared 0, key 1, direct 0, unread 5)
+    id                                           integer                      key
+    qualifier                                    character varying            unread
+    tree_number                                  character varying            unread
+    description                                  character varying            unread
+    mesh_term                                    character varying            unread
+    downcase_mesh_term                           character varying            unread
+
+  milestones  (902303 rows; declared 0, key 2, direct 0, unread 8)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    result_group_id                              integer                      unread
+    ctgov_group_code                             character varying            unread
+    title                                        character varying            unread
+    period                                       character varying            unread
+    description                                  text                         unread
+    count                                        integer                      unread
+    milestone_description                        character varying            unread
+    count_units                                  character varying            unread
+
+  outcome_analyses  (327352 rows; declared 0, key 2, direct 23, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    outcome_id                                   integer                      direct
+    non_inferiority_type                         character varying            direct
+    non_inferiority_description                  text                         direct
+    param_type                                   character varying            direct
+    param_value                                  numeric                      direct
+    dispersion_type                              character varying            direct
+    dispersion_value                             numeric                      direct
+    p_value_modifier                             character varying            direct
+    p_value                                      double precision             direct
+    ci_n_sides                                   character varying            direct
+    ci_percent                                   numeric                      direct
+    ci_lower_limit                               numeric                      direct
+    ci_upper_limit                               numeric                      direct
+    ci_upper_limit_na_comment                    character varying            direct
+    p_value_description                          character varying            direct
+    method                                       character varying            direct
+    method_description                           text                         direct
+    estimate_description                         text                         direct
+    groups_description                           text                         direct
+    other_analysis_description                   text                         direct
+    ci_upper_limit_raw                           character varying            direct
+    ci_lower_limit_raw                           character varying            direct
+    p_value_raw                                  character varying            direct
+
+  outcome_analysis_groups  (633214 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    outcome_analysis_id                          integer                      unread
+    result_group_id                              integer                      unread
+    ctgov_group_code                             character varying            unread
+
+  outcome_counts  (1614519 rows; declared 0, key 2, direct 6, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    outcome_id                                   integer                      direct
+    result_group_id                              integer                      direct
+    ctgov_group_code                             character varying            direct
+    scope                                        character varying            direct
+    units                                        character varying            direct
+    count                                        integer                      direct
+
+  outcome_measurements  (5012388 rows; declared 0, key 2, direct 19, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    outcome_id                                   integer                      direct
+    result_group_id                              integer                      direct
+    ctgov_group_code                             character varying            direct
+    classification                               character varying            direct
+    category                                     character varying            direct
+    title                                        character varying            direct
+    description                                  text                         direct
+    units                                        character varying            direct
+    param_type                                   character varying            direct
+    param_value                                  character varying            direct
+    param_value_num                              numeric                      direct
+    dispersion_type                              character varying            direct
+    dispersion_value                             character varying            direct
+    dispersion_value_num                         numeric                      direct
+    dispersion_lower_limit                       numeric                      direct
+    dispersion_upper_limit                       numeric                      direct
+    explanation_of_na                            text                         direct
+    dispersion_upper_limit_raw                   character varying            direct
+    dispersion_lower_limit_raw                   character varying            direct
+
+  outcomes  (668544 rows; declared 0, key 2, direct 11, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    outcome_type                                 character varying            direct
+    title                                        text                         direct
+    description                                  text                         direct
+    time_frame                                   text                         direct
+    population                                   text                         direct
+    anticipated_posting_date                     date                         direct
+    anticipated_posting_month_year               character varying            direct
+    units                                        character varying            direct
+    units_analyzed                               character varying            direct
+    dispersion_type                              character varying            direct
+    param_type                                   character varying            direct
+
+  overall_officials  (535466 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    role                                         character varying            unread
+    name                                         character varying            unread
+    affiliation                                  character varying            unread
+
+  participant_flows  (80320 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    recruitment_details                          text                         unread
+    pre_assignment_details                       text                         unread
+    units_analyzed                               character varying            unread
+
+  pending_results  (33510 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    event                                        character varying            unread
+    event_date_description                       character varying            unread
+    event_date                                   date                         unread
+
+  provided_documents  (86271 rows; declared 0, key 2, direct 0, unread 6)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    document_type                                character varying            unread
+    has_protocol                                 boolean                      unread
+    has_icf                                      boolean                      unread
+    has_sap                                      boolean                      unread
+    document_date                                date                         unread
+    url                                          character varying            unread
+
+  reported_event_totals  (606351 rows; declared 0, key 2, direct 0, unread 7)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    ctgov_group_code                             character varying            unread
+    event_type                                   character varying            unread
+    classification                               character varying            unread
+    subjects_affected                            integer                      unread
+    subjects_at_risk                             integer                      unread
+    created_at                                   timestamp without time zone  unread
+    updated_at                                   timestamp without time zone  unread
+
+  reported_events  (12109655 rows; declared 0, key 2, direct 0, unread 15)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    result_group_id                              integer                      unread
+    ctgov_group_code                             character varying            unread
+    time_frame                                   text                         unread
+    event_type                                   character varying            unread
+    default_vocab                                character varying            unread
+    default_assessment                           character varying            unread
+    subjects_affected                            integer                      unread
+    subjects_at_risk                             integer                      unread
+    description                                  text                         unread
+    event_count                                  integer                      unread
+    organ_system                                 character varying            unread
+    adverse_event_term                           character varying            unread
+    frequency_threshold                          integer                      unread
+    vocab                                        character varying            unread
+    assessment                                   character varying            unread
+
+  responsible_parties  (586718 rows; declared 6, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    responsible_party_type                       character varying            declared
+    name                                         character varying            declared
+    title                                        character varying            declared
+    organization                                 character varying            declared
+    affiliation                                  text                         declared
+    old_name_title                               character varying            declared
+
+  result_agreements  (80320 rows; declared 0, key 2, direct 0, unread 5)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    pi_employee                                  boolean                      unread
+    agreement                                    text                         unread
+    restriction_type                             character varying            unread
+    other_details                                text                         unread
+    restrictive_agreement                        boolean                      unread
+
+  result_contacts  (80320 rows; declared 0, key 2, direct 0, unread 5)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    organization                                 character varying            unread
+    name                                         character varying            unread
+    phone                                        character varying            unread
+    email                                        character varying            unread
+    extension                                    character varying            unread
+
+  result_groups  (2225832 rows; declared 0, key 2, direct 5, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    ctgov_group_code                             character varying            direct
+    result_type                                  character varying            direct
+    title                                        character varying            direct
+    description                                  text                         direct
+    outcome_id                                   integer                      direct
+
+  retractions  (335 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           bigint                       key
+    reference_id                                 integer                      unread
+    pmid                                         character varying            unread
+    source                                       character varying            unread
+    nct_id                                       character varying            key
+
+  search_results  (0 rows; declared 0, key 2, direct 0, unread 5)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    name                                         character varying            unread
+    created_at                                   timestamp without time zone  unread
+    updated_at                                   timestamp without time zone  unread
+    grouping                                     character varying            unread
+    study_search_id                              integer                      unread
+
+  search_term_results  (515846 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           bigint                       key
+    nct_id                                       character varying            key
+    search_term_id                               bigint                       unread
+    created_at                                   timestamp without time zone  unread
+    updated_at                                   timestamp without time zone  unread
+
+  search_terms  (186 rows; declared 0, key 1, direct 0, unread 4)
+    id                                           bigint                       key
+    term                                         character varying            unread
+    group                                        character varying            unread
+    created_at                                   timestamp without time zone  unread
+    updated_at                                   timestamp without time zone  unread
+
+  sponsors  (964442 rows; declared 3, key 2, direct 0, unread 0)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    agency_class                                 character varying            declared
+    lead_or_collaborator                         character varying            declared
+    name                                         character varying            declared
+
+  studies  (605150 rows; declared 70, key 1, direct 0, unread 0)
+    nct_id                                       character varying            key
+    nlm_download_date_description                character varying            declared
+    study_first_submitted_date                   date                         declared
+    results_first_submitted_date                 date                         declared
+    disposition_first_submitted_date             date                         declared
+    last_update_submitted_date                   date                         declared
+    study_first_submitted_qc_date                date                         declared
+    study_first_posted_date                      date                         declared
+    study_first_posted_date_type                 character varying            declared
+    results_first_submitted_qc_date              date                         declared
+    results_first_posted_date                    date                         declared
+    results_first_posted_date_type               character varying            declared
+    disposition_first_submitted_qc_date          date                         declared
+    disposition_first_posted_date                date                         declared
+    disposition_first_posted_date_type           character varying            declared
+    last_update_submitted_qc_date                date                         declared
+    last_update_posted_date                      date                         declared
+    last_update_posted_date_type                 character varying            declared
+    start_month_year                             character varying            declared
+    start_date_type                              character varying            declared
+    start_date                                   date                         declared
+    verification_month_year                      character varying            declared
+    verification_date                            date                         declared
+    completion_month_year                        character varying            declared
+    completion_date_type                         character varying            declared
+    completion_date                              date                         declared
+    primary_completion_month_year                character varying            declared
+    primary_completion_date_type                 character varying            declared
+    primary_completion_date                      date                         declared
+    target_duration                              character varying            declared
+    study_type                                   character varying            declared
+    acronym                                      character varying            declared
+    baseline_population                          text                         declared
+    brief_title                                  text                         declared
+    official_title                               text                         declared
+    overall_status                               character varying            declared
+    last_known_status                            character varying            declared
+    phase                                        character varying            declared
+    enrollment                                   integer                      declared
+    enrollment_type                              character varying            declared
+    source                                       character varying            declared
+    limitations_and_caveats                      character varying            declared
+    number_of_arms                               integer                      declared
+    number_of_groups                             integer                      declared
+    why_stopped                                  character varying            declared
+    has_expanded_access                          boolean                      declared
+    expanded_access_type_individual              boolean                      declared
+    expanded_access_type_intermediate            boolean                      declared
+    expanded_access_type_treatment               boolean                      declared
+    has_dmc                                      boolean                      declared
+    is_fda_regulated_drug                        boolean                      declared
+    is_fda_regulated_device                      boolean                      declared
+    is_unapproved_device                         boolean                      declared
+    is_ppsd                                      boolean                      declared
+    is_us_export                                 boolean                      declared
+    biospec_retention                            character varying            declared
+    biospec_description                          text                         declared
+    ipd_time_frame                               character varying            declared
+    ipd_access_criteria                          character varying            declared
+    ipd_url                                      character varying            declared
+    plan_to_share_ipd                            character varying            declared
+    plan_to_share_ipd_description                character varying            declared
+    created_at                                   timestamp without time zone  declared
+    updated_at                                   timestamp without time zone  declared
+    source_class                                 character varying            declared
+    delayed_posting                              boolean                      declared
+    expanded_access_nctid                        character varying            declared
+    expanded_access_status_for_nctid             character varying            declared
+    fdaaa801_violation                           boolean                      declared
+    baseline_type_units_analyzed                 character varying            declared
+    patient_registry                             boolean                      declared
+
+  study_references  (1145630 rows; declared 0, key 2, direct 0, unread 3)
+    id                                           integer                      key
+    nct_id                                       character varying            key
+    pmid                                         character varying            unread
+    reference_type                               character varying            unread
+    citation                                     text                         unread
+
+  study_searches  (0 rows; declared 0, key 1, direct 0, unread 8)
+    id                                           integer                      key
+    save_tsv                                     boolean                      unread
+    query                                        character varying            unread
+    grouping                                     character varying            unread
+    name                                         character varying            unread
+    beta_api                                     boolean                      unread
+    created_at                                   timestamp without time zone  unread
+    updated_at                                   timestamp without time zone  unread
+    active                                       boolean                      unread
+
+  declared columns the restore lacks: none
+
+==============================================================================
+4. IDENTIFIER-SHAPED COLUMNS
+==============================================================================
+  baseline_counts                      ctgov_group_code                     character varying    unread
+  baseline_measurements                ctgov_group_code                     character varying    unread
+  browse_conditions                    mesh_term                            character varying    declared
+  browse_conditions                    downcase_mesh_term                   character varying    declared
+  browse_conditions                    mesh_type                            character varying    declared
+  browse_interventions                 mesh_term                            character varying    declared
+  browse_interventions                 downcase_mesh_term                   character varying    declared
+  browse_interventions                 mesh_type                            character varying    declared
+  calculated_values                    registered_in_calendar_year          integer              declared
+  calculated_values                    number_of_secondary_outcomes_to_measure integer              declared
+  drop_withdrawals                     ctgov_group_code                     character varying    unread
+  id_information                       id_source                            character varying    declared
+  id_information                       id_value                             character varying    declared
+  id_information                       id_type                              character varying    declared
+  id_information                       id_type_description                  character varying    declared
+  id_information                       id_link                              character varying    declared
+  mesh_terms                           mesh_term                            character varying    unread
+  mesh_terms                           downcase_mesh_term                   character varying    unread
+  milestones                           ctgov_group_code                     character varying    unread
+  outcome_analysis_groups              ctgov_group_code                     character varying    unread
+  outcome_counts                       ctgov_group_code                     character varying    direct
+  outcome_measurements                 ctgov_group_code                     character varying    direct
+  reported_event_totals                ctgov_group_code                     character varying    unread
+  reported_events                      ctgov_group_code                     character varying    unread
+  result_groups                        ctgov_group_code                     character varying    direct
+
+==============================================================================
+5. id_information
+==============================================================================

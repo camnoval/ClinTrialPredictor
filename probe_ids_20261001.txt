@@ -1,0 +1,75 @@
+﻿host localhost:54320 db aact schema ctgov | distinct True | id patterns ('mesh', 'unii', 'rxnorm', 'cui', 'appl', 'nda', 'code', 'identifier', 'id_') | IND pattern '\\mIND\\M' | drug types ['biological', 'drug']
+
+==============================================================================
+1. SERVER AND SNAPSHOT
+==============================================================================
+  server_version 18.6
+  datcollate C  datctype C
+  max(studies.updated_at) 2026-10-01 04:14:34.355844
+
+==============================================================================
+2. TABLES (52 base tables)
+==============================================================================
+  table                                            rows    trials  read by a pull
+
+  tables a pull reads that the restore lacks: none
+
+==============================================================================
+3. COLUMNS
+==============================================================================
+
+  declared columns the restore lacks: none
+
+==============================================================================
+4. IDENTIFIER-SHAPED COLUMNS
+==============================================================================
+
+==============================================================================
+5. id_information
+==============================================================================
+  id_source              id_type                           rows   trials  drug trials
+  org_study_id           None                            599917   599917       234510
+  secondary_id           OTHER                            53137    43398        24525
+  secondary_id           NIH                              51653    45429        23882
+  secondary_id           None                             33933    24820        16520
+  secondary_id           REGISTRY                         19564    17912        12643
+  secondary_id           EUDRACT_NUMBER                   18353    18332        17738
+  secondary_id           OTHER_GRANT                      12444    11267         2885
+  org_study_id           NIH                               5026     5026          879
+  nct_alias              None                              3354     3162         2246
+  secondary_id           CTIS                              2297     2297         2198
+  secondary_id           AHRQ                               227      223           15
+  secondary_id           FDA                                142      140          116
+  org_study_id           AHRQ                               134      134            5
+  org_study_id           FDA                                  9        9            8
+  secondary_id           SAMHSA                               3        3            0
+
+  sample values per pair (first 5 in byte order):
+    org_study_id         None                       ["!---''ZEYNEP-ASAL-000000000001", '!SZINF2', '"11-2021"', '"70904504/376"', '"A.KAZAK33-H.TOPALI31"!']
+    secondary_id         OTHER                      ['!!SZINF2', '"03-663"', '"MISSION" study', '#02-033', '#04-10']
+    secondary_id         NIH                        ['1D43TW009539', '1DP1DA031401-01', '1DP1HD121548-01', '1DP2CA225433-01', '1DP2DA042424-01']
+    secondary_id         None                       ['"EPO Stroke Study"', '"Ehrenreich EPO Stroke Study"', '"Ehrenreich Study"', '"LOPOS"', '#1-UCI-AI-06205-01']
+    secondary_id         REGISTRY                   ['# 133148', '#84525', '(FWA#000010609)', '(UTN) U1111-1139-2991', '0000-0001-9120-7071']
+    secondary_id         EUDRACT_NUMBER             ['2004-000086-35', '2004-000087-27', '2004-000088-92', '2004-000093-30', '2004-000100-40']
+    secondary_id         OTHER_GRANT                ['"Age-It", PE00000015', '"Ricerca Finalizzata 2019"', '# 317.276.2000', '# OG-2-12-3722-HN', '# W81XWH-13-1-0479']
+    org_study_id         NIH                        ['1D43TW009114', '1DP2DA066200', '1DP3DK094338-01', '1DP3DK101075', '1DP3DK108198']
+    nct_alias            None                       ['NCT00000109', 'NCT00000141', 'NCT00000181', 'NCT00000182', 'NCT00000183']
+    secondary_id         CTIS                       ['2022-500108-23-00', '2022-500391-62-00', '2022-500439-35-00', '2022-500451-23-00', '2022-500631-36-00']
+    secondary_id         AHRQ                       ['1K01HS023680-01A1', '1K01HS026518', '1K02HS015663-01A1', '1K08HS024332-01A1', '1K08HS024342-01A1']
+    secondary_id         FDA                        ['1P50FD006424-01', '1R01FD003005-01', '1R01FD003009-01', '1R01FD003107-01A1', '1R01FD003361-01A1']
+    org_study_id         AHRQ                       ['1K08HS028473-01A1', '1K18HS023445-01', '1R01HS014539-01A1', '1R01HS015084-01', '1R01HS018431']
+    org_study_id         FDA                        ['1R01FD003032-01A1', '1R01FD003080-01A1', '1R01FD003410-01', '1R01FD003435-01', '1R01FD003514-01']
+    secondary_id         SAMHSA                     ['2U79SM056215', '3B09SM010032-19S3', '5U79SM061767']
+
+  rows matching '\\mIND\\M' in id_value or id_type_description:
+    secondary_id           OTHER                              158 rows      153 trials
+    org_study_id           None                               140 rows      140 trials
+    secondary_id           None                                99 rows       96 trials
+    secondary_id           REGISTRY                            40 rows       40 trials
+    secondary_id           OTHER_GRANT                         10 rows       10 trials
+    samples: [('#76,160', 'IND Number'), ('(IND) - DPP (completed)', None), ('017464', 'IND'), ('100,481', 'FDA IND'), ('1006001474 IND', None)]
+
+==============================================================================
+6. VIEWS (not counted)
+==============================================================================
+  ['all_browse_conditions', 'all_browse_interventions', 'all_cities', 'all_conditions', 'all_countries', 'all_design_outcomes', 'all_facilities', 'all_group_types', 'all_id_information', 'all_intervention_types', 'all_interventions', 'all_keywords', 'all_overall_official_affiliations', 'all_overall_officials', 'all_primary_outcome_measures', 'all_secondary_outcome_measures', 'all_sponsors', 'all_states', 'categories']

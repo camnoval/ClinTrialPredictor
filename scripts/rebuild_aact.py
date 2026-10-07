@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rebuild every AACT-derived file from the local restore of the pinned snapshot.
 
-Runs the three pulls in order against the local server, with every verdict-producing
+Runs the four pulls in order against the local server, with every verdict-producing
 setting pinned: --as-of is the snapshot's own date, never today. Writes into --out-root,
 which must be empty, then prints each file's size and sha256.
 
@@ -49,6 +49,8 @@ def pulls(root: Path, port: int) -> list:
           "--out", str(root / "trial_design_outcomes.csv")]),
         ("registration fields and text",
          [py, str(s / "pull_aact_fields.py"), *conn, "--out-dir", str(root)]),
+        ("row-level registration tables",
+         [py, str(s / "pull_aact_rows.py"), *conn, "--out-dir", str(root)]),
     ]
 
 

@@ -1,0 +1,61 @@
+﻿host localhost:54320 db aact schema ctgov | population interventional | chunk 2000 | max_trials None | timeout 900s | out data\aact_rows_check | probe_only False
+
+==============================================================================
+SCHEMA CHECK (schema 'ctgov')
+==============================================================================
+  23 tables, every server column classified
+  snapshot proxy max(studies.updated_at): 2026-10-01T04:14:34.355844
+
+==============================================================================
+POPULATION
+==============================================================================
+  interventional                   461824
+  observational                    141276
+  expanded_access                    1068
+  unknown                             982
+  selected (population=interventional): 461824
+
+==============================================================================
+PULL
+==============================================================================
+  chunk 20/231  rows 2136188  79s
+  chunk 40/231  rows 4048473  140s
+  chunk 60/231  rows 5843497  188s
+  chunk 80/231  rows 7575405  237s
+  chunk 100/231  rows 9261901  294s
+  chunk 120/231  rows 10896901  352s
+  chunk 140/231  rows 12496553  410s
+  chunk 160/231  rows 14031376  464s
+  chunk 180/231  rows 15510314  516s
+  chunk 200/231  rows 16949419  569s
+  chunk 220/231  rows 18355642  613s
+  chunk 231/231  rows 19072127  634s
+
+==============================================================================
+DONE
+==============================================================================
+  table                                  rows          bytes  sha256
+  interventions                        912744      196365223  5889212e82b61ea3d621c08d5891a771e778deed18f3cdd8d58d24d8482815ee
+  intervention_other_names             461947       23174658  141af97457ed875ce07042716edf13006be60ded8420002957e0990fb7de2248
+  design_groups                        941550      210700787  92cdcf8e4e2b7ff6f1d088f8c5814bcd7a46ef5cd28f8e7f8fbebb8271c06735
+  design_group_interventions          1213686       52188541  0cd9d98000b0f28b79474fafc26055c172d3fdd820bf71e71995972208383d61
+  browse_interventions                2319763      172071279  f78a6ad205f426c116634ed9ff57dc035a2506d493ce8863f160da3c82fc428d
+  browse_conditions                   3310650      271673736  bbe45053cd6b922104e7fb9224b829d8f7cab454a5e3a1e3e9a062047792a940
+  conditions                           817334       54195559  a6ce70e92dea7ac6942181e44b9ba09ff6b61d89b11ea8fa76fb60bd349e5c51
+  keywords                            1267097       75965306  0ffe43468ec4a82289c6b6012c325baa71a5a7527201ea2e85a151294cc3023b
+  countries                            666033       25914060  4b8babdcfb5417c8f05b004402d38bd07dfd6ba203dce20dc1fe0691a4f58d2d
+  facilities                          3026192      340766519  5855e06c12a60b440f944ef9662927d78ac0887c26651b79108a4fa8d01bfdc4
+  facility_investigators               176090       13179509  c1280666a35dd4750ea3a01e013c36272acb658e32b053ce441cae7b50fc1230
+  overall_officials                    416636       42305750  b40e0d477f04ebae9417edd3a5efb317a9583b6efbcff6522e35778c7dc032c5
+  sponsors                             730497       49892856  c7501e965e16f706c5ed6d6a3c62560302ad5533736a88c91ccf902de9e0cbf1
+  id_information                       630222       37186885  e7ad5c84d19459575d51c370e29a05d734ddcf746898b1284dacc759a1bd2f3e
+  links                                 60071        8635786  b064b90d68027ff15039c90f1495f6f9be859dcb43ee9486fd138bca0981654b
+  documents                             10302        1874237  5ef1914e57426747bf100e6195c12b83276b3bb365d664c436d54e77766b11ce
+  provided_documents                    78319       11729198  6b9a23ec6949fee56bf3a4a9034f8e2a042d0bf9f064c472099e7e20255b61f8
+  ipd_information_types                 82206        2507758  7a8a141034f8a621eb36a4fc3a0f7c90d96063ac2b025bdadb8bca2b04a31362
+  study_references                     878022      288449072  670d2da7824ea0e5a048450bf9318e96094b22496f15655854063e013de8383a
+  detailed_descriptions                461824      638716424  78a2241342b91ce4e878af83f4e928b83fd691c9359f68ec64c92cc0b178827e
+  outcome_analysis_groups              610942       29936222  2e0dd2634926afc7f31bd881c204f20a401c9adf4af0fccd3280c32ade5e3cfa
+  mesh_terms                            59746        4518829  6163fbdddb470e2afcdb75d9f3489474609e3a7522ee21272a7714cb6457ed56
+  mesh_headings                           906          54201  22b6bad47bd0df981046485e18dfb65b91d5319394016ac279757976edc85722
+  snapshot proxy 2026-10-01T04:14:34.355844 | trials 461824 | elapsed 642s

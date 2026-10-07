@@ -11,7 +11,7 @@ from decimal import Decimal
 from trial_pos.services.aact_aggregates import IDS_PARAM
 from trial_pos.services.aact_fields import (
     DERIVED, FILE_FIELDS, FILE_TEXT, GROUP_TYPES, KIND_DERIVED, OUTPUT_FILES,
-    OUTCOME_TYPES, PARENT_TABLE, SKIP_COLUMNS, TEXT_COLUMNS, chunk_sql, csv_value,
+    OUTCOME_TYPES, PARENT_TABLE, ROW_LEVEL_ONLY_TABLES, SKIP_COLUMNS, TEXT_COLUMNS, chunk_sql, csv_value,
     derived_provenance, output_columns, plain_columns, registered_after_primary_completion,
     registration_lag_days, required_server_columns, worst_provenance,
 )
@@ -124,9 +124,13 @@ def test_every_many_table_appears_only_inside_a_scoped_group_by_subquery():
 def test_every_one_table_is_left_joined_on_nct_id_and_the_parent_is_scoped():
     sql = chunk_sql(SCHEMA)
     for spec in TABLES:
-        if spec.cardinality == CARDINALITY_ONE and spec.table != PARENT_TABLE:
-            assert re.search(rf"LEFT JOIN {SCHEMA}\.{spec.table} t\d+ ON t\d+\.nct_id",
-                             sql), spec.table
+        if spec.cardinality != CARDINALITY_ONE or spec.table == PARENT_TABLE:
+            continue
+        joined = re.search(rf"LEFT JOIN {SCHEMA}\.{spec.table} t\d+ ON t\d+\.nct_id", sql)
+        if spec.table in ROW_LEVEL_ONLY_TABLES:
+            assert not joined and f"{SCHEMA}.{spec.table} " not in sql, spec.table
+        else:
+            assert joined, spec.table
     # the parent is scoped to the chunk, and rows come back in nct_id order
     assert re.search(rf"WHERE (t\d+)\.nct_id = ANY\(%\({IDS_PARAM}\)s\) "
                      rf"ORDER BY \1\.nct_id$", sql.rstrip()), sql[-120:]

@@ -1,0 +1,133 @@
+﻿host localhost:54320 db aact schema ctgov | salt 'probe-intervention-arms-v1' | samples 8 | max_k 4 | drug types ['biological', 'drug'] | mesh list token 'mesh-list'
+
+==============================================================================
+1. SCHEMA
+==============================================================================
+  studies                        needs nct_id, study_type, phase  -> ok
+  interventions                  needs id, nct_id, intervention_type, name  -> ok
+  design_groups                  needs id, nct_id, group_type, title  -> ok
+  design_group_interventions     needs nct_id, design_group_id, intervention_id  -> ok
+  intervention_other_names       needs nct_id, intervention_id, name  -> ok
+  browse_interventions           needs nct_id, mesh_term, downcase_mesh_term, mesh_type  -> ok
+
+==============================================================================
+2. POPULATION
+==============================================================================
+  studies 605150  interventional 461824  drug 222329  not drug 239495  no intervention rows 0
+  paired against data\aact\trial_labels.csv is_drug_trial (file, derived):
+    (False, False)                               239495
+    (True, True)                                 222329
+  rows read for drug trials: arms 466900, links 700745, other names 377153, intervention MeSH 1820625
+
+==============================================================================
+3. LINKAGE INTEGRITY (drug trials)
+==============================================================================
+  exact duplicate link rows                                     0
+  link rows                                                700745
+  other-name rows                                          377153
+
+==============================================================================
+4. ARM VOCABULARY (drug trials)
+==============================================================================
+  arms 466900  untyped 0
+    'EXPERIMENTAL'                               295459  -> EXPERIMENTAL
+    'ACTIVE_COMPARATOR'                           90496  -> ACTIVE_COMPARATOR
+    'PLACEBO_COMPARATOR'                          59279  -> PLACEBO_COMPARATOR
+    'OTHER'                                       11324  -> OTHER
+    'NO_INTERVENTION'                              8666  -> NO_INTERVENTION
+    'SHAM_COMPARATOR'                              1676  -> SHAM_COMPARATOR
+  normalised types outside aact_fields.GROUP_TYPES: none
+
+==============================================================================
+5. ROLE OF EACH DRUG/BIOLOGICAL INTERVENTION
+==============================================================================
+  drug/biological intervention rows in drug trials: 445377
+  unlinked_to_any_arm                               27757    6.2%  sample ['NCT00002144', 'NCT01118611', 'NCT00003630', 'NCT00002284', 'NCT00004999', 'NCT00124137', 'NCT00013520', 'NCT00520650']
+  experimental_arms_only                           261153   58.6%  sample ['NCT01406704', 'NCT05644509', 'NCT07166796', 'NCT02944565', 'NCT02623595', 'NCT03602079', 'NCT04853901', 'NCT02649439']
+  experimental_and_comparator_arms                  30601    6.9%  sample ['NCT04029467', 'NCT05043376', 'NCT04503668', 'NCT04493216', 'NCT01079234', 'NCT04284215', 'NCT02788656', 'NCT07481708']
+  comparator_arms_only                             117069   26.3%  sample ['NCT05412056', 'NCT04853901', 'NCT04502862', 'NCT05956509', 'NCT07166991', 'NCT00226772', 'NCT06651970', 'NCT01426386']
+  untyped_or_unrecognised_arms_only                     0    0.0%  sample []
+  other_or_no_intervention_arms_only                 8797    2.0%  sample ['NCT04434300', 'NCT05611268', 'NCT01157364', 'NCT05848947', 'NCT02566187', 'NCT07802418', 'NCT01988077', 'NCT05523713']
+
+==============================================================================
+6. TRIAL OUTCOME UNDER THE CANDIDATE RULE
+==============================================================================
+  CANDIDATE rule, not decided: the tested agent is a drug/biological intervention
+  in >=1 EXPERIMENTAL arm and in no comparator arm. Outcomes in precedence order.
+
+  outcome                                                trials   share         early       pivotal post_approval       unknown
+  no_design_groups                                        17305    7.8%          9076          4113          2279          1837
+  no_drug_intervention_linked_to_an_arm                      26    0.0%            12             3             9             2
+  candidate_tested_agent_found                           162725   73.2%        100474         30712         18312         13227
+  no_experimental_arm_and_some_arms_untyped                   0    0.0%             0             0             0             0
+  no_experimental_arm                                     30212   13.6%         10306          5515          8270          6121
+  every_experimental_drug_also_in_a_comparator_arm         9958    4.5%          3847          2329          1770          2012
+  experimental_arms_carry_no_drug                          2103    0.9%           444           386           314           959
+  (drug trials)                                          222329
+
+  outcome by arm count                                   0 arms    1 arm  2+ arms
+  no_design_groups                                        17305        0        0
+  no_drug_intervention_linked_to_an_arm                       0        0       26
+  candidate_tested_agent_found                                0    53680   109045
+  no_experimental_arm_and_some_arms_untyped                   0        0        0
+  no_experimental_arm                                         0     3120    27092
+  every_experimental_drug_also_in_a_comparator_arm            0        0     9958
+  experimental_arms_carry_no_drug                             0        0     2103
+
+  sample NCT ids per outcome, for reading on ClinicalTrials.gov:
+    no_design_groups                                     ['NCT00002144', 'NCT01118611', 'NCT00003630', 'NCT00002284', 'NCT00004999', 'NCT00124137', 'NCT00013520', 'NCT00520650']
+    no_drug_intervention_linked_to_an_arm                ['NCT06824870', 'NCT05944562', 'NCT06574022', 'NCT06692010', 'NCT06833788', 'NCT05731271', 'NCT04656431', 'NCT06538181']
+    candidate_tested_agent_found                         ['NCT01406704', 'NCT05644509', 'NCT07166796', 'NCT02944565', 'NCT02623595', 'NCT03602079', 'NCT04853901', 'NCT02649439']
+    no_experimental_arm_and_some_arms_untyped            []
+    no_experimental_arm                                  ['NCT05412056', 'NCT06651970', 'NCT04434300', 'NCT00390013', 'NCT05611268', 'NCT01157364', 'NCT01084343', 'NCT03713359']
+    every_experimental_drug_also_in_a_comparator_arm     ['NCT04029467', 'NCT05043376', 'NCT04284215', 'NCT02788656', 'NCT07481708', 'NCT03389893', 'NCT00635063', 'NCT02884492']
+    experimental_arms_carry_no_drug                      ['NCT05974072', 'NCT02843165', 'NCT00776568', 'NCT02771600', 'NCT01647958', 'NCT01648023', 'NCT05079087', 'NCT05013801']
+
+  candidates per trial (candidate_tested_agent_found only), max bucket 4+:
+      1          111622
+      2           29301
+      3           11345
+      4+          10457
+
+  candidates whose name matches '\\b(placebo|sham|vehicle|dummy|saline)\\b': 7194 of 261153
+    NCT01578057  'Placebo ethanol'
+    NCT00661713  'Placebo'
+    NCT05948059  'SHR-2106 injection or placebo'
+    NCT01002742  'Placebo'
+    NCT03645096  'Placebo'
+    NCT02207920  'Placebo for AIDSVAX B/E'
+    NCT05080959  'Placebo'
+    NCT01667406  'Kisspeptin 9.6 nmol/kg + saline'
+
+==============================================================================
+7. OTHER NAMES
+==============================================================================
+  drug/biological interventions with >=1 other name: 164163 of 445377 (36.9%)
+  candidate tested agents with >=1 other name: 108275 of 261153 (41.5%)
+
+==============================================================================
+8. INTERVENTION MESH (browse_interventions, drug trials)
+==============================================================================
+  raw mesh_type spellings (rows):
+    'mesh-ancestor'                   1483943
+    'mesh-list'                        336682
+  spellings that lowercase to 'mesh-list': {'mesh-list': 336682}
+
+  indexed terms (mesh-list) in 171120 trials: 336682 rows. Attribution by exact name_key equality with an intervention name or other name:
+    matches_a_candidate_tested_agent                  97776   29.0%
+    matches_another_drug_intervention                 59023   17.5%
+    matches_a_non_drug_intervention                    6754    2.0%
+    matches_no_intervention_name                     173129   51.4%
+  trials with >=1 indexed term matching no intervention name: 107913
+
+==============================================================================
+9. data\aact\trial_entities.csv AGAINST THE RESTORE (drug trials)
+==============================================================================
+  drug trials absent from the file                                      0
+  mesh equals ALL mesh_types pooled                                222329
+  mesh equals indexed (mesh-list) terms only                        92311
+  mesh equals pooled AND pooled differs from indexed               130018
+  names differ                                                          2
+  names differ, trial has a name containing the separator               2
+  names equal                                                      222327
+  sample trials whose names differ: ['NCT03313960', 'NCT03822962']

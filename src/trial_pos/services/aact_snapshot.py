@@ -114,8 +114,9 @@ def required_tables() -> list:
     """Every AACT table a pull reads, derived from the pull declarations."""
     from trial_pos.services.aact_aggregates import AGGREGATE_SOURCES
     from trial_pos.services.aact_provenance import TABLES
+    from trial_pos.services.aact_rows import all_tables
     return sorted({s.table for s in AGGREGATE_SOURCES} | {t.table for t in TABLES}
-                  | set(DIRECT_TABLES))
+                  | set(DIRECT_TABLES) | set(all_tables()))
 
 
 def pull_connection_args(port: int = LOCAL_PORT) -> list:

@@ -209,6 +209,51 @@ TABLES: tuple[TableSpec, ...] = (
                     "also edited the registered Outcome Measures section, and 2 of 3 edited "
                     "it during conduct too"),
     }),
+    # ---- added for the row-level pull (services/aact_rows.py), 2026-10-07 ----------------
+    # Appended, never inserted: aact_fields aliases tables by their position here. Columns
+    # are every non-key column the pinned restore holds (audit/probe_restore_inventory.py).
+    TableSpec("design_group_interventions", CARDINALITY_MANY, {
+        "design_group_id": _R, "intervention_id": _R,
+    }, {
+        "design_group_id": ("which arm receives which intervention; same class as "
+                            "design_groups and interventions. Adaptive designs can drop "
+                            "arms during conduct, which is not systematic"),
+    }),
+    TableSpec("facility_investigators", CARDINALITY_MANY, {
+        "facility_id": _E, "role": _E, "name": _E,
+    }, {"name": "site investigators change as sites open and close, like facilities"}),
+    TableSpec("overall_officials", CARDINALITY_MANY, {
+        "role": _R, "name": _R, "affiliation": _R,
+    }, {"name": "the study official; replacements happen but are not systematic"}),
+    TableSpec("links", CARDINALITY_MANY, {"url": _P, "description": _P}, {
+        "url": ("links are added at any time, including to results publications and press "
+                "releases after readout, and the table carries no date"),
+    }),
+    TableSpec("documents", CARDINALITY_MANY, {
+        "document_id": _E, "document_type": _E, "url": _E, "comment": _E,
+    }, {"document_type": "shared-IPD documents; part of the data-sharing plan, editable"}),
+    TableSpec("provided_documents", CARDINALITY_MANY, {
+        "document_type": _P, "has_protocol": _P, "has_icf": _P, "has_sap": _P,
+        "document_date": _P, "url": _P,
+    }, {"document_type": ("protocol, SAP and consent uploads; required with results, so "
+                          "their presence encodes posting")}),
+    TableSpec("ipd_information_types", CARDINALITY_MANY, {"name": _E}, {
+        "name": "data-sharing plan detail, editable like plan_to_share_ipd",
+    }),
+    TableSpec("study_references", CARDINALITY_MANY, {
+        "pmid": _P, "reference_type": _P, "citation": _P,
+    }, {"reference_type": ("mixes background citations with results publications added "
+                           "after readout; whole table post hoc until a feature separates "
+                           "them by reference_type")}),
+    TableSpec("detailed_descriptions", CARDINALITY_ONE, {"description": _R}, {
+        "description": ("registration prose, same class as brief_summaries. Pulled row-level "
+                        "only: aact_fields.ROW_LEVEL_ONLY_TABLES keeps it out of the fields "
+                        "file, whose hash is pinned"),
+    }),
+    TableSpec("outcome_analysis_groups", CARDINALITY_MANY, {
+        "outcome_analysis_id": _P, "result_group_id": _P, "ctgov_group_code": _P,
+    }, {"outcome_analysis_id": ("which arms a posted analysis compared: results-side, a "
+                                "label input only, never a feature")}),
 )
 
 

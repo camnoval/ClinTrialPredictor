@@ -1,0 +1,397 @@
+﻿aact data\aact | drugcentral data\drugcentral | drugs@fda data\drugsatfda | mondo data\ontology\mondo_xref.csv | lookup max 100 | separators (';', '||', ',')
+
+==============================================================================
+1. FILE IDENTITY (bytes, sha256)
+==============================================================================
+
+  AACT-derived: data\aact (11 files)
+    results_raw_outcomes.csv                                   73846462  886f0dab90bcc4ca13bd3adcb01caecee2e32792567a5976856fdc23ff525ab9
+    results_raw_studies.csv                                    81618574  e06754144a469dd6540af49391d6c98ac0f6ebfb53a43b4a7c6f53995b758727
+    trial_design_outcomes.csv                                 308094649  024fb870285fc1426a920ab27adfa7d9793b4eec981c2722a21cf3c480f7496d
+    trial_design_outcomes.csv.manifest.json                          90  4f8685e70851cba1ff87349795ba756080e2d96c9bdb3285715e587d52751415
+    trial_entities.csv                                        172464800  93c7a5ccdbee6a12c1562ae4201a88a7514503f1b67fb7b35fea0ffcee9ac5d3
+    trial_labels.csv                                          179194174  5cc4276686c7fc365eb2327f87055b5e8b47bbdd9378c6c8531cc4b00b6e4db6
+    trial_labels.csv.manifest.json                                  224  1c7dea42446ec35cc2a4d33d63f725daf4b1102ec86af309daad601e8b395a0c
+    trial_registration_fields.csv                             311268875  90a51c0b0c33799e1b08474ff276bc4bc41cbf062c84bd6547e9ad45ca4ce381
+    trial_registration_fields.manifest.json                        6312  0a9c4020d057f47bee1848e99c10811aff54d15c27c8b7e4c456f92e6bdb45a3
+    trial_registration_fields.provenance.csv                      16045  8cd17bcf09ef68db2db907478dca918cc0e714366ca71584bf1baece76db948f
+    trial_registration_text.csv                              1285691171  d94d75cf6681a0b56ccee66a0881bb38b3bbb49fdcd6c22996f0646cd1202d3c
+
+  DrugCentral: data\drugcentral (15 files)
+    dc_approval.csv                                              165274  32da9ac6b7289feca04b12716ece7be7796343cecd4f6c896602d291bd038ba7
+    dc_approval_type.csv                                            291  787da1c9388e26aad1982187b2973cb5a871d9fa23c3c802d54436dbf468b906
+    dc_dbversion.csv                                                 43  baae011bdaf2e7c6930c403c18683c067bb162ebad91e1247df4cfa7b1dedc18
+    dc_doid.csv                                                  883426  63bfdd5b127bbca5fd1252c239f8784f7b98f8e040100499b72c94aa2634b48f
+    dc_doid_xref.csv                                            1218077  f94e93e4dac27a646d76c4ed5b83c84ccd34b199cd1138a06c0d2bf98bc15659
+    dc_identifier.csv                                           2861863  735b8acf3bad35a597ac400a34895140b31fc1f6a30f3deef7f72d2d67056686
+    dc_ob_product.csv                                           8925699  d6889cc006bb4a38d8a84dab929f85a6dabce6ee547fe2074004e54fd2fa69b4
+    dc_omop_relationship.csv                                    4280188  ca0bbdb245fb2335c3ece0bf7525365a2223e737af5938256fca4d9dbd17bfa3
+    dc_struct2obprod.csv                                        3222298  b0e90a3ee62312733b5e96864815d8cd8b79a3f142ccf4c6465703075e950eba
+    dc_struct2parent.csv                                           3323  0c34c0a0033d87598e65f9933a9e492815696070308940004b14c259728d61f3
+    dc_structures.csv                                            326168  be65c88c848e26658cffc320450f116af60c3c52c9901cea0d4f7affb690d368
+    dc_synonyms.csv                                             1021213  3a602abee0acef3713be4a4c89982b7a1e59556ed532b59a3979e47de9ed5012
+    drugcentral.manifest.json                                      9626  8e14299a5aa01b574c64d47d05aed0d8efb3742a0b1a8a0af6335ac2c0f68479
+    Drugcentral_2026-09-25.pgdump                            1378106682  5afea88f6a1916f250c28c10ab988e7464ca6fd5ccf2c42f080600473de732dc
+    Drugcentral_2026-09-25.tables.sql                         200517729  c97ed080191c4467ee40b21ebda3da4447700f16864022878d774b883c99bf5f
+
+  Drugs@FDA: data\drugsatfda (12 files)
+    ActionTypes_Lookup.txt                                         2916  6958952b336953914a099a85fbf2804a3c035de816098f17b5b8c857ad2b35f8
+    ApplicationDocs.txt                                        11129797  9120b22b4d23d203eb336f912686e2a85cb6c8ae90451123879de6e821b82f32
+    Applications.txt                                             782098  3884a9dd98cb73ea5f58d7a3f98bcc37d491ba90deabecf3726876ef40f7f2ef
+    ApplicationsDocsType_Lookup.txt                                1795  7825896648cb3798efc4823792223f818e5dab396a2eed7e3e04c1c78825547f
+    Join_Submission_ActionTypes_Lookup.txt                      6934437  2f8661c84a223e342f0af782df1c6cefbe779ef7b8ebc6646de24353ddc12888
+    MarketingStatus.txt                                          734658  d768c3794b14987c17a3e5a6f069e8a542ac4a80c515ddc56984a4241dba61b9
+    MarketingStatus_Lookup.txt                                      160  97999fe0d679c81d56669c365d1ff579065368835a68f1f92098e602cb3b0d60
+    Products.txt                                                4653425  a43b3ccaeb621cd17e3ea3008e3e9dd7eb70736676740b00021b7b1b41847fde
+    SubmissionClass_Lookup.txt                                     1305  cc136b40fa73c8167905b96e381df886ac82ff7f7d29542d34a1a4859523bfd1
+    SubmissionPropertyType.txt                                  9306303  ffb709bd615f84832f0ae85f0960b9b4bee0be9551b5e79b7cae925efaaf4bee
+    Submissions.txt                                             9361449  67fc58a38dd16d192499fe31b1ed3cfd465e68e269e2371b4f68fae7c456f3f4
+    TE.txt                                                       456375  e3c054881bd0c70f14c30d14b0631a8d6506d4b4dea5e1e421c767d19a57f322
+
+  MONDO crosswalk: data\ontology\mondo_xref.csv (1 files)
+    mondo_xref.csv                                              4403104  eda31a32c95c51a456258312ecfc6986cda433f66549fe428443abf8dbf44b01
+
+  pinned AACT zip (pin says 2547627020 bytes, 8f88d1f779c70050ee8679b4440ce3e62d8a5843cb61642bcb6f91f8669bc629): data\aact_snapshots\20261001_clinical_trials_ctgov.zip (1 files)
+    20261001_clinical_trials_ctgov.zip                       2547627020  8f88d1f779c70050ee8679b4440ce3e62d8a5843cb61642bcb6f91f8669bc629
+
+==============================================================================
+2. DRUGCENTRAL
+==============================================================================
+  dbversion [{'version': '56', 'dtime': '2026-09-02 00:55:33.731'}]
+  archive {'file': 'Drugcentral_2026-09-25.pgdump', 'bytes': 1378106682, 'sha256': '5afea88f6a1916f250c28c10ab988e7464ca6fd5ccf2c42f080600473de732dc'}
+  dump Drugcentral_2026-09-25.tables.sql sha256 c97ed080191c4467ee40b21ebda3da4447700f16864022878d774b883c99bf5f
+
+  approval: manifest rows 4128, csv rows 4128
+    columns ['id', 'struct_id', 'approval', 'type', 'applicant', 'orphan']
+    columns holding NULL (count): {'approval': 531, 'applicant': 1072, 'orphan': 3250}
+    NULL and empty both present: ['applicant']
+
+  approval_type: manifest rows 10, csv rows 10
+    columns ['id', 'descr']
+    columns holding NULL (count): none
+
+  dbversion: manifest rows 1, csv rows 1
+    columns ['version', 'dtime']
+    columns holding NULL (count): none
+
+  doid: manifest rows 10040, csv rows 10040
+    columns ['id', 'label', 'doid', 'url']
+    columns holding NULL (count): none
+
+  doid_xref: manifest rows 34645, csv rows 34645
+    columns ['id', 'doid', 'source', 'xref']
+    columns holding NULL (count): none
+
+  identifier: manifest rows 87135, csv rows 87135
+    columns ['id', 'identifier', 'id_type', 'struct_id', 'parent_match']
+    columns holding NULL (count): {'parent_match': 83504}
+
+  ob_product: manifest rows 55242, csv rows 55242
+    columns ['id', 'ingredient', 'trade_name', 'applicant', 'strength', 'appl_type', 'appl_no', 'te_code', 'approval_date', 'rld', 'type', 'applicant_full_name', 'dose_form', 'route', 'product_no']
+    columns holding NULL (count): {'approval_date': 6497}
+
+  omop_relationship: manifest rows 42515, csv rows 42515
+    columns ['id', 'struct_id', 'concept_id', 'relationship_name', 'concept_name', 'umls_cui', 'snomed_full_name', 'cui_semantic_type', 'snomed_conceptid']
+    columns holding NULL (count): {'umls_cui': 3879, 'snomed_full_name': 3881, 'cui_semantic_type': 3881, 'snomed_conceptid': 3913}
+
+  struct2obprod: manifest rows 77694, csv rows 77694
+    columns ['struct_id', 'prod_id', 'strength']
+    columns holding NULL (count): none
+
+  struct2parent: manifest rows 361, csv rows 361
+    columns ['struct_id', 'parent_id']
+    columns holding NULL (count): none
+
+  structures: manifest rows 5116, csv rows 5116
+    columns ['id', 'name', 'cas_reg_no', 'inchikey', 'stem', 'status', 'no_formulations', 'fda_labels']
+    columns holding NULL (count): {'cas_reg_no': 53, 'inchikey': 736, 'stem': 1899, 'status': 3295, 'no_formulations': 3290, 'fda_labels': 3290}
+
+  synonyms: manifest rows 23875, csv rows 23875
+    columns ['syn_id', 'id', 'name', 'preferred_name', 'parent_id', 'lname']
+    columns holding NULL (count): {'id': 133, 'preferred_name': 18719, 'parent_id': 23649}
+
+==============================================================================
+3. DRUGS@FDA FILES
+==============================================================================
+
+  ActionTypes_Lookup: rows 59 malformed 0 encoding utf-8
+    header ['ActionTypes_LookupID', 'ActionTypes_LookupDescription', 'SupplCategoryLevel1Code', 'SupplCategoryLevel2Code']
+      ['1', 'Bioequivalence', 'BIOEQUIV', '']
+      ['2', 'Efficacy', 'EFFICACY', 'NOT APPLICABLE']
+      ['3', 'Efficacy-Accelerated Approval', 'EFFICACY', 'ACCEL APP']
+      ['4', 'Efficacy-Accelerated Approval Confirmatory Study', 'EFFICACY', 'COMP EFF']
+      ['5', 'Efficacy-Labeling Change With Clinical Data', 'EFFICACY', 'LABEL W CLIN']
+      ['6', 'Efficacy-Manufacturing Change With Clinical Data', 'EFFICACY', 'MANU W CLIN']
+      ['7', 'Efficacy-New Dosing Regimen', 'EFFICACY', 'DOSING']
+      ['8', 'Efficacy-New Indication', 'EFFICACY', 'INDICATION']
+      ['9', 'Efficacy-New Patient Population', 'EFFICACY', 'PAT POPUL']
+      ['10', 'Efficacy-New Route Of Administration', 'EFFICACY', 'ROUTE']
+      ['11', 'Efficacy-Pediatric', 'EFFICACY', 'PEDIATRIC']
+      ['12', 'Efficacy-Rx To OTC Switch', 'EFFICACY', 'RX TO OTC']
+      ['13', 'Labeling', 'LABELING', 'NOT APPLICABLE']
+      ['14', 'Labeling-Container/Carton Labels', 'LABELING', 'CONT/CARTON']
+      ['15', 'Labeling-Container/Carton Labels', 'LABELING', 'CONT/CARTON']
+      ['16', 'Labeling-Container/Carton Labels', 'LABELING', 'CONT/CARTON']
+      ['17', 'Labeling-Container/Carton Labels', 'LABELING', 'CONT/CARTON']
+      ['18', 'Labeling-Medication Guide', 'LABELING', 'MED GUIDE']
+      ['19', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['20', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['21', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['22', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['23', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['24', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['25', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['26', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['27', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['28', 'Labeling-Patient Package Insert', 'LABELING', 'PPI']
+      ['29', 'Labeling-Proprietary Name Change', 'LABELING', 'PROP NAME']
+      ['30', 'Manufacturing (CMC)', 'MANUF (CMC)', '']
+      ['31', 'Manufacturing (CMC)', 'MANUF (CMC)', 'NOT APPLICABLE']
+      ['32', 'Manufacturing (CMC)-Container/Carton Labels', 'MANUF (CMC)', 'CONT/CARTON']
+      ['33', 'Manufacturing (CMC)-Control', 'MANUF (CMC)', 'CONTROL']
+      ['34', 'Manufacturing (CMC)-Expiration Date', 'MANUF (CMC)', 'EXPIRATION']
+      ['35', 'Manufacturing (CMC)-Facility', 'MANUF (CMC)', 'FACILITY']
+      ['36', 'Manufacturing (CMC)-Facility', 'MANUF (CMC)', 'FACILITY']
+      ['37', 'Manufacturing (CMC)-Formulation', 'MANUF (CMC)', 'FORMULATION']
+      ['38', 'Manufacturing (CMC)-Manufacturing Process', 'MANUF (CMC)', 'MANU PROC']
+      ['39', 'Manufacturing (CMC)-Microbiology-Processing', 'MANUF (CMC)', 'MICRO-PROC']
+      ['40', 'Manufacturing (CMC)-New Strength', 'MANUF (CMC)', 'STRENGTH']
+      ['41', 'Manufacturing (CMC)-Not Applicable', 'MANUF (CMC)', 'NOT APPLICABLE']
+      ['42', 'Manufacturing (CMC)-Packaging', 'MANUF (CMC)', 'PACKAGING']
+      ['43', 'Manufacturing (CMC)-Package Insert', 'MANUF (CMC)', 'PI']
+      ['44', 'Manufacturing (CMC)-Patient Package Insert', 'MANUF (CMC)', 'PPI']
+      ['45', 'Unspecified', 'UNSPEC', '']
+      ['46', '', '', 'NOT APPLICABLE']
+      ['47', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['48', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['49', 'Labeling-Package Insert', 'LABELING', 'PI']
+      ['50', 'REMS-Assessment', 'REMS', 'ASSESSMENT']
+      ['51', 'REMS-Modified', 'REMS', 'MODIFIED']
+      ['52', 'REMS', 'REMS', 'NOT APPLICABLE']
+      ['53', 'REMS-Proposal', 'REMS', 'PROPOSAL']
+      ['54', 'Efficacy-Animal Rule', 'EFFICACY', 'ANIM RULE']
+      ['55', 'REMS - MODIFIED - D-N-A', 'REMS', 'MODIFIED']
+      ['56', 'REMS - ASSESSMENT - MODIFIED', 'REMS', 'ASSESSMENT']
+      ['57', 'REMS - PROPOSAL - D-N-A', 'REMS', 'PROPOSAL']
+      ['58', 'REMS - MODIFIED - BIFURCATED', 'REMS', 'MODIFIED']
+      ['59', '-  -', '', '']
+
+  ApplicationDocs: rows 81209 malformed 1 encoding cp1252
+    header ['ApplicationDocsID', 'ApplicationDocsTypeID', 'ApplNo', 'SubmissionType', 'SubmissionNo', 'ApplicationDocsTitle', 'ApplicationDocsURL', 'ApplicationDocsDate']
+
+  Applications: rows 29380 malformed 0 encoding utf-8
+    header ['ApplNo', 'ApplType', 'ApplPublicNotes', 'SponsorName']
+
+  ApplicationsDocsType_Lookup: rows 62 malformed 0 encoding utf-8
+    header ['ApplicationDocsType_Lookup_ID', 'ApplicationDocsType_Lookup_Description']
+      ['1', 'Letter']
+      ['2', 'Label']
+      ['3', 'Review']
+      ['4', 'FDA Talk Paper']
+      ['5', 'FDA Press Release']
+      ['6', 'Patient Package Insert']
+      ['7', 'Dear Health Professional Letter']
+      ['8', 'Medication Guide']
+      ['9', 'Withdrawal Notice']
+      ['10', 'Other Important Information from FDA']
+      ['11', 'Consumer Information Sheet']
+      ['12', 'Exclusivity Letter']
+      ['13', 'Questions and Answers']
+      ['14', 'Other']
+      ['15', 'Patient Information Sheet']
+      ['16', 'Healthcare Professional Sheet']
+      ['17', 'Pediatric Statistical Review']
+      ['18', 'Pediatric Clinical Pharmacology Review']
+      ['19', 'REMS']
+      ['20', 'Pediatric Medical Review']
+      ['21', 'Summary Review']
+      ['22', 'Federal Register Notice']
+      ['23', 'Pediatric Written Request']
+      ['24', 'Pediatric Reissue']
+      ['25', 'Pediatric Amendment 1']
+      ['26', 'Pediatric Amendment 2']
+      ['27', 'Pediatric Amendment 3']
+      ['28', 'Pediatric Amendment 4']
+      ['29', 'Pediatric Amendment 5']
+      ['30', 'Pediatric Amendment 6']
+      ['31', 'Pediatric Amendment 7']
+      ['32', 'Pediatric Amendment 8']
+      ['33', 'Pediatric Amendment 9']
+      ['34', 'Pediatric Amendment 10']
+      ['35', 'Pediatric Amendment 11']
+      ['36', 'Pediatric Amendment 12']
+      ['37', 'Pediatric Amendment 13']
+      ['38', 'Pediatric Amendment 14']
+      ['39', 'Pediatric Amendment 15']
+      ['40', 'Pediatric Reissue Amendment 1']
+      ['41', 'Pediatric Reissue Amendment 2']
+      ['42', 'Pediatric Reissue Amendment 3']
+      ['43', 'Pediatric Reissue Amendment 4']
+      ['44', 'Pediatric Reissue Amendment 5']
+      ['45', 'Pediatric Reissue Amendment 6']
+      ['46', 'Pediatric Reissue Amendment 7']
+      ['47', 'Pediatric Reissue Amendment 8']
+      ['48', 'Pediatric Reissue Amendment 9']
+      ['49', 'Pediatric Reissue Amendment 10']
+      ['50', 'Pediatric Reissue Amendment 11']
+      ['51', 'Pediatric Reissue Amendment 12']
+      ['52', 'Pediatric Reissue Amendment 13']
+      ['53', 'Pediatric Reissue Amendment 14']
+      ['54', 'Pediatric Reissue Amendment 15']
+      ['55', 'Pediatric Memo']
+      ['56', 'Pediatric Other']
+      ['57', 'Pediatric CDTL Review']
+      ['58', 'Pediatric Medical Addendum']
+      ['59', 'Pediatric Medical Secondary Review']
+      ['60', 'Pediatric DD Summary Review']
+      ['61', 'Pediatric Addendum']
+      ['62', 'Pediatric Clinical Pharmacology Addendum']
+
+  Join_Submission_ActionTypes_Lookup: rows 209769 malformed 0 encoding utf-8
+    header ['SubmissionType', 'j_submissionActionTypeID', 'ApplNo', 'SubmissionNo', 'ActionTypes_LookupID']
+
+  MarketingStatus: rows 52473 malformed 0 encoding utf-8
+    header ['MarketingStatusID', 'ApplNo', 'ProductNo']
+
+  MarketingStatus_Lookup: rows 5 malformed 0 encoding utf-8
+    header ['MarketingStatusID', 'MarketingStatusDescription']
+      ['1', 'Prescription']
+      ['2', 'Over-the-counter']
+      ['3', 'Discontinued']
+      ['4', 'None (Tentative Approval)']
+      ['5', 'For Further Manufacturing Use']
+
+  Products: rows 51866 malformed 0 encoding utf-8
+    header ['ApplNo', 'ProductNo', 'Form', 'Strength', 'ReferenceDrug', 'DrugName', 'ActiveIngredient', 'ReferenceStandard']
+
+  SubmissionClass_Lookup: rows 28 malformed 0 encoding utf-8
+    header ['SubmissionClassCodeID', 'SubmissionClassCode', 'SubmissionClassCodeDescription']
+      ['1', 'BIOEQUIV', 'Bioequivalence']
+      ['2', 'EFFICACY', 'Efficacy']
+      ['3', 'LABELING', 'Labeling']
+      ['4', 'MANUF (CMC)', 'Manufacturing (CMC)']
+      ['5', 'N/A', 'Not Applicable']
+      ['6', 'S', 'Supplement']
+      ['7', 'TYPE 1', 'Type 1 - New Molecular Entity']
+      ['8', 'TYPE 1/4', 'Type 1 - New Molecular Entity and Type 4 - New Combination']
+      ['9', 'TYPE 2', 'Type 2 - New Active Ingredient']
+      ['10', 'TYPE 2/3', 'Type 2 - New Active Ingredient and Type 3 - New Dosage Form']
+      ['11', 'TYPE 2/4', 'Type 2 New Active Ingredient and Type 4 New Combination']
+      ['12', 'TYPE 3', 'Type 3 - New Dosage Form']
+      ['13', 'TYPE 3/4', 'Type 3 - New Dosage Form and Type 4 - New Combination']
+      ['14', 'TYPE 4', 'Type 4 - New Combination']
+      ['15', 'TYPE 5', 'Type 5 - New Formulation or New Manufacturer']
+      ['16', 'TYPE 6', 'Type 6 - New Indication (no longer used)']
+      ['17', 'TYPE 7', 'Type 7 - Drug Already Marketed without Approved NDA']
+      ['18', 'TYPE 8', 'Type 8 - Partial Rx to OTC Switch']
+      ['19', 'UNKNOWN', '']
+      ['20', 'Unspecified', '']
+      ['21', 'REMS', 'REMS']
+      ['22', 'TYPE 10', 'Type 10 - New Indication Submitted as Distinct NDA - Not Consolidated']
+      ['23', 'MEDGAS', 'Medical Gas']
+      ['24', 'TYPE 9', 'Type 9 - New Indication Submitted as Distinct NDA, Consolidated with Original NDA after Approval']
+      ['25', 'TYPE 9- BLA', 'Type 9 - New indication submitted as distinct BLA, consolidated']
+      ['26', 'TYPE 4/5', 'New Combination and New Formulation or New Manufacturer']
+      ['27', 'TYPE 10- BLA', '']
+      ['28', 'BIOSIMILAR', '']
+
+  SubmissionPropertyType: rows 320338 malformed 0 encoding utf-8
+    header ['ApplNo', 'SubmissionType', 'SubmissionNo', 'SubmissionPropertyTypeCode', 'SubmissionPropertyTypeID']
+
+  Submissions: rows 194026 malformed 0 encoding cp1252
+    header ['ApplNo', 'SubmissionClassCodeID', 'SubmissionType', 'SubmissionNo', 'SubmissionStatus', 'SubmissionStatusDate', 'SubmissionsPublicNotes', 'ReviewPriority']
+
+  TE: rows 26732 malformed 0 encoding utf-8
+    header ['ApplNo', 'ProductNo', 'MarketingStatusID', 'TECode']
+
+==============================================================================
+4. REV 10 SECTION 12.28 CLAIMS
+==============================================================================
+
+  4a. Drugs@FDA applications per ApplType, and how many are in ob_product:
+    ApplType      total  in ob_product   absent
+    ANDA          22996          21593     1403
+    BLA             485              0      485
+    NDA            5899           5298      601
+    (all)         29380          26891
+    ob_product application numbers absent from Drugs@FDA, by ob_product.appl_type: {'A': 3}
+    ob_product.appl_type vocabulary (rows): {'A': 41818, 'N': 13424}
+
+  4b. ApplNo shape (length, all digits) -> distinct numbers:
+    Drugs@FDA  {(5, True): 2, (6, True): 29378}
+    ob_product {(6, True): 26894}
+
+  4c. approved ORIG submissions per application, by ApplType:
+    ApplType          0        1       2+
+    ANDA           3440    19429      127
+    BLA               1      465       19
+    NDA             547     5314       38
+    approved ORIG dated before 1939-01-01: 1 [('060904', '1900-01-01 00:00:00')]
+
+  4d. approved ORIG by ApplType x submission class:
+    ?      (blank)                                                            847
+    ?      UNKNOWN                                                            104
+    ?      TYPE 5         Type 5 - New Formulation or New Manufacturer         63
+    ?      TYPE 3         Type 3 - New Dosage Form                             35
+    ?      TYPE 6         Type 6 - New Indication (no longer used)             31
+    ?      TYPE 1         Type 1 - New Molecular Entity                        24
+    ?      TYPE 4         Type 4 - New Combination                             23
+    ?      TYPE 2         Type 2 - New Active Ingredient                       12
+    ?      TYPE 1/4       Type 1 - New Molecular Entity and Type 4 - New        7
+    ?      TYPE 9         Type 9 - New Indication Submitted as Distinct         3
+    ?      TYPE 2/4       Type 2 New Active Ingredient and Type 4 New Co        2
+    ?      MEDGAS         Medical Gas                                           2
+    ?      TYPE 7         Type 7 - Drug Already Marketed without Approve        1
+    ?      TYPE 8         Type 8 - Partial Rx to OTC Switch                     1
+    ?      N/A            Not Applicable                                        1
+    ANDA   (blank)                                                          10653
+    ANDA   UNKNOWN                                                           8507
+    ANDA   N/A            Not Applicable                                      526
+    ANDA   TYPE 5         Type 5 - New Formulation or New Manufacturer          4
+    ANDA   LABELING       Labeling                                              2
+    BLA    TYPE 1         Type 1 - New Molecular Entity                       275
+    BLA    TYPE 5         Type 5 - New Formulation or New Manufacturer         61
+    BLA    UNKNOWN                                                             53
+    BLA    TYPE 3         Type 3 - New Dosage Form                             32
+    BLA    TYPE 2         Type 2 - New Active Ingredient                       31
+    BLA    EFFICACY       Efficacy                                             13
+    BLA    TYPE 9- BLA    Type 9 - New indication submitted as distinct        10
+    BLA    TYPE 7         Type 7 - Drug Already Marketed without Approve        6
+    BLA    TYPE 4         Type 4 - New Combination                              6
+    BLA    TYPE 1/4       Type 1 - New Molecular Entity and Type 4 - New        4
+    BLA    TYPE 3/4       Type 3 - New Dosage Form and Type 4 - New Comb        3
+    BLA    TYPE 6         Type 6 - New Indication (no longer used)              3
+    BLA    (blank)                                                              3
+    BLA    TYPE 9         Type 9 - New Indication Submitted as Distinct         1
+    BLA    TYPE 2/4       Type 2 New Active Ingredient and Type 4 New Co        1
+    BLA    TYPE 10- BLA                                                         1
+    NDA    TYPE 3         Type 3 - New Dosage Form                           1615
+    NDA    TYPE 1         Type 1 - New Molecular Entity                      1497
+    NDA    TYPE 5         Type 5 - New Formulation or New Manufacturer       1118
+    NDA    TYPE 4         Type 4 - New Combination                            312
+    NDA    (blank)                                                            142
+    NDA    TYPE 2         Type 2 - New Active Ingredient                      141
+    NDA    UNKNOWN                                                            135
+    NDA    TYPE 6         Type 6 - New Indication (no longer used)             83
+    NDA    MEDGAS         Medical Gas                                          82
+    NDA    TYPE 1/4       Type 1 - New Molecular Entity and Type 4 - New       70
+    NDA    TYPE 7         Type 7 - Drug Already Marketed without Approve       40
+    NDA    TYPE 8         Type 8 - Partial Rx to OTC Switch                    29
+    NDA    EFFICACY       Efficacy                                             28
+    NDA    TYPE 3/4       Type 3 - New Dosage Form and Type 4 - New Comb       26
+    NDA    TYPE 9         Type 9 - New Indication Submitted as Distinct        24
+    NDA    TYPE 10        Type 10 - New Indication Submitted as Distinct       18
+    NDA    TYPE 2/3       Type 2 - New Active Ingredient and Type 3 - Ne       17
+    NDA    TYPE 2/4       Type 2 New Active Ingredient and Type 4 New Co        7
+    NDA    TYPE 4/5       New Combination and New Formulation or New Man        6
+    NDA    S              Supplement                                            2
+
+  4e. ActiveIngredient: 3356 distinct strings
+    containing ';': 690  e.g. ['ABACAVIR SULFATE; DOLUTEGRAVIR SODIUM; LAMIVUDINE', 'ABACAVIR SULFATE; LAMIVUDINE', 'ABACAVIR SULFATE; LAMIVUDINE; ZIDOVUDINE', 'ABACAVIR; DOLUTEGRAVIR; LAMIVUDINE', 'ABACAVIR; LAMIVUDINE', 'ABACAVIR;DOLUTEGRAVIR;LAMIVUDINE', 'ABACAVIR;LAMIVUDINE', 'ABIRATERONE ACETATE; NIRAPARIB TOSYLATE']
+    containing '||': 3  e.g. ['ABACAVIR || DOLUTEGRAVIR || LAMIVUDINE', 'DAPAGLIFLOZIN || METFORMIN', 'METFORMIN HYDROCHLORIDE || SITAGLIPTIN']
+    containing ',': 80  e.g. ['ABACAVIR, DOLUTEGRAVIR, LAMIVUDINE', 'ACETIC ACID, GLACIAL', 'ACETIC ACID, GLACIAL; ALUMINUM ACETATE', 'ACETIC ACID, GLACIAL; DESONIDE', 'ACETIC ACID, GLACIAL; HYDROCORTISONE', 'ACETIC ACID, GLACIAL; HYDROCORTISONE; NEOMYCIN SULFATE', 'ADAPALENE, BENZOYL PEROXIDE', 'AMINO ACIDS; CALCIUM CHLORIDE; DEXTROSE; MAGNESIUM CHLORIDE; POTASSIUM CHLORIDE; POTASSIUM PHOSPHATE, DIBASIC; SODIUM CHLORIDE']
+    singles splitting on ';' only: 2908, matched to synonyms 2538 (87.3%)
+    singles splitting on all (';', '||', ','): 2894, matched 2531 (87.5%)
+
+  4f. BLA applications 485, products 844, distinct ingredients 413, matched to synonyms 273 (66.1%)
+    unmatched, first 8 in order: ['abobotulinumtoxina', 'adalimumab-aacf', 'adalimumab-aaty', 'adalimumab-adaz', 'adalimumab-afzb', 'adalimumab-aqvh', 'adalimumab-bwwd', 'adalimumab-fkjp']

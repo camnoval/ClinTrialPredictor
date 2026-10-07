@@ -1,0 +1,55 @@
+﻿host localhost:54320 db aact schema ctgov | population interventional | chunk 2000 | max_trials None | timeout 900s | out data\aact | probe_only True
+
+==============================================================================
+SCHEMA CHECK (schema 'ctgov')
+==============================================================================
+  23 tables, every server column classified
+  snapshot proxy max(studies.updated_at): 2026-10-01T04:14:34.355844
+
+==============================================================================
+POPULATION
+==============================================================================
+  interventional                   461824
+  observational                    141276
+  expanded_access                    1068
+  unknown                             982
+  selected (population=interventional): 461824
+
+==============================================================================
+PROBE: rows and trials per table in the population
+==============================================================================
+  interventions                    rows     912744  trials   461824  -> rows__interventions.csv
+  intervention_other_names         rows     461947  trials   139843  -> rows__intervention_other_names.csv
+  design_groups                    rows     941550  trials   437875  -> rows__design_groups.csv
+  design_group_interventions       rows    1213686  trials   437816  -> rows__design_group_interventions.csv
+  browse_interventions             rows    2319763  trials   244096  -> rows__browse_interventions.csv
+  browse_conditions                rows    3310650  trials   363547  -> rows__browse_conditions.csv
+  conditions                       rows     817334  trials   461821  -> rows__conditions.csv
+  keywords                         rows    1267097  trials   296317  -> rows__keywords.csv
+  countries                        rows     666033  trials   425221  -> rows__countries.csv
+  facilities                       rows    3026192  trials   419823  -> rows__facilities.csv
+  facility_investigators           rows     176090  trials    36098  -> rows__facility_investigators.csv
+  overall_officials                rows     416636  trials   333814  -> rows__overall_officials.csv
+  sponsors                         rows     730497  trials   461824  -> rows__sponsors.csv
+  id_information                   rows     630222  trials   461779  -> rows__id_information.csv
+  links                            rows      60071  trials    44459  -> rows__links.csv
+  documents                        rows      10302  trials     2543  -> rows__documents.csv
+  provided_documents               rows      78319  trials    50444  -> rows__provided_documents.csv
+  ipd_information_types            rows      82206  trials    29780  -> rows__ipd_information_types.csv
+  study_references                 rows     878022  trials   179783  -> rows__study_references.csv
+  detailed_descriptions            rows     461824  trials   461824  -> rows__detailed_descriptions.csv
+  outcome_analysis_groups          rows     610942  trials    25805  -> rows__outcome_analysis_groups.csv
+  mesh_terms                       rows      59746  (vocabulary, no trial key)
+  mesh_headings                    rows        906  (vocabulary, no trial key)
+
+==============================================================================
+PROBE: child rows whose parent is not a row of the same trial
+==============================================================================
+  intervention_other_names.intervention_id -> interventions: 0
+  design_group_interventions.design_group_id -> design_groups: 0
+  design_group_interventions.intervention_id -> interventions: 0
+  facility_investigators.facility_id -> facilities: 0
+  outcome_analysis_groups.outcome_analysis_id -> outcome_analyses: NOT CHECKED (parent not exported)
+  outcome_analysis_groups.result_group_id -> result_groups: NOT CHECKED (parent not exported)
+
+  --probe-only: nothing written.

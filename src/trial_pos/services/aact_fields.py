@@ -57,6 +57,11 @@ TEXT_COLUMNS = frozenset({
     ("brief_summaries", "description"),
 })
 
+# One-per-trial tables registered for the row-level pull (services/aact_rows.py) and kept
+# OUT of the fields file. Adding one here would add columns to a file whose sha256 is the
+# reproducibility check for the pinned snapshot.
+ROW_LEVEL_ONLY_TABLES = frozenset({"detailed_descriptions"})
+
 # design_outcomes is pulled by its own script with per-outcome rows; here only counts.
 LEAD_FLAG = "lead"
 MESH_LIST = "mesh-list"
@@ -223,7 +228,7 @@ def plain_columns() -> list:
     """(table, column) for every one-per-trial column the pull takes, registry order."""
     out = []
     for spec in TABLES:
-        if spec.cardinality != CARDINALITY_ONE:
+        if spec.cardinality != CARDINALITY_ONE or spec.table in ROW_LEVEL_ONLY_TABLES:
             continue
         for column in spec.columns:
             if (spec.table, column) not in SKIP_COLUMNS:
