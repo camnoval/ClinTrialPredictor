@@ -1,0 +1,470 @@
+﻿examples ['doxorubicin', 'bupivacaine', 'methylphenidate', 'metoprolol', 'vedolizumab', 'amphotericin', 'paliperidone', 'glucagon'] | show 40 | innovator types ('NDA', 'BLA') | formulation words 30
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+
+==============================================================================
+1. Products.Form VOCABULARY over NDA/BLA products (dosage form ; route)
+==============================================================================
+  NDA/BLA products 12288; distinct dosage forms 122; routes 92; unlinked to a moiety 493
+
+  dosage forms:
+      3238  TABLET
+      3014  INJECTABLE
+      1347  SOLUTION
+       936  CAPSULE
+       485  TABLET, EXTENDED RELEASE
+       330  POWDER
+       288  CAPSULE, EXTENDED RELEASE
+       176  CREAM
+       154  SUSPENSION
+       146  SOLUTION/DROPS
+       123  GAS
+       121  FOR SUSPENSION
+       105  GEL
+       100  VIAL
+        99  TABLET, ORALLY DISINTEGRATING
+        97  OINTMENT
+        94  FILM, EXTENDED RELEASE
+        91  FOR SOLUTION
+        79  AEROSOL, METERED
+        71  TABLET, CHEWABLE
+        66  SPRAY, METERED
+        65  TABLET, DELAYED RELEASE
+        60  FILM
+        54  SYSTEM
+        53  SYRUP
+        50  CAPSULE, DELAYED RELEASE
+        50  SUSPENSION, EXTENDED RELEASE
+        45  LOTION
+        45  SUSPENSION/DROPS
+        43  SUPPOSITORY
+        39  GRANULE
+        37  EMULSION
+        37  TABLET, FOR SUSPENSION
+        35  CAPSULE, DELAYED REL PELLETS
+        35  SPRAY
+        29  LIQUID
+        28  INJECTION
+        26  FOR SUSPENSION, EXTENDED RELEASE
+        25  SPONGE
+        24  IMPLANT
+        22  CONCENTRATE
+        22  PELLETS
+        17  AEROSOL, FOAM
+        15  SYRINGE
+        15  TROCHE/LOZENGE
+        13  ELIXIR
+        13  SOLUTION, EXTENDED RELEASE
+        12  INJECTABLE, LIPOSOMAL
+        11  AEROSOL
+        11  FOR SUSPENSION, DELAYED RELEASE
+        11  GEL, METERED
+        10  TABLET, ORALLY DISINTEGRATING, EXTENDED RELEASE
+         9  PATCH
+         9  SWAB
+         9  TABLET, EFFERVESCENT
+         8  POWDER, METERED
+         7  CAPSULE, PELLETS
+         7  INSERT, EXTENDED RELEASE
+         7  SHAMPOO
+         6  GUM, CHEWING
+         6  INSERT
+         6  PASTE
+         6  TABLET, ORALLY DISINTEGRATING, DELAYED RELEASE
+         5  ENEMA
+         4  DISC
+         4  SOLUTION, GEL FORMING/DROPS
+         3  CAPSULE, DELAYED REL PELLETS, TABLET
+         3  CLOTH
+         3  CREAM, SUPPOSITORY
+         3  CREAM, TABLET
+         3  INJECTABLE, LIPID COMPLEX
+         3  OIL
+         3  TABLET, EXTENDED RELEASE, CHEWABLE
+         2  CAPSULE, TABLET
+         2  CREAM, AUGMENTED
+         2  DRESSING
+         2  FOAM
+         2  FOR SOLUTION, TABLET, DELAYED RELEASE
+         2  GRANULE, DELAYED RELEASE
+         2  GRANULE, EFFERVESCENT
+         2  GRANULE, EXTENDED RELEASE
+         2  INJECTABLE, TABLET
+         2  INTRAUTERINE DEVICE
+         2  POWDER, FOR INJECTION SOLUTION, LYOPHILIZED POWDER
+         2  RING
+         2  TABLET, COATED PARTICLES
+         1  BAR, CHEWABLE
+         1  CAPSULE, PELLET
+         1  CAPSULE, TABLET, CAPSULE, DELAYED REL PELLETS
+         1  CAPSULE, TABLET, CAPSULE, DELAYED RELEASE
+         1  CAPSULE, TABLET, TABLET
+         1  CREAM, INSERT
+         1  DRUG-ELUTING CONTACT LENS
+         1  FIBER, EXTENDED RELEASE
+         1  FOR SOLUTION, TABLET, FOR SOLUTION
+         1  FOR SUSPENSION, TABLET
+         1  GEL, AUGMENTED
+         1  INHALANT
+         1  INJECTABLE, SUSPENSION
+         1  JELLY
+         1  LOTION, AUGMENTED
+         1  LOTION/SHAMPOO
+         1  N/A
+         1  OIL/DROPS
+         1  OINTMENT, AUGMENTED
+         1  PASTILLE
+         1  PELLET
+         1  PEN
+         1  POWDER, EXTENDED RELEASE
+         1  POWDER, FOR SOLUTION
+         1  SOAP
+         1  SOLUTION FOR SLUSH
+         1  SOLUTION, METERED
+         1  SOLUTION, SOLUTION
+         1  SUSPENSION, LIPOSOMAL
+         1  SYSTEM, EXTENDED RELEASE
+         1  TABLET, CHEWABLE, TABLET
+         1  TABLET, CHEWABLE, TABLET, CAPSULE
+         1  TABLET, DISPERSIBLE
+         1  TAMPON
+         1  TAPE
+         1  UNKNOWN
+
+  routes:
+      5958  ORAL
+      2753  INJECTION
+       816  INTRAVENOUS
+       498  TOPICAL
+       403  SUBCUTANEOUS
+       328  INHALATION
+       244  OPHTHALMIC
+       159  TRANSDERMAL
+        99  NASAL
+        96  INTRAMUSCULAR
+        72  
+        62  VAGINAL
+        56  INTRAPERITONEAL
+        54  IRRIGATION
+        54  SUBLINGUAL
+        47  ORAL-28
+        42  RECTAL
+        38  INTRAVENOUS, SUBCUTANEOUS
+        37  BUCCAL
+        37  ORAL-21
+        29  SINGLE-USE
+        28  INTRAMUSCULAR, INTRAVENOUS
+        22  INTRATHECAL
+        21  INTRAMUSCULAR, SUBCUTANEOUS
+        18  INTRAMUSCULAR, INTRAVENOUS, SUBCUTANEOUS
+        18  IV (INFUSION)
+        18  OTIC
+        16  BUCCAL, SUBLINGUAL
+        16  INJECTION, ORAL
+        16  INTRA-ARTERIAL
+        16  N/A
+        15  IMPLANTATION
+        12  INTRAUTERINE
+        12  SOLUTION
+        11  INTRAVITREAL
+        10  INTRAVENOUS, ORAL
+        10  TOPICAL, VAGINAL
+         9  SINGLE-DOSE
+         8  DENTAL
+         8  URETHRAL
+         7  INTRATRACHEAL
+         7  INTRAVESICAL
+         6  ORAL, RECTAL
+         6  TRANSMUCOSAL
+         5  INJECTION, ORAL, RECTAL
+         5  INTRAPLEURAL
+         5  ORAL SUSPENSION
+         4  FOR RX COMPOUNDING
+         4  MULTIDOSE
+         4  ORAL-20
+         4  PERIARTICULAR
+         3  EPIDURAL
+         3  IRRIGATION, URETHRAL
+         3  OPHTHALMIC, OTIC
+         3  PERIODONTAL
+         3  SPINAL
+         3  SUBCUTANEOUS LYOPHILIZED POWER
+         2  INHALATION, INTRAVENOUS
+         2  INHALATION, ORAL
+         2  INTRA-ARTICULAR, INTRAMUSCULAR, INTRAVITREAL
+         2  INTRACAVITARY, INTRAVENOUS, INTRAVESICAL
+         2  INTRAMUSCULAR, ORAL
+         2  INTRAOCULAR
+         2  INTRAVENOUS, INTERSTITIAL
+         2  IONTOPHORESIS
+         2  IONTOPHORESIS, TOPICAL
+         2  POWDER,FOR SOLUTION
+         2  RECTAL, SUBLINGUAL
+         2  URETERAL
+         1  ENDOCERVICAL
+         1  ENTERAL
+         1  IM-IV
+         1  INFILTRATION
+         1  INHALATION, INJECTION
+         1  INTRA-ANAL
+         1  INTRA-ARTICULAR
+         1  INTRACAMERAL
+         1  INTRACRANIAL
+         1  INTRADERMAL
+         1  INTRALYMPHATIC, INTRAUTERINE
+         1  INTRAVENOUS, INTRAMUSCULAR, SUBCUTANEOUS, INTRAOSSEOUS, ENDOTRACHEAL
+         1  INTRAVENOUS, INTRAOCULAR, INTRAMUSCULAR, SUBCUTANEOUS
+         1  INTRAVENOUS, INTRAVENOUS
+         1  INTRAVENOUS, INTRAVESICULAR, OPHTHALMIC
+         1  INTRAVESICAL, URETERAL
+         1  IONTOPHORESIS, TRANSDERMAL
+         1  ORALLY DISINTEGRATING
+         1  PERFUSION, BILIARY
+         1  PERFUSION, CARDIAC
+         1  PREFILLED
+         1  PYELOCALYCEAL
+         1  SUSPENSION
+
+==============================================================================
+2. NAMED EXAMPLES: NDA/BLA products and the first approved original
+==============================================================================
+
+  --- doxorubicin: 9 products
+    1974-08-07 NDA  050467 doxorubicin hydrochloride          INJECTABLE                     INJECTION        DOXORUBICIN HYDROCHL
+    1974-08-07 NDA  050467 doxorubicin hydrochloride          INJECTABLE                     INJECTION        DOXORUBICIN HYDROCHL
+    1974-08-07 NDA  050467 doxorubicin hydrochloride          INJECTABLE                     INJECTION        DOXORUBICIN HYDROCHL
+    1974-08-07 NDA  050467 doxorubicin hydrochloride          INJECTABLE                     INJECTION        DOXORUBICIN HYDROCHL
+    1987-12-23 NDA  050629 doxorubicin hydrochloride          INJECTABLE                     INJECTION        DOXORUBICIN HYDROCHL
+    1987-12-23 NDA  050629 doxorubicin hydrochloride          INJECTABLE                     INJECTION        DOXORUBICIN HYDROCHL
+    1987-12-23 NDA  050629 doxorubicin hydrochloride          INJECTABLE                     INJECTION        DOXORUBICIN HYDROCHL
+    1995-11-17 NDA  050718 doxorubicin hydrochloride          INJECTABLE, LIPOSOMAL          INJECTION        DOXIL (LIPOSOMAL)
+    1995-11-17 NDA  050718 doxorubicin hydrochloride          INJECTABLE, LIPOSOMAL          INJECTION        DOXIL (LIPOSOMAL)
+
+  --- bupivacaine: 33 products
+    1972-10-03 NDA  016964 bupivacaine hydrochloride          INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride          INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride          INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride          INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride          INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1972-10-03 NDA  016964 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        MARCAINE HYDROCHLORI
+    1978-04-17 NDA  018053 bupivacaine hydrochloride          INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    1978-04-17 NDA  018053 bupivacaine hydrochloride          INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    1978-04-17 NDA  018053 bupivacaine hydrochloride          INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    1981-12-30 NDA  018304 bupivacaine hydrochloride          INJECTABLE                     INJECTION        SENSORCAINE
+    1981-12-30 NDA  018304 bupivacaine hydrochloride          INJECTABLE                     INJECTION        SENSORCAINE
+    1981-12-30 NDA  018304 bupivacaine hydrochloride          INJECTABLE                     INJECTION        SENSORCAINE
+    1981-12-30 NDA  018304 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        SENSORCAINE
+    1981-12-30 NDA  018304 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        SENSORCAINE
+    1983-07-13 NDA  022046 bupivacaine hydrochloride; epineph INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    1983-07-13 NDA  022046 bupivacaine hydrochloride          INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    1984-05-04 NDA  018692 bupivacaine hydrochloride          INJECTABLE                     SPINAL           MARCAINE
+    1992-09-03 NDA  019978 bupivacaine hydrochloride          INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    1992-09-03 NDA  019978 bupivacaine hydrochloride          INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    1992-09-03 NDA  019978 bupivacaine hydrochloride          INJECTABLE                     INJECTION        BUPIVACAINE HYDROCHL
+    2003-05-23 NDA  021496 bupivacaine hydrochloride; lidocai INJECTABLE                     INJECTION        DUOCAINE
+    2011-10-28 NDA  022496 bupivacaine                        INJECTABLE, LIPOSOMAL          INJECTION        EXPAREL
+    2011-10-28 NDA  022496 bupivacaine                        INJECTABLE, LIPOSOMAL          INJECTION        EXPAREL
+    2020-08-28 NDA  209511 bupivacaine hydrochloride          IMPLANT                        IMPLANTATION     XARACOLL
+    2021-02-01 NDA  204803 bupivacaine                        SOLUTION                       INFILTRATION     POSIMIR
+    2021-05-12 NDA  211988 bupivacaine; meloxicam             SOLUTION, EXTENDED RELEASE     PERIARTICULAR    ZYNRELEF KIT
+    2021-05-12 NDA  211988 bupivacaine; meloxicam             SOLUTION, EXTENDED RELEASE     PERIARTICULAR    ZYNRELEF KIT
+    2021-05-12 NDA  211988 bupivacaine; meloxicam             SOLUTION, EXTENDED RELEASE     PERIARTICULAR    ZYNRELEF KIT
+    2021-05-12 NDA  211988 bupivacaine; meloxicam             SOLUTION, EXTENDED RELEASE     PERIARTICULAR    ZYNRELEF KIT
+
+  --- methylphenidate: 61 products
+    1955-12-05 NDA  010187 methylphenidate hydrochloride      TABLET                         ORAL             RITALIN
+    1955-12-05 NDA  010187 methylphenidate hydrochloride      TABLET                         ORAL             RITALIN
+    1955-12-05 NDA  010187 methylphenidate hydrochloride      TABLET                         ORAL             RITALIN
+    1982-03-30 NDA  018029 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RITALIN-SR
+    2000-08-01 NDA  021121 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             CONCERTA
+    2000-08-01 NDA  021121 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             CONCERTA
+    2000-08-01 NDA  021121 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             CONCERTA
+    2000-08-01 NDA  021121 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             CONCERTA
+    2001-04-03 NDA  021259 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             METADATE CD
+    2001-04-03 NDA  021259 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             METADATE CD
+    2001-04-03 NDA  021259 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             METADATE CD
+    2001-04-03 NDA  021259 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             METADATE CD
+    2001-04-03 NDA  021259 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             METADATE CD
+    2001-04-03 NDA  021259 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             METADATE CD
+    2002-06-05 NDA  021284 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             RITALIN LA
+    2002-06-05 NDA  021284 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             RITALIN LA
+    2002-06-05 NDA  021284 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             RITALIN LA
+    2002-06-05 NDA  021284 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             RITALIN LA
+    2002-06-05 NDA  021284 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             RITALIN LA
+    2002-12-19 NDA  021419 methylphenidate hydrochloride      SOLUTION                       ORAL             METHYLIN
+    2002-12-19 NDA  021419 methylphenidate hydrochloride      SOLUTION                       ORAL             METHYLIN
+    2003-04-15 NDA  021475 methylphenidate hydrochloride      TABLET, CHEWABLE               ORAL             METHYLIN
+    2003-04-15 NDA  021475 methylphenidate hydrochloride      TABLET, CHEWABLE               ORAL             METHYLIN
+    2003-04-15 NDA  021475 methylphenidate hydrochloride      TABLET, CHEWABLE               ORAL             METHYLIN
+    2006-04-06 NDA  021514 methylphenidate                    FILM, EXTENDED RELEASE         TRANSDERMAL      DAYTRANA
+    2006-04-06 NDA  021514 methylphenidate                    FILM, EXTENDED RELEASE         TRANSDERMAL      DAYTRANA
+    2006-04-06 NDA  021514 methylphenidate                    FILM, EXTENDED RELEASE         TRANSDERMAL      DAYTRANA
+    2006-04-06 NDA  021514 methylphenidate                    FILM, EXTENDED RELEASE         TRANSDERMAL      DAYTRANA
+    2012-09-27 NDA  202100 methylphenidate hydrochloride      FOR SUSPENSION, EXTENDED RELEA ORAL             QUILLIVANT XR
+    2015-04-17 NDA  205831 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             APTENSIO XR
+    2015-04-17 NDA  205831 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             APTENSIO XR
+    2015-04-17 NDA  205831 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             APTENSIO XR
+    2015-04-17 NDA  205831 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             APTENSIO XR
+    2015-04-17 NDA  205831 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             APTENSIO XR
+    2015-04-17 NDA  205831 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             APTENSIO XR
+    2015-04-17 NDA  205831 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             APTENSIO XR
+    2015-12-04 NDA  207960 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE, CHEW ORAL             QUILLICHEW ER
+    2015-12-04 NDA  207960 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE, CHEW ORAL             QUILLICHEW ER
+    2015-12-04 NDA  207960 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE, CHEW ORAL             QUILLICHEW ER
+    2017-06-19 NDA  205489 methylphenidate                    TABLET, ORALLY DISINTEGRATING, ORAL             COTEMPLA XR-ODT
+    2017-06-19 NDA  205489 methylphenidate                    TABLET, ORALLY DISINTEGRATING, ORAL             COTEMPLA XR-ODT
+    2017-06-19 NDA  205489 methylphenidate                    TABLET, ORALLY DISINTEGRATING, ORAL             COTEMPLA XR-ODT
+    2017-06-19 NDA  205489 methylphenidate                    TABLET, ORALLY DISINTEGRATING, ORAL             COTEMPLA XR-ODT
+    2018-08-08 NDA  209311 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             JORNAY PM
+    2018-08-08 NDA  209311 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             JORNAY PM
+    2018-08-08 NDA  209311 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             JORNAY PM
+    2018-08-08 NDA  209311 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             JORNAY PM
+    2018-08-08 NDA  209311 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             JORNAY PM
+    2019-02-27 NDA  212038 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             ADHANSIA XR
+    2019-02-27 NDA  212038 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             ADHANSIA XR
+    2019-02-27 NDA  212038 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             ADHANSIA XR
+    2019-02-27 NDA  212038 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             ADHANSIA XR
+    2019-02-27 NDA  212038 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             ADHANSIA XR
+    2019-02-27 NDA  212038 methylphenidate hydrochloride      CAPSULE, EXTENDED RELEASE      ORAL             ADHANSIA XR
+    2022-06-23 NDA  216117 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RELEXXII
+    2022-06-23 NDA  216117 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RELEXXII
+    2022-06-23 NDA  216117 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RELEXXII
+    2022-06-23 NDA  216117 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RELEXXII
+    2022-06-23 NDA  216117 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RELEXXII
+    2022-06-23 NDA  216117 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RELEXXII
+    2022-06-23 NDA  216117 methylphenidate hydrochloride      TABLET, EXTENDED RELEASE       ORAL             RELEXXII
+
+  --- metoprolol: 25 products
+    1978-08-07 NDA  017963 metoprolol tartrate                TABLET                         ORAL             LOPRESSOR
+    1978-08-07 NDA  017963 metoprolol tartrate                TABLET                         ORAL             LOPRESSOR
+    1984-03-30 NDA  018704 metoprolol tartrate                INJECTABLE                     INJECTION        LOPRESSOR
+    1984-12-31 NDA  018303 hydrochlorothiazide; metoprolol ta TABLET                         ORAL             LOPRESSOR HCT
+    1984-12-31 NDA  018303 hydrochlorothiazide; metoprolol ta TABLET                         ORAL             LOPRESSOR HCT
+    1984-12-31 NDA  018303 hydrochlorothiazide; metoprolol ta TABLET                         ORAL             LOPRESSOR HCT
+    1989-12-27 NDA  019786 metoprolol fumarate                TABLET, EXTENDED RELEASE       ORAL             LOPRESSOR
+    1989-12-27 NDA  019786 metoprolol fumarate                TABLET, EXTENDED RELEASE       ORAL             LOPRESSOR
+    1989-12-27 NDA  019786 metoprolol fumarate                TABLET, EXTENDED RELEASE       ORAL             LOPRESSOR
+    1989-12-27 NDA  019786 metoprolol fumarate                TABLET, EXTENDED RELEASE       ORAL             LOPRESSOR
+    1992-01-10 NDA  019962 metoprolol succinate               TABLET, EXTENDED RELEASE       ORAL             TOPROL-XL
+    1992-01-10 NDA  019962 metoprolol succinate               TABLET, EXTENDED RELEASE       ORAL             TOPROL-XL
+    1992-01-10 NDA  019962 metoprolol succinate               TABLET, EXTENDED RELEASE       ORAL             TOPROL-XL
+    1992-01-10 NDA  019962 metoprolol succinate               TABLET, EXTENDED RELEASE       ORAL             TOPROL-XL
+    2006-08-28 NDA  021956 hydrochlorothiazide; metoprolol su TABLET, EXTENDED RELEASE       ORAL             DUTOPROL
+    2006-08-28 NDA  021956 hydrochlorothiazide; metoprolol su TABLET, EXTENDED RELEASE       ORAL             DUTOPROL
+    2006-08-28 NDA  021956 hydrochlorothiazide; metoprolol su TABLET, EXTENDED RELEASE       ORAL             DUTOPROL
+    2018-01-26 NDA  210428 metoprolol succinate               CAPSULE, EXTENDED RELEASE      ORAL             KAPSPARGO SPRINKLE
+    2018-01-26 NDA  210428 metoprolol succinate               CAPSULE, EXTENDED RELEASE      ORAL             KAPSPARGO SPRINKLE
+    2018-01-26 NDA  210428 metoprolol succinate               CAPSULE, EXTENDED RELEASE      ORAL             KAPSPARGO SPRINKLE
+    2018-01-26 NDA  210428 metoprolol succinate               CAPSULE, EXTENDED RELEASE      ORAL             KAPSPARGO SPRINKLE
+    2025-04-10 NDA  219373 metoprolol tartrate                SOLUTION                       ORAL             LOPRESSOR
+    2025-08-28 NDA  218698 metoprolol tartrate                TABLET                         ORAL             LOPRESSOR
+    -          NDA  019451 chlorthalidone; metoprolol tartrat CAPSULE                        ORAL             LOPRESSIDONE
+    -          NDA  019451 chlorthalidone; metoprolol tartrat CAPSULE                        ORAL             LOPRESSIDONE
+
+  --- vedolizumab: 5 products
+    2014-05-20 BLA  125476 vedolizumab                        INJECTABLE                     INJECTION        ENTYVIO
+    2023-09-27 BLA  761133 vedolizumab                        INJECTABLE                     INTRAVENOUS      ENTYVIO
+    2023-09-27 BLA  761133 vedolizumab                        INJECTABLE                     INJECTION        ENTYVIO
+    2024-04-18 BLA  761359 vedolizumab                        INJECTABLE                     INTRAVENOUS      ENTYVIO
+    2024-04-18 BLA  761359 vedolizumab                        INJECTABLE                     SUBCUTANEOUS     ENTYVIO
+
+  --- amphotericin: 7 products
+    1965-10-13 NDA  050313 amphotericin b                     OINTMENT                       TOPICAL          FUNGIZONE
+    1966-02-07 NDA  050314 amphotericin b                     CREAM                          TOPICAL          FUNGIZONE
+    1971-06-02 NDA  050341 amphotericin b                     SUSPENSION                     ORAL             FUNGIZONE
+    1995-11-20 NDA  050724 amphotericin b                     INJECTABLE, LIPID COMPLEX      INJECTION        ABELCET
+    1996-11-22 NDA  050729 amphotericin b                     INJECTABLE, LIPID COMPLEX      INJECTION        AMPHOTEC
+    1996-11-22 NDA  050729 amphotericin b                     INJECTABLE, LIPID COMPLEX      INJECTION        AMPHOTEC
+    1997-08-11 NDA  050740 amphotericin b                     INJECTABLE, LIPOSOMAL          INJECTION        AMBISOME
+
+  --- paliperidone: 26 products
+    2006-12-19 NDA  021999 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2006-12-19 NDA  021999 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2006-12-19 NDA  021999 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2006-12-19 NDA  021999 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2006-12-19 NDA  021999 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2007-04-27 NDA  022043 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2007-04-27 NDA  022043 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2007-04-27 NDA  022043 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2007-04-27 NDA  022043 paliperidone                       TABLET, EXTENDED RELEASE       ORAL             INVEGA
+    2009-07-31 NDA  022264 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA SUSTENNA
+    2009-07-31 NDA  022264 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA SUSTENNA
+    2009-07-31 NDA  022264 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA SUSTENNA
+    2009-07-31 NDA  022264 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA SUSTENNA
+    2009-07-31 NDA  022264 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA SUSTENNA
+    2015-05-18 NDA  207946 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA TRINZA
+    2015-05-18 NDA  207946 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA TRINZA
+    2015-05-18 NDA  207946 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA TRINZA
+    2015-05-18 NDA  207946 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA TRINZA
+    2015-05-18 NDA  207946 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA HAFYERA
+    2015-05-18 NDA  207946 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    INVEGA HAFYERA
+    2024-07-26 NDA  216352 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    ERZOFRI
+    2024-07-26 NDA  216352 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    ERZOFRI
+    2024-07-26 NDA  216352 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    ERZOFRI
+    2024-07-26 NDA  216352 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    ERZOFRI
+    2024-07-26 NDA  216352 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    ERZOFRI
+    2024-07-26 NDA  216352 paliperidone palmitate             SUSPENSION, EXTENDED RELEASE   INTRAMUSCULAR    ERZOFRI
+
+  --- glucagon: 14 products
+    1960-11-14 NDA  012122 glucagon hydrochloride             INJECTABLE                     INJECTION        GLUCAGON
+    1960-11-14 NDA  012122 glucagon hydrochloride             INJECTABLE                     INJECTION        GLUCAGON
+    1998-06-22 NDA  020918 glucagon hydrochloride             POWDER                         INTRAMUSCULAR, I GLUCAGEN
+    1998-06-22 NDA  020918 glucagon hydrochloride             POWDER                         INTRAMUSCULAR, I GLUCAGEN
+    1998-09-11 NDA  020928 glucagon                           INJECTABLE                     INJECTION        GLUCAGON
+    2015-05-08 NDA  201849 glucagon hydrochloride             POWDER                         INTRAMUSCULAR, I GLUCAGON
+    2015-05-08 NDA  201849 glucagon hydrochloride             POWDER                         INTRAMUSCULAR, I GLUCAGON
+    2019-07-24 NDA  210134 glucagon                           POWDER                         NASAL            BAQSIMI
+    2019-09-10 NDA  212097 glucagon                           SOLUTION                       SUBCUTANEOUS     GVOKE PFS
+    2019-09-10 NDA  212097 glucagon                           SOLUTION                       SUBCUTANEOUS     GVOKE PFS
+    2019-09-10 NDA  212097 glucagon                           SOLUTION                       SUBCUTANEOUS     GVOKE HYPOPEN
+    2019-09-10 NDA  212097 glucagon                           SOLUTION                       SUBCUTANEOUS     GVOKE HYPOPEN
+    2019-09-10 NDA  212097 glucagon                           SOLUTION                       SUBCUTANEOUS     GVOKE KIT
+    2019-09-10 NDA  212097 glucagon                           SOLUTION                       INTRAVENOUS      GVOKE VIALDX
+
+==============================================================================
+3. D1: matched agents stating no form -> distinct approved products of the moiety
+==============================================================================
+  matched agents 156014; stating no salt and no formulation 140768 (90.2%)
+    products 0 (no NDA/BLA product)   agents     5804 (4.1%)   pivotal trials   1356
+    products 1                        agents    42408 (30.1%)   pivotal trials   6739
+    products 2-3                      agents    42017 (29.8%)   pivotal trials   5721
+    products 4+                       agents    50539 (35.9%)   pivotal trials   7571
+
+==============================================================================
+4. D2: does the description state a form the name does not?
+==============================================================================
+  unstated agents with a description 115651; description states a formulation or route word 29979 (25.9%)
+      17903  iv
+       6717  intravenous
+       2693  subcutaneous
+       2020  sc
+        420  intramuscular
+        413  topical
+        348  im
+        281  inhalation
+        234  nasal
+        200  sq
+        189  gel
+        169  inhaler
+        155  patch
+        152  cream
+        148  film
+        136  transdermal
+        134  cr
+        118  ophthalmic
+        107  liposomal
+         91  extended-release
+         69  long-acting
+         61  ointment
+         53  er
+         46  depot
+         33  sr
+         33  xr
+         32  delayed-release
+         10  xl
+          7  dr
+          5  modified-release

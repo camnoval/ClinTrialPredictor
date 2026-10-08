@@ -1,0 +1,199 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  aact data\aact | drugcentral data\drugcentral | drugs@fda data\drugsatfda | out data\labels | show 25 | mesh token 'mesh-list'
+
+==============================================================================
+INPUTS
+==============================================================================
+  drug trials in trial_labels.csv: 222329
+  drug trials with interventions 222329, arms 205024, links 204999, other names 97870, indexed MeSH 171120
+  intervention MeSH rows by mesh_type: {'mesh-ancestor': 1483943, 'mesh-list': 336682}
+  dc synonyms             rows    23875
+  dc structures           rows     5116
+  dc struct2parent        rows      361
+  dc ob_product           rows    55242
+  dc struct2obprod        rows    77694
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+
+==============================================================================
+DICTIONARY
+==============================================================================
+  fda_brand: entries added                                        51040
+  fda_ingredient: entries added                                   51040
+  fda_product linked by: ingredient_name                           2868
+  fda_product linked by: ob_application                             271
+  fda_product linked by: ob_product                               47901
+  fda_product linked by: unlinked                                   826
+  fda_product: application absent from Applications                  11
+  ob_ingredient: entries added                                    55242
+  ob_trade: entries added                                         55242
+  structure: entries added                                         5116
+  synonym: entries added                                          23742
+  synonym: row without a drug id, dropped                           133
+
+==============================================================================
+TESTED-AGENT SELECTION (drug trials)
+==============================================================================
+  outcome                                                trials         early       pivotal post_approval       unknown
+  arm_rule                                               162520        100405         30663         18273         13179
+  no_arms_fallback                                        17300          9075          4111          2278          1836
+  no_drug_intervention                                        0             0             0             0             0
+  no_drug_intervention_linked_to_an_arm                      26            12             3             9             2
+  no_experimental_arm_and_some_arms_untyped                   0             0             0             0             0
+  no_experimental_arm                                     30212         10306          5515          8270          6121
+  every_experimental_drug_also_in_a_comparator_arm         9958          3847          2329          1770          2012
+  experimental_arms_carry_no_drug                          2103           444           386           314           959
+  every_candidate_is_a_placebo                              210            70            51            40            49
+  placebo-type interventions dropped from candidates: 5266
+
+==============================================================================
+AGENT STATUS (tested agents)
+==============================================================================
+  resolved               148033  52.2%
+  partial                  7981  2.8%
+  ambiguous                  33  0.0%
+  unresolved             127509  45.0%
+
+  matching agents by (name kind, how, step):
+    intervention_name  whole_name   exact                                      109911
+    intervention_name  whole_name   no_dose_or_form                             12322
+    intervention_name  components   exact                                       10396
+    other_name         whole_name   exact                                        7405
+    intervention_name  whole_name   no_parentheticals                            6066
+    intervention_name  whole_name   compact                                      2654
+    intervention_name  whole_name   parenthetical_content                        1742
+    other_name         whole_name   compact                                       937
+    other_name         components   exact                                         925
+    other_name         whole_name   no_dose_or_form                               669
+    intervention_name  components   no_dose_or_form                               480
+    intervention_name  components   compact                                       439
+    other_name         whole_name   no_parentheticals                             327
+    intervention_name  components   exact+no_dose_or_form                         298
+    intervention_name  components   no_parentheticals                             267
+    intervention_name  components   exact+no_parentheticals                       234
+    intervention_name  components   compact+exact                                 218
+    other_name         whole_name   parenthetical_content                         189
+    intervention_name  whole_name   no_salt                                       184
+    other_name         components   compact                                        48
+    other_name         components   compact+exact                                  43
+    other_name         components   no_dose_or_form                                37
+    other_name         whole_name   no_salt                                        33
+    other_name         components   exact+no_dose_or_form                          28
+    intervention_name  whole_name   no_biosimilar_suffix                           22
+    other_name         components   exact+no_parentheticals                        22
+    intervention_name  components   exact+no_biosimilar_suffix                     19
+    other_name         components   no_parentheticals                              19
+    intervention_name  components   no_dose_or_form+no_parentheticals              14
+    intervention_name  components   no_salt                                        11
+    intervention_name  components   compact+no_parentheticals                       9
+    intervention_name  components   exact+no_salt                                   9
+    other_name         whole_name   no_biosimilar_suffix                            8
+    other_name         components   exact+no_salt                                   6
+    intervention_name  components   compact+no_dose_or_form                         5
+    intervention_name  components   no_biosimilar_suffix                            4
+    other_name         components   exact+no_biosimilar_suffix                      3
+    intervention_name  components   exact+no_dose_or_form+no_parentheticals         2
+    other_name         components   no_salt                                         2
+    intervention_name  components   compact+exact+no_dose_or_form                   1
+    intervention_name  components   compact+exact+no_parentheticals                 1
+    intervention_name  components   no_dose_or_form+no_salt                         1
+    other_name         components   compact+no_parentheticals                       1
+    other_name         components   compact+no_salt                                 1
+    other_name         components   no_biosimilar_suffix                            1
+    other_name         components   no_dose_or_form+no_parentheticals               1
+
+  matching agents by deciding source:
+    synonym                                    150767
+    ob_trade                                     3900
+    ob_ingredient                                 629
+    fda_brand                                     366
+    ob_trade+synonym                              164
+    fda_ingredient                                156
+    ob_ingredient+synonym                          18
+    fda_brand+synonym                              10
+    fda_ingredient+synonym                          2
+    fda_brand+ob_trade                              1
+    ob_ingredient+ob_trade                          1
+
+==============================================================================
+POPULATION-LEVEL RATE: trials with at least one tested agent resolved
+==============================================================================
+  all drug trials                          matched  100715 of determinable  179820 (56.0%); of all  222329 (45.3%)
+  pivotal drug trials                      matched   21280 of determinable   34774 (61.2%); of all   43058 (49.4%)
+  route arm_rule                           matched   89284 of determinable  162520 (54.9%); of all  162520 (54.9%)
+  route no_arms_fallback                   matched   11431 of determinable   17300 (66.1%); of all   17300 (66.1%)
+
+  matched trials with indexed MeSH: corroborated 91970, not 5411 (94.4% corroborated)
+  unmatched trials whose indexed MeSH names a drug: 12571  (MeSH never creates a match)
+
+  literature, for context only (different denominators, DrugBank not DrugCentral):
+    [1] Miftahutdinov 2021, intervention mentions mapped to DrugBank   69.6%
+    [1] Miftahutdinov 2021, intervention mentions covered by MeSH      66.6%
+    [2] Vasan 2023, drug trials matched on exact name                  70.6%
+    [2] Vasan 2023, drug trials matched after every step incl. fuzzy   87.6%
+
+==============================================================================
+MOST FREQUENT UNMATCHED AGENT NAMES (top 25, for debugging)
+==============================================================================
+  unresolved: 78054 distinct names
+       634  fludarabine
+       253  chemotherapy
+       248  sintilimab
+       167  camrelizumab
+       162  anlotinib
+       127  psilocybin
+       126  anti-thymocyte globulin
+       108  s-1
+       101  adebrelimab
+        97  recombinant interferon alfa
+        93  interleukin-2
+        87  nimotuzumab
+        82  blood sample
+        77  veliparib
+        74  g-csf
+        69  tipifarnib
+        67  pyrotinib
+        65  cadonilimab
+        64  entinostat
+        64  therapeutic allogeneic lymphocytes
+        63  mesenchymal stem cells
+        58  pegylated liposomal doxorubicin hydrochloride
+        57  ivonescimab
+        56  alisertib
+        55  alvocidib
+  ambiguous: 26 distinct names
+         4  amino acids
+         3  pseudoephedrine, chlorpheniramine (chlor-trimeton), atropine
+         2  intravenous amino acids
+         2  zegerid
+         1  akynzeo
+         1  akynzeo solution
+         1  aldomet
+         1  ams2434 (amino acids)
+         1  antibiotic treatment (augmentin or cleocin)
+         1  antibiotic treatment (unasyn or cleocin)
+         1  atezolizumab combined with bevacizumab combined with \u03b2- alanine
+         1  celestone
+         1  celestone + placebo
+         1  cortef
+         1  haldol
+         1  hydrocortone
+         1  iv amino acids
+         1  kena cort
+         1  kenacort«
+         1  maxidex
+         1  neosporin
+         1  neosporin (polymyxin b 5,000units, bacitracin 400 units, neomycin 3.5mg)
+         1  neosporin« plus pain relief ointment
+         1  neosporin« plus pain relieving cream formula with ph balance technology
+         1  pn 200 tablets (500 mg naproxen and 20 mg omeprazole)
+
+==============================================================================
+WRITTEN
+==============================================================================
+  data\labels\trial_drug_agents.csv
+  data\labels\trial_drug_resolution.csv
+  data\labels\trial_drug_resolution.manifest.json

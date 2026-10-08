@@ -1,0 +1,276 @@
+﻿examples ['metoprolol', 'fluticasone', 'testosterone', 'bupivacaine', 'doxorubicin', 'fludarabine', 'diclofenac', 'methylphenidate', 'paliperidone', 'amphotericin'] | show 15 | salt words 41 | formulation words ['cr', 'cream', 'delayed-release', 'depot', 'dr', 'er', 'extended-release', 'film', 'gel', 'im', 'inhalation', 'inhaler', 'intramuscular', 'intravenous', 'iv', 'liposomal', 'long-acting', 'modified-release', 'nasal', 'ointment', 'ophthalmic', 'patch', 'sc', 'sq', 'sr', 'subcutaneous', 'topical', 'transdermal', 'xl', 'xr']
+
+==============================================================================
+1. DRUGCENTRAL: synonyms carrying a salt word, by what they point at
+==============================================================================
+  no parent relation (salt is a synonym of the moiety)        3464
+  salt child in struct2parent                                  318
+  parent with salt children                                    160
+  struct2parent rows 361; structures 5116
+
+==============================================================================
+2. NAMED EXAMPLES
+==============================================================================
+
+  --- metoprolol
+    structure   1786 -       metoprolol
+    synonym   metoprolol                                   -> 1786 metoprolol
+    synonym   metoprolol fumarate                          -> 1786 metoprolol
+    synonym   metoprolol succinate                         -> 1786 metoprolol
+    synonym   metoprolol tartrate                          -> 1786 metoprolol
+    orange book ingredient chlorthalidone; metoprolol tartrate  -> [625, 1786]
+    orange book ingredient hydrochlorothiazide; metoprolol succinate -> [1385, 1786]
+    orange book ingredient hydrochlorothiazide; metoprolol tartrate -> [1385, 1786]
+    orange book ingredient metoprolol fumarate                  -> [1786]
+    orange book ingredient metoprolol succinate                 -> [1786]
+    orange book ingredient metoprolol tartrate                  -> [1786]
+    drugs@fda chlorthalidone; metoprolol tartrate          NDA/BLA   1  earliest original -
+    drugs@fda hydrochlorothiazide; metoprolol succinate    NDA/BLA   1  earliest original 2006-08-28
+    drugs@fda hydrochlorothiazide; metoprolol tartrate     NDA/BLA   1  earliest original 1984-12-31
+    drugs@fda metoprolol fumarate                          NDA/BLA   1  earliest original 1989-12-27
+    drugs@fda metoprolol succinate                         NDA/BLA   2  earliest original 1992-01-10
+    drugs@fda metoprolol tartrate                          NDA/BLA   4  earliest original 1978-08-07
+
+  --- fluticasone
+    structure   4554 child   fluticasone furoate
+    structure   1225 child   fluticasone propionate
+    synonym   fluticasone                                  -> None 
+    synonym   fluticasone 17-propionate                    -> 1225 fluticasone propionate
+    synonym   fluticasone furoate                          -> 4554 fluticasone furoate
+    synonym   fluticasone propionate                       -> 1225 fluticasone propionate
+    synonym   fluticasone proprionate                      -> 1225 fluticasone propionate
+    orange book ingredient azelastine hydrochloride; fluticasone propionate -> [271, 1225]
+    orange book ingredient fluticasone furoate                  -> [4554]
+    orange book ingredient fluticasone furoate; umeclidinium bromide; vilanterol trifenatate -> [4554, 4799, 4816]
+    orange book ingredient fluticasone furoate; vilanterol trifenatate -> [4554, 4799]
+    orange book ingredient fluticasone propionate               -> [1225]
+    orange book ingredient fluticasone propionate; salmeterol xinafoate -> [1225, 2419]
+    drugs@fda azelastine hydrochloride; fluticasone propionate NDA/BLA   1  earliest original 2012-05-01
+    drugs@fda fluticasone furoate                          NDA/BLA   2  earliest original 2007-04-27
+    drugs@fda fluticasone furoate; umeclidinium bromide; vilanterol trifenatate NDA/BLA   1  earliest original 2017-09-18
+    drugs@fda fluticasone furoate; vilanterol trifenatate  NDA/BLA   1  earliest original 2013-05-10
+    drugs@fda fluticasone propionate                       NDA/BLA  11  earliest original 1990-12-14
+    drugs@fda fluticasone propionate; salmeterol xinafoate NDA/BLA   3  earliest original 2000-08-24
+
+  --- testosterone
+    structure   2607 -       testosterone
+    structure   2608 child   testosterone undecanoate
+    structure   4146 child   testosterone propionate
+    structure   4609 child   testosterone enantate
+    structure   4454 child   testosterone cypionate
+    synonym   testosterone                                 -> 2607 testosterone
+    synonym   testosterone cyclopentylpropionate           -> 4454 testosterone cypionate
+    synonym   testosterone cypionate                       -> 4454 testosterone cypionate
+    synonym   testosterone enantate                        -> 4609 testosterone enantate
+    synonym   testosterone enanthate                       -> 4609 testosterone enantate
+    synonym   testosterone heptylate                       -> 4609 testosterone enantate
+    synonym   testosterone oenanthate                      -> 4609 testosterone enantate
+    synonym   testosterone propionate                      -> 4146 testosterone propionate
+    synonym   testosterone undecanoate                     -> 2608 testosterone undecanoate
+    synonym   testosterone undecylate                      -> 2608 testosterone undecanoate
+    orange book ingredient estradiol cypionate; testosterone cypionate -> [1059, 4454]
+    orange book ingredient estradiol valerate; testosterone enanthate -> [1064, 4609]
+    orange book ingredient testosterone                         -> [2607]
+    orange book ingredient testosterone cypionate               -> [4454]
+    orange book ingredient testosterone enanthate               -> [4609]
+    orange book ingredient testosterone propionate              -> [4146]
+    orange book ingredient testosterone undecanoate             -> [2608]
+    drugs@fda estradiol cypionate; testosterone cypionate  NDA/BLA   1  earliest original 1980-06-13
+    drugs@fda estradiol valerate; testosterone enanthate   NDA/BLA   0  earliest original -
+    drugs@fda testosterone                                 NDA/BLA  13  earliest original 1993-10-12
+    drugs@fda testosterone cypionate                       NDA/BLA   1  earliest original 2022-06-02
+    drugs@fda testosterone enanthate                       NDA/BLA   2  earliest original 1953-12-24
+    drugs@fda testosterone propionate                      NDA/BLA   0  earliest original -
+    drugs@fda testosterone undecanoate                     NDA/BLA   4  earliest original 2014-03-05
+
+  --- bupivacaine
+    structure    432 -       bupivacaine
+    synonym   bupivacaine                                  -> 432 bupivacaine
+    synonym   bupivacaine hcl                              -> 432 bupivacaine
+    synonym   bupivacaine hydrochloride                    -> 432 bupivacaine
+    synonym   bupivacaine hydrochloride anhydrous          -> 432 bupivacaine
+    orange book ingredient bupivacaine                          -> [432]
+    orange book ingredient bupivacaine hydrochloride            -> [432]
+    orange book ingredient bupivacaine hydrochloride; epinephrine -> [432, 1028]
+    orange book ingredient bupivacaine hydrochloride; epinephrine bitartrate -> [432, 1028]
+    orange book ingredient bupivacaine hydrochloride; lidocaine hydrochloride -> [432, 1579]
+    drugs@fda bupivacaine                                  NDA/BLA   2  earliest original 2011-10-28
+    drugs@fda bupivacaine hydrochloride                    NDA/BLA   7  earliest original 1972-10-03
+    drugs@fda bupivacaine hydrochloride; epinephrine       NDA/BLA   0  earliest original -
+    drugs@fda bupivacaine hydrochloride; epinephrine bitartrate NDA/BLA   3  earliest original 1972-10-03
+    drugs@fda bupivacaine hydrochloride; lidocaine hydrochloride NDA/BLA   1  earliest original 2003-05-23
+    drugs@fda bupivacaine; meloxicam                       NDA/BLA   1  earliest original 2021-05-12
+
+  --- doxorubicin
+    structure    960 -       doxorubicin
+    synonym   doxorubicin                                  -> 960 doxorubicin
+    synonym   doxorubicin hcl                              -> 960 doxorubicin
+    synonym   doxorubicin hydrochloride                    -> 960 doxorubicin
+    synonym   liposomal doxorubicin                        -> 960 doxorubicin
+    orange book ingredient doxorubicin hydrochloride            -> [960]
+    drugs@fda doxorubicin hydrochloride                    NDA/BLA   3  earliest original 1974-08-07
+
+  --- fludarabine
+    structure   1189 child   fludarabine phosphate
+    synonym   fludarabine                                  -> None 
+    synonym   fludarabine 5'-monophosphate                 -> 1189 fludarabine phosphate
+    synonym   fludarabine phosphate                        -> 1189 fludarabine phosphate
+    orange book ingredient fludarabine phosphate                -> [1189]
+    drugs@fda fludarabine phosphate                        NDA/BLA   3  earliest original 1991-04-18
+
+  --- diclofenac
+    structure   5489 -       diclofenac etalhyaluronate sodium
+    structure    865 -       diclofenac
+    synonym   diclofenac                                   -> 865 diclofenac
+    synonym   diclofenac calcium                           -> 865 diclofenac
+    synonym   diclofenac diethylamine                      -> 865 diclofenac
+    synonym   diclofenac epolamine                         -> 865 diclofenac
+    synonym   diclofenac etalhyaluronate sodium            -> 5489 diclofenac etalhyaluronate sodium
+    synonym   diclofenac hydroxyethylpyrrolidine           -> 865 diclofenac
+    synonym   diclofenac potassium                         -> 865 diclofenac
+    synonym   diclofenac sodium                            -> 865 diclofenac
+    orange book ingredient diclofenac                           -> [865]
+    orange book ingredient diclofenac epolamine                 -> [865]
+    orange book ingredient diclofenac potassium                 -> [865]
+    orange book ingredient diclofenac sodium                    -> [865]
+    orange book ingredient diclofenac sodium; misoprostol       -> [865, 1817]
+    drugs@fda diclofenac                                   NDA/BLA   1  earliest original 2013-10-18
+    drugs@fda diclofenac epolamine                         NDA/BLA   2  earliest original 2007-01-31
+    drugs@fda diclofenac potassium                         NDA/BLA   3  earliest original 1993-11-24
+    drugs@fda diclofenac sodium                            NDA/BLA  10  earliest original 1988-07-28
+    drugs@fda diclofenac sodium; misoprostol               NDA/BLA   1  earliest original 1997-12-24
+
+  --- methylphenidate
+    structure   1767 -       methylphenidate
+    synonym   methylphenidate                              -> 1767 methylphenidate
+    synonym   methylphenidate hcl                          -> 1767 methylphenidate
+    synonym   methylphenidate hydrochloride                -> 1767 methylphenidate
+    orange book ingredient methylphenidate                      -> [1767]
+    orange book ingredient methylphenidate hydrochloride        -> [1767]
+    drugs@fda methylphenidate                              NDA/BLA   2  earliest original 2006-04-06
+    drugs@fda methylphenidate hydrochloride                NDA/BLA  13  earliest original 1955-12-05
+
+  --- paliperidone
+    structure   4498 child   paliperidone palmitate
+    structure   4137 -       paliperidone
+    synonym   paliperidone                                 -> 4137 paliperidone
+    synonym   paliperidone palmitate                       -> 4498 paliperidone palmitate
+    orange book ingredient paliperidone                         -> [4137]
+    orange book ingredient paliperidone palmitate               -> [4498]
+    drugs@fda paliperidone                                 NDA/BLA   2  earliest original 2006-12-19
+    drugs@fda paliperidone palmitate                       NDA/BLA   3  earliest original 2009-07-31
+
+  --- amphotericin
+    structure    197 parent  amphotericin B
+    synonym   amphotericin b                               -> 197 amphotericin B
+    synonym   amphotericin b liposome                      -> 197 amphotericin B
+    orange book ingredient amphotericin b                       -> [197]
+    drugs@fda amphotericin b                               NDA/BLA   6  earliest original 1965-10-13
+
+==============================================================================
+3. RESOLVER OUTPUT: matched agents whose name states a salt or formulation
+==============================================================================
+
+  formulation stated, matched by a stripping step: 3576
+        80  nicotine patch
+        41  paliperidone er
+        31  iv acetaminophen
+        31  oxytocin nasal spray
+        26  ruxolitinib cream
+        21  testosterone gel
+        20  lidocaine iv
+        17  arformoterol tartrate inhalation solution
+        15  liposomal doxorubicin hydrochloride
+        15  tacrolimus ointment
+        14  metformin xr
+        12  imiquimod 5% cream
+        12  mometasone furoate nasal spray
+        12  quetiapine xr
+        11  levomilnacipran er
+
+  formulation stated, matched without stripping: 722
+        51  liposomal doxorubicin
+        13  zohydro er
+        11  acthar gel
+        11  daunorubicin and cytarabine (liposomal)
+         9  gestodene/ee patch (bay86-5016)
+         7  astagraf xl
+         7  liposomal bupivacaine plus bupivacaine
+         6  depakote er
+         6  dexamethasone (iv)
+         6  envarsus xr
+         5  clofarabine (iv formulation)
+         5  doxorubicin hydrochloride (liposomal)
+         4  aceclidine+brimonidine combination ophthalmic solution
+         4  budesonide and formoterol fumarate inhalation aerosol
+         4  canagliflozin and metformin extended release (xr) fixed dose combination [fdc]
+
+  salt stated, matched by a stripping step: 1858
+        19  apatinib mesylate tablets
+        18  creatine monohydrate
+        18  emtricitabine/tenofovir disoproxil fumarate
+        17  arformoterol tartrate inhalation solution
+        15  liposomal doxorubicin hydrochloride
+        13  estradiol/norethindrone acetate
+        11  doxycycline monohydrate
+         8  saroglitazar magnesium 1 mg
+         7  osimertinib mesylate tablets
+         7  saroglitazar magnesium 2 mg
+         7  valemetostat tosylate
+         6  anamorelin hcl
+         6  brinzolamide 1%/brimonidine tartrate 0.2% ophthalmic suspension
+         6  diclofenac sodium gel
+         6  naproxen sodium er (bayh6689)
+
+  salt stated, matched without stripping: 9592
+       458  doxorubicin hydrochloride
+       424  gemcitabine hydrochloride
+       376  fludarabine phosphate
+       365  vincristine sulfate
+       352  leucovorin calcium
+       289  irinotecan hydrochloride
+       195  imatinib mesylate
+       163  erlotinib hydrochloride
+       129  topotecan hydrochloride
+       127  sorafenib tosylate
+       121  abiraterone acetate
+       117  sunitinib malate
+       115  mitoxantrone hydrochloride
+       107  magnesium sulfate
+       100  daunorubicin hydrochloride
+
+==============================================================================
+4. FORM-VS-FORM TRIALS: two drug interventions, one moiety, different forms
+==============================================================================
+  trials 782; by phase class {'early': 439, 'pivotal': 164, 'post_approval': 131, 'unknown': 48}
+       44  bupivacaine: (none) vs liposomal
+       17  bupivacaine: hydrochloride vs liposomal
+       13  placebo: iv vs sc
+       12  placebo: (none) vs iv
+       11  doxorubicin: (none) vs hydrochloride
+       11  etoposide: (none) vs phosphate
+        9  acetaminophen: (none) vs iv
+        9  fludarabine: (none) vs phosphate
+        7  gemcitabine: (none) vs hydrochloride
+        7  mirikizumab: iv vs sc
+        7  placebo: (none) vs intravenous
+        7  placebo: (none) vs patch
+        6  bupivacaine: hcl vs liposomal
+        6  irinotecan: (none) vs hydrochloride
+        6  tranexamic acid: intravenous vs topical
+        5  acetaminophen: (none) vs intravenous
+        5  cediranib: (none) vs maleate
+        5  doxorubicin: (none) vs liposomal
+        5  erlotinib: (none) vs hydrochloride
+        5  leucovorin: (none) vs calcium
+        5  placebo: (none) vs gel
+        5  risankizumab: iv vs sc
+        5  vedolizumab: iv vs sc
+        4  daunorubicin: (none) vs hydrochloride
+        4  irinotecan: (none) vs liposomal
+        4  lenacapavir: (none) vs subcutaneous
+        4  placebo: (none) vs nasal
+        4  sorafenib: (none) vs tosylate
+        3  glucagon: intramuscular vs nasal
+        3  insulin: intravenous vs subcutaneous
+  sample trials: ['NCT00000936', 'NCT00001259', 'NCT00011921', 'NCT00017368', 'NCT00035347', 'NCT00035607', 'NCT00045292', 'NCT00066157', 'NCT00073957', 'NCT00074165', 'NCT00088491', 'NCT00092222', 'NCT00104572', 'NCT00112190', 'NCT00116935']

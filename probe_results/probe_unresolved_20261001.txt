@@ -1,0 +1,148 @@
+﻿aact data\aact | drugcentral data\drugcentral | drugs@fda data\drugsatfda | resolver outputs data\labels | show 30 | FDA agency token 'FDA'
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+approval.type vocabulary: {'CDSCO (INDIA)': 2, 'China Food and Drug Administration (CFDA)': 10, 'EMA': 702, 'FDA': 2675, 'Health Canada': 2, 'Korean Food and Drug Administration (KFDA)': 16, 'Ministry of Health of the Russian Federation': 1, 'PMDA': 554, 'UK Medicines and Healthcare Products Regulatory Agency (MHRA)': 9, 'YEAR INTRODUCED': 157}
+drugs with an FDA approval row (parent-mapped): 2578
+
+==============================================================================
+1. REVERSE SALT: unresolved agents against salt-stripped DICTIONARY keys
+==============================================================================
+  unresolved agents 127509 in 95378 trials
+
+  dictionary_salt_stripped: agents resolved uniquely 838, ambiguously 117; recovered drug FDA-approved 837 (99.9%)
+    trials touched 828; currently-unmatched pivotal trials that would match 27
+       634  fludarabine  ->  fludarabine phosphate
+        41  abiraterone  ->  abiraterone acetate
+        15  dalteparin  ->  bemiparin
+        13  fludrocortisone  ->  fludrocortisone acetate
+        12  pregnenolone  ->  pregnenolone succinate
+        12  valproate  ->  valproic acid
+        10  beclomethasone  ->  beclometasone dipropionate
+        10  fludarabine (flu)  ->  fludarabine phosphate
+         9  fluticasone  ->  fluticasone propionate
+         5  clobetasol  ->  altizide
+         5  copper gluconate  ->  copper sulfate
+         4  folate  ->  folic acid
+         4  tocopherol  ->  alpha-tocopherol acetate
+         3  copper  ->  copper sulfate
+         3  nitrite  ->  sodium nitrite
+         2  ec17 (folate-fitc)  ->  folic acid
+         2  fludarabine (conditional therapy)  ->  fludarabine phosphate
+         2  fludarabine (non-imp)  ->  fludarabine phosphate
+         2  fludarabine injection  ->  fludarabine phosphate
+         2  l-methylfolate  ->  levomefolic acid
+         2  pregnenolone 250 mg  ->  pregnenolone succinate
+         2  pregnenolone 500 mg  ->  pregnenolone succinate
+         1  1% sodium tetradecyl sulphate  ->  sodium tetradecyl sulfate
+         1  3% sodium tetradecyl sulphate  ->  sodium tetradecyl sulfate
+         1  abiraterone tablet  ->  abiraterone acetate
+         1  alclometasone cream  ->  alclometasone dipropionate
+         1  barium  ->  barium sulfate
+         1  beclomethasone propionate  ->  beclometasone dipropionate
+         1  cardiac mri taken using contrast agent, dotarem« (gd-dota)  ->  gadoterate meglumine
+         1  chondroitin  ->  chondroitin sulfate
+
+  dictionary_salt_and_form_stripped: agents resolved uniquely 1209, ambiguously 1521; recovered drug FDA-approved 1090 (90.2%)
+    trials touched 1138; currently-unmatched pivotal trials that would match 71
+       634  fludarabine  ->  fludarabine phosphate
+        41  abiraterone  ->  abiraterone acetate
+        16  alks 5461  ->  diroximel fumarate
+        15  dalteparin  ->  bemiparin
+        13  fludrocortisone  ->  fludrocortisone acetate
+        12  pregnenolone  ->  pregnenolone succinate
+        12  valproate  ->  valproic acid
+        10  beclomethasone  ->  beclometasone dipropionate
+        10  fludarabine (flu)  ->  fludarabine phosphate
+         9  fluticasone  ->  fluticasone propionate
+         7  alks 3831  ->  diroximel fumarate
+         7  rta 402  ->  omaveloxolone
+         6  leo 90100  ->  delgocitinib
+         5  bevacizumab biosimilar  ->  bevacizumab
+         5  clobetasol  ->  altizide
+         5  copper gluconate  ->  copper sulfate
+         5  d-plex  ->  tinofedrine
+         5  envarsus  ->  tacrolimus
+         5  las 41004  ->  aclidinium bromide
+         5  leo 138559  ->  delgocitinib
+         5  pcv24 vaccine (dose h)  ->  ximelagatran
+         4  [177lu]lu-neob  ->  ambrisentan
+         4  emd 521873  ->  safinamide
+         4  emd 525797  ->  safinamide
+         4  folate  ->  folic acid
+         4  leo 134310  ->  delgocitinib
+         4  leo 32731  ->  delgocitinib
+         4  loestrin  ->  ethinylestradiol + norethindrone acetate
+         4  pcv24 vaccine (dose m)  ->  emorfazone
+         4  peg-rhgh with new preparation (t)  ->  ozenoxacin
+
+==============================================================================
+2. UNMATCHED TRIALS WHOSE INDEXED MESH NAMES A DRUG
+==============================================================================
+  trials 12571; MeSH drug FDA-approved in 12101 (96.3%); of those pivotal 3445
+
+  top (agent name -> MeSH drug) pairs, FDA-approved MeSH drugs only:
+        34  d-cycloserine  ->  cycloserine
+        23  faster-acting insulin aspart  ->  insulin lispro
+        21  ly900014  ->  insulin lispro
+        20  ciprofol  ->  propofol
+        20  cyclosporine a  ->  ciclosporin
+        19  hsk3486  ->  propofol
+        18  liposomal bupivacaine  ->  bupivacaine
+        18  unfractionated heparin  ->  heparin
+        17  pd 0200390  ->  acetic acid
+        16  buprenorphine transdermal patch  ->  buprenorphine
+        16  isis 301012 or placebo  ->  mipomersen
+        15  iron sucrose  ->  ferric oxide
+        13  dhea  ->  prasterone
+        13  tzp-101  ->  racecadotril
+        12  bupivacain  ->  bupivacaine
+        11  bt-114143  ->  sodium chloride
+        11  ly2605541  ->  insulin lispro
+        10  mk0653, ezetimibe  ->  ezetimibe
+        10  tak-875  ->  glimepiride
+         9  611  ->  entacapone
+         9  cc-5013  ->  lenalidomide
+         9  efgartigimod  ->  efgartigimod alfa
+         9  oc000459  ->  acetic acid
+         9  pegylated liposomal doxorubicin  ->  doxorubicin
+         9  sodium hyaluronate  ->  hyaluronic acid
+         8  68ga-dotatate  ->  Gallium Ga 68 dotatate
+         8  acetyl-l-carnitine  ->  gabapentin enacarbil
+         8  bardoxolone methyl  ->  gemcitabine
+         8  esmirtazapine  ->  mirtazapine
+         8  low-dose aspirin  ->  acetylsalicylic acid
+
+==============================================================================
+3. MATCHED BUT NOT CORROBORATED BY MESH
+==============================================================================
+  trials 5411; most frequent resolver drugs among them:
+       243  botulinum toxin type A
+       160  paclitaxel
+       104  anakinra
+       102  mycophenolate mofetil
+        81  tucidinostat
+        68  nicotine
+        65  methoxy polyethylene glycol-epoetin beta
+        62  degarelix
+        59  ferumoxytol
+        58  bupivacaine
+        58  paliperidone
+        57  dabigatran etexilate
+        55  alteplase
+        55  vonoprazan
+        53  fluticasone propionate
+        50  tenofovir alafenamide
+        46  corticotropin
+        45  collagenase
+        45  vismodegib
+        43  levosimendan
+        42  serplulimab
+        41  artemether + lumefantrine
+        41  desmopressin
+        38  octocog alfa
+        38  sacubitril + valsartan
+        37  buprenorphine + naloxone
+        37  sotagliflozin
+        36  gemtuzumab ozogamicin
+        36  ledipasvir + sofosbuvir
+        34  armodafinil
