@@ -6,8 +6,13 @@ from __future__ import annotations
 
 from statistics import NormalDist
 
+from trial_pos.services.drug_resolution import (
+    MATCH_CLASSES, MATCH_FULL, MATCH_NONE, MATCH_PARTIAL_ONLY, MATCH_UNDETERMINABLE,
+)
+
 from trial_pos.services.resolution_sample import (
-    CONFIDENCE, KEY_COLUMNS, LABEL_COLUMNS, PRECISION_GATE, RECALL_GATE, SHEET_COLUMNS,
+    CONFIDENCE, KEY_COLUMNS, LABEL_COLUMNS, PRECISION_GATE, RECALL_GATE, STRATUM_PARTIAL,
+    RESOLUTION_COLUMNS, SHEET_COLUMNS,
     STRATA, STRATUM_MATCHED, STRATUM_UNMATCHED, TARGET_HALF_WIDTH, key_row,
     n_for_half_width, ordered_strata, presentation, sheet_row, strata, stratum_of, tranche,
     wilson_half_width, wilson_interval, z_value,
@@ -45,17 +50,21 @@ def test_targets_are_the_smallest_n_meeting_the_half_width():
         assert n == 1 or wilson_half_width(p, n - 1) > TARGET_HALF_WIDTH
 
 
-def test_strata_put_undeterminable_with_unmatched_and_refuse_missing_trials():
-    assert stratum_of(True) == STRATUM_MATCHED
-    assert stratum_of(False) == stratum_of(None) == STRATUM_UNMATCHED
-    got = strata({"N1": True, "N2": False, "N3": None}, ["N3", "N1", "N2"])
-    assert got == {STRATUM_MATCHED: ["N1"], STRATUM_UNMATCHED: ["N2", "N3"]}
-    assert _raises(strata, {"N1": True}, ["N1", "N9"], exc=KeyError)
+def test_strata_follow_the_match_class_and_refuse_missing_trials_and_unknown_classes():
+    assert stratum_of(MATCH_FULL) == STRATUM_MATCHED
+    assert stratum_of(MATCH_PARTIAL_ONLY) == STRATUM_PARTIAL
+    assert stratum_of(MATCH_NONE) == stratum_of(MATCH_UNDETERMINABLE) == STRATUM_UNMATCHED
+    assert {stratum_of(c) for c in MATCH_CLASSES} == set(STRATA)
+    got = strata({"N1": MATCH_FULL, "N2": MATCH_NONE, "N3": MATCH_UNDETERMINABLE,
+                  "N4": MATCH_PARTIAL_ONLY}, ["N3", "N1", "N2", "N4"])
+    assert got == {STRATUM_MATCHED: ["N1"], STRATUM_PARTIAL: ["N4"],
+                   STRATUM_UNMATCHED: ["N2", "N3"]}
+    assert _raises(strata, {"N1": MATCH_FULL}, ["N1", "N9"], exc=KeyError)
+    assert _raises(stratum_of, True)
 
 
 def test_order_is_independent_of_input_order_and_tranche_two_continues_tranche_one():
-    members = {STRATUM_MATCHED: [f"M{i}" for i in range(20)],
-               STRATUM_UNMATCHED: [f"U{i}" for i in range(20)]}
+    members = {s: [f"{s}{i}" for i in range(20)] for s in STRATA}
     rev = {s: list(reversed(v)) for s, v in members.items()}
     o = ordered_strata(members)
     assert o == ordered_strata(rev)
@@ -73,6 +82,10 @@ def test_presentation_ids_are_unique_and_the_sheet_reveals_no_stratum():
     row = sheet_row(ids[0], shown[0][3])
     assert set(row) == set(SHEET_COLUMNS) and all(row[c] == "" for c in LABEL_COLUMNS)
     assert "stratum" not in SHEET_COLUMNS and "matched" not in SHEET_COLUMNS
-    k = key_row(ids[0], shown[0][1], shown[0][2], 1,
-                {"nct_id": shown[0][3], "selection_outcome": "x", "matched": "", "drugs": ""})
+    full = {c: "" for c in RESOLUTION_COLUMNS}
+    full["nct_id"] = shown[0][3]
+    k = key_row(ids[0], shown[0][1], shown[0][2], 1, full)
     assert set(k) == set(KEY_COLUMNS)
+    assert "tested_form" in SHEET_COLUMNS and "tested_form" in LABEL_COLUMNS
+    old = {c: "" for c in RESOLUTION_COLUMNS if c != "any_form_stated"}
+    assert _raises(key_row, ids[0], shown[0][1], shown[0][2], 1, old, exc=KeyError)

@@ -116,7 +116,7 @@ def main() -> int:
     drugs_of_prod = defaultdict(set)
     for r in dc["struct2obprod"]:
         drugs_of_prod[parse_struct_id(r["prod_id"])].add(
-            d.canonical(parse_struct_id(r["struct_id"])))
+            parse_struct_id(r["struct_id"]))
     ob_drugs = {}
     for r in dc["ob_product"]:
         ds = drugs_of_prod.get(parse_struct_id(r["id"]))

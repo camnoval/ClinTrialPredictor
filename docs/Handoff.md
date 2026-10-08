@@ -1,3 +1,1867 @@
+# Handoff: clinical-trial success predictor — combined (rev 7 to rev 11)
+
+All five handoff files, unedited, in one place, newest first. This file replaces
+`Handoff.md`, the rev 8 and rev 9 supplements, `Handoff_rev10.md` and `Handoff_rev11.md`.
+
+**Precedence:** a later revision supersedes an earlier one wherever they disagree. Read
+Part 1 (rev 11) first and in full; it lists which rev 10 claims were verified and which
+were refuted (rev 11 §3), and its §2 is the dated decision log (D-1 onwards). New
+decisions are appended to Part 1 §2.
+
+**Contents**
+- Part 1: rev 11 (2026-10-07) — read first; supersedes everything below where they disagree
+- Part 2: rev 10 — supplement
+- Part 3: rev 9 — supplement
+- Part 4: rev 8 — supplement
+- Part 5: rev 7 — the base handoff
+
+
+
+---
+---
+
+<!-- ===== Part 1: rev 11 (2026-10-07) — read first; supersedes everything below where they disagree (was: Handoff_rev11.md) ===== -->
+
+# Part 1: rev 11 (2026-10-07) — read first; supersedes everything below where they disagree
+
+# Handoff rev 11 — supplement, started 2026-10-07
+
+Read this FIRST, then rev 10, rev 9, rev 8, rev 7 (§13, §12.9, §8). Rev 11 supersedes earlier
+revisions wherever they disagree. It is a living file: every decision is appended to §2 the
+day it is made, with its date and the evidence it rests on.
+
+**Figures rule.** Every number below comes from a run on the owner's machine and names the
+output file it came from. Numbers marked *(arithmetic)* are computed by hand from such
+figures. Sandbox runs (synthetic data) produced no figures here.
+
+**On rev 10.** Rev 10's later sections were found unreliable in places (§3). Do not quote a
+rev 10 figure that §3 does not list as verified.
+
+---
+
+## 1. State
+
+- Gate: **967 passed** expected once `partial.zip` (2026-10-07) is installed on top of
+  `cleanup.zip`; 964 with cleanup alone. Report any other count first.
+- **Every `data/labels/trial_drug_*` file written before `idfix.zip` is WRONG for drugs whose
+  DrugCentral structure is a salt child (D-19). Regenerate before any use.**
+- The pinned AACT tier (rev 10) is unchanged and was re-verified (§3).
+- New this session: a row-level AACT pull (`rows__*.csv`), trial-to-drug resolution
+  (first version run), and the design decisions in §2.
+- Built, not yet run on the owner's data: the drug-id fix and guards (D-19 to D-21, §5).
+- **Not yet done:** rerun of the resolver with the redesign, the resolution sample draw,
+  Task 2 (lag), and everything after (rev 10 §14 items 3–9).
+
+---
+
+## 2. Decision log
+
+Each entry: decision, date, evidence. Later entries override earlier ones where they
+conflict; overridden text is kept and marked.
+
+**D-1 (2026-10-07) Row-level pull, scope (b).** Pull every registration-side AACT table row
+by row, keyed on the child's own id. Results-side tables (baseline, milestones, withdrawals,
+reported events, participant flows) excluded: post hoc, unknown at prediction time.
+Contact tables (names, phones, emails) and AACT's internal search tables excluded.
+Already-pulled tables are not re-exported (the one-per-trial tables in the fields file;
+`design_outcomes`). Evidence: `probe_intervention_arms_20261001.txt` showed the arm links
+exist, are clean, and were read by no pull; `trial_entities.csv` pools every MeSH type.
+
+**D-2 (2026-10-07) Tested agent.** A drug/biological intervention in ≥1 EXPERIMENTAL arm and
+in no comparator arm (active, placebo, sham). Trials with no arms: all drug interventions,
+placebo removed, on a separate route (`no_arms_fallback`) so the sample measures it.
+Undeterminable (never counted as unmatched): no experimental arm; every experimental drug
+also in a comparator arm; experimental arms carry no drug; no drug linked to an arm; only
+placebo left. Pure placebo/sham/vehicle/dummy/saline dropped; "X or placebo" keeps X.
+
+**D-3 (2026-10-07) MeSH.** Term text, not ids (AACT holds no MeSH ids anywhere). MeSH only
+corroborates a match; it never creates one, because it cannot say which arm a term belongs
+to. Evidence: 51.4% of indexed terms match no intervention name
+(`probe_intervention_arms_20261001.txt`); comparators dominate the MeSH-named misses
+(`probe_unresolved_20261001.txt` §2).
+
+**D-4 (2026-10-07) Application route.** Drugs@FDA `Products` brand and ingredient names,
+linked by ApplNo to ob_product; for BLAs (absent from the Orange Book) the ingredient name
+resolved against DrugCentral. Drugs@FDA ingredient strings split on `;` and `||` only, never
+on commas.
+
+**D-5 (2026-10-07) No fuzzy matching.** Every step is a deterministic rewrite, and every
+match records its route (name used, whole/components, step, source).
+
+**D-6 (2026-10-07) Combinations.** Unit is (trial, tested agent). A trial is matched when **at
+least one** tested agent resolves.
+
+**D-7 (2026-10-07) Labelling.** Blind: the sheet carries no resolver output and no stratum.
+The labeller records each tested agent, its DrugCentral id, and FDA approval. CBER-only
+approvals are their own row, outside the gate's recall. *Amended by D-12: "approved" means
+the specific form tested.*
+
+**D-8 (2026-10-07) Sample.** Frame: market-eligible pivotal trials at W=3. Strata: matched /
+unmatched (undeterminable goes with unmatched). Salted-hash order per stratum fixed at draw
+time; tranche 2 continues down the same order. Stopping on counts, never rates. Wilson for
+precision; recall as a stratified ratio with Wilson on the effective n. Expected labelling
+load 250–350 trials.
+
+**D-9 (2026-10-07) New molecule.** The drug has no NDA or BLA original approval before the
+readout; ANDAs never count. FDA's NME class is not used (only 279 of 503 approved BLA
+originals carry it *(arithmetic, `probe_source_files_20261001.txt` §4d)*).
+
+**D-10 (2026-10-07) Lag, follow-up and decision line.** Only readouts with ≥H years of
+follow-up before 2026-10-02; H=10 headline, H=5 sensitivity. Decisive figure per drug
+(earliest pivotal readout). If p90 lands between 3 and 5 years, the headline window moves to
+W=5 and W=3 becomes the sensitivity.
+
+**D-11 (2026-10-07) Resolver fixes A, B, C (approved, with guards).**
+- A. Dictionary-side salt stripping ('fludarabine' -> 'fludarabine phosphate'), DrugCentral
+  names only, unique hits only, after every forward step. Guards: the query spelling must
+  carry no salt word (no salt swaps); bare elements never match; sibling esters collide.
+- B. Formulation qualifiers stripped for MATCHING: liposomal, unfractionated, transdermal,
+  low dose, high dose (phrases). Never 'pegylated'; never 'low' alone.
+- C. Commas split registry names, last resort only, never between digits.
+- Rejected: salt+form stripping on the dictionary side (produced 'pcv24 vaccine ->
+  ximelagatran', 'ALKS 5461 -> diroximel fumarate', `probe_unresolved_20261001.txt` §1).
+- *Amended by D-12 to D-15: stripping finds the drug; it must never erase the form.*
+
+**D-12 (2026-10-07) Salts and formulations are different products.** Metoprolol succinate
+(Toprol-XL, 1992) and tartrate (Lopressor, 1978) are separate approvals with different
+indications; trials compare one form against another. **"Approved" means approval of the
+specific form the trial tested.** Evidence (`probe_salt_forms_20261001.txt`,
+`probe_form_vocab_20261001.txt`):
+- DrugCentral ids cannot carry the form: 3,464 salt-bearing synonyms point at the moiety;
+  only 318 salts have their own id. Metoprolol succinate/tartrate/fumarate are all id 1786;
+  'liposomal doxorubicin' is a synonym of doxorubicin (960).
+- Drugs@FDA dates salts apart through the ingredient string, and formulations apart only
+  through `Products.Form` (dosage form ; route): Doxil is 'doxorubicin hydrochloride /
+  INJECTABLE, LIPOSOMAL' (1995) vs 1974; Exparel 'bupivacaine / INJECTABLE, LIPOSOMAL'
+  (2011); Concerta 'TABLET, EXTENDED RELEASE' (2000) vs Ritalin 1955; vedolizumab SC
+  (BLA 761359, 2024) vs IV 2014; Baqsimi nasal 2019.
+
+**D-13 (2026-10-07) Agent identity = moiety + stated form.** Moiety: the DrugCentral id
+(grouping, features). Form: the salt and the formulation/route the trial states, where it
+was found, and whether matching had to strip it. The market label (later) dates the specific
+form from NDA/BLA products whose ingredient string and Form are compatible.
+
+**D-14 (2026-10-07) D1: an unstated form means the moiety.** When the trial states no salt
+and no formulation, any approved form of the moiety counts. Evidence: 90.2% of matched agents
+state no form; for 65.7% *(arithmetic)* of those the moiety has ≥2 approved products
+(`probe_form_vocab_20261001.txt` §3). Known cost: a trial testing a new form of an old
+moiety under the bare moiety name (e.g. 'vedolizumab' for the SC form) is judged at moiety
+level.
+
+**D-15 (2026-10-07) D2: the form is read from the intervention name and other names only.**
+Not from the intervention description: cleaner, fewer false positives. Evidence: a
+description states a formulation or route word the name does not in 25.9% of unstated agents,
+mostly 'iv' and 'intravenous' (`probe_form_vocab_20261001.txt` §4), and descriptions also
+describe comparators and schedules.
+
+**D-16 (2026-10-07) Working practice.** Every delivery shows every changed file
+individually, with a plain-language note per file, plus a zip at repo paths for installing.
+Decisions are written here the day they are made.
+
+**D-17 (2026-10-07, proposed by the assistant, to be confirmed) The labeller records the
+TRUE form.** The labelling sheet asks for the form as the registry page describes it
+anywhere (name, description, arms), not only in the names. D-15 limits only what the
+resolver reads; scoring against the true form then measures what D-14 and D-15 cost.
+
+**D-18 (2026-10-07) Form vocabulary (implementation of D-13).**
+- Salts: the trailing salt words the name states, in one spelling each (`hcl` ->
+  `hydrochloride`, `mesilate` -> `mesylate`, `sulphate` -> `sulfate`). 'free', 'base',
+  'anhydrous' are not salts. A drug that is itself a salt states none ('sodium chloride').
+- Formulation/route: 22 classes (`drug_names.FORM_CLASS_WORDS`: extended/delayed/modified
+  release, orally disintegrating, liposomal, lipid complex, IV, SC, IM, oral, topical,
+  transdermal, nasal, inhalation, ophthalmic, intrathecal, intravitreal, vaginal, rectal,
+  sublingual, buccal, implant). Short tokens match whole words only ('iv' never inside
+  'ivermectin'). Classes, not words, are what the market label maps onto Products.Form.
+- Form handling per match: `no_form_stated`, `stated_form_kept`, `stated_form_stripped`,
+  `salt_inferred` (`drug_resolution.FORM_HANDLINGS`).
+- A trial whose tested moiety is also a comparator moiety is flagged
+  (`tested_moiety_in_comparator`, tri-state: unknown when a comparator is unresolved).
+
+**D-19 (2026-10-07) BUG FIXED: struct2parent's parent ids are not structure ids.**
+`struct2parent.parent_id` references DrugCentral's `parentmol` table, not `structures`. The
+resolver had replaced every salt-child structure id with that parent id, conflating
+unrelated drugs whose structure id equalled a parentmol id. Seen in
+`resolve_trial_drugs_20261001_v3.txt`: 'fludarabine -> amfetamine' (968 agents),
+'abiraterone -> amifostine', 'mycophenolate mofetil -> acyclovir', 'capecitabine ->
+aminorex', 'sacubitril -> alphaprodine', every insulin -> one id (178), bare ids with no
+structure name (8, 41, 233). Fix: drug ids are structure ids, never remapped; the
+struct2parent link is kept only as a namespaced PARENT GROUP (`pm<id>`), used to treat two
+salts of one parent as one moiety in the comparator flag. `parentmol` is not extracted, so
+parent groups have no names. Consequences, all corrected below:
+- every resolver output before the fix is wrong for salt-child drugs (§1);
+- the probe pairs 'dalteparin -> bemiparin' and 'clobetasol -> altizide' were this bug,
+  not Orange Book pooling; D-11's stated reason for restricting A to DrugCentral names was
+  wrong (the restriction stays: it is still the cleaner source);
+- `probe_salt_forms_20261001.txt` §1 "parent with salt children 160" counted structures
+  whose id equals a parentmol id: meaningless. "Salt child 318" stands.
+
+**D-20 (2026-10-07) Abbreviations match only as an exact whole intervention name.** A key of
+≤3 letters (compact, letters only), or 4 letters written in capitals by the trial, never
+matches as a component, a parenthetical, an other name, or after any rewrite. Evidence
+(v3 route review): 'albuterol … mcg/inh' -> isoniazid, 'balstilimab (bal)' -> dimercaprol,
+'dv, rc48' -> dienestrol, 'adcc & tace' -> chlorotrianisene, 'ats' -> erythromycin. Codes
+with digits ('5-fu') stay usable; lowercase drug words ('iron', 'zinc') stay usable.
+Inhaler device words (dpi, mdi, pmdi) added to the form vocabulary.
+
+**D-21 (2026-10-07) The biosimilar suffix comes off biologics only.** Stripped only when the
+remainder contains a word with a biologic stem (-mab, -cept, -ase, -kin, -stim, -poetin,
+-vec, -cel, -vedotin, -tecan, -tansine, -tropin, -cog, -ermin, -gene) or 'insulin'. Evidence:
+'latanoprost-ppds', 'tace-haic', 'ibrutinib-rice', 'pentoxifylline-teva' were stripped.
+
+**D-22 (2026-10-07, curation, owner to review) Known source errors are excluded, never
+remapped.** `drug_dictionary.KNOWN_SOURCE_ERRORS`: names matching a pattern never reach a
+named wrong drug; each entry carries its evidence and the run counts how often it fired.
+Entries: dalteparin/Fragmin -/-> bemiparin; monomethyl fumarate/Bafiertam -/-> diroximel
+fumarate (both from `resolve_trial_drugs_20261001_v4.txt`, after D-19).
+
+**D-23 (2026-10-07) Two more deterministic guards.** (a) The dictionary-side salt step no
+longer reads bracket contents, and never indexes a stripped root ending in '-yl' (alkyl
+fragments: 'dimethyl', 'myristyl'). Evidence (v4): two long chemical names -> dimethyl
+fumarate; 'myristyl' -> sodium myristyl sulfate. (b) Brackets holding an isotope ([18F],
+[68Ga], [99mTc]) are never removed. Evidence (v4): '[18f]t4' -> levothyroxine.
+
+**D-24 (2026-10-07, DECIDED (b)) Partial matches are their own class.** Amends D-6. A
+trial is `full` when at least one tested agent fully resolves; `partial_only` when none
+does but one partly does; `none`; or `undeterminable`. `partial_only` trials are neither
+matched nor unmatched, are EXCLUDED from the market label, and form their own sample
+stratum. A trial's `drugs` are its fully resolved agents' drugs only; partly resolved
+agents' drugs are kept apart (`partial_drugs`) even in a `full` trial. Evidence (v4/v5):
+9,519 / 9,531 partial agents; wrong examples 'torcetrapib/atorvastatin' -> atorvastatin,
+'AZD5363 when combined with weekly paclitaxel' -> paclitaxel, excipients (gelatin, captisol
+-> betadex, sodium chloride diluent). The owner expects many false positives there; the
+partial stratum of the sample measures it.
+
+**D-25 (2026-10-07) The resolution sample is DEFERRED until it can be pure row reading.**
+The owner will label only if every row can be answered from an Excel sheet without
+searching. Identity and form can be; approval of a specific form cannot, without knowledge
+or a lookup. So the sample waits for the form-level approval matcher (built with Task 2,
+needed by the market label anyway), and is then redesigned as follows (amends D-7, D-8):
+- an .xlsx sheet with each trial's arms (title, type), interventions (name, other names,
+  description) inline from the row-level pull; still blind: nothing from the resolver;
+- the labeller records only the tested drug name(s) and form(s); no DrugCentral id, no
+  approval column;
+- approval is filled in mechanically afterwards from the labeller's clean name and form
+  by the form-level matcher, NOT by the resolver's own match;
+- a second, unblinded reconciliation pass shows the labeller's answer beside the
+  resolver's; the labeller marks same / different;
+- partial-only stratum cut to a small fixed size (it does not enter the gate; it measures
+  the cost of excluding partial-only trials);
+- early stopping for FAILURE only, in batches, pre-registered (passing at 0.95 needs about
+  73 rows with no error *(arithmetic, Wilson bound)*, so early stopping cannot shorten a pass).
+Until then the market label's error rate is unmeasured; endpoint-met does not depend on it.
+
+---
+
+## 3. Rev 10 claims, checked
+
+Verified:
+- §12.24: all 10 AACT-derived file sizes and sha256 match; the pinned zip matches the pin;
+  restore is PostgreSQL 18.6, C collation, snapshot proxy 2026-10-01 04:14
+  (`probe_source_files_20261001.txt`, `probe_restore_inventory_20261001.txt`).
+- §12.25 and §12.27 figures appear in shipped run outputs.
+- §12.30/§15 literature: [1] 69.6% of mentions mapped, 66.6% MeSH, MeSH lacks investigational
+  drugs; [2] 70.6% exact, 87.6% after all steps. Both resolve against DrugBank (includes
+  investigational drugs), so neither is a benchmark for DrugCentral. [2] also reports a
+  ~3-year MEAN from phase 3 completion to approval.
+
+Refuted or corrected:
+- §12.28 "every NDA (5,298) and ANDA (21,593) is in ob_product": false. NDA 5,298 of 5,899
+  (601 absent); ANDA 21,593 of 22,996 (1,403 absent); BLA 0 of 485
+  (`probe_source_files_20261001.txt` §4a).
+- §12.27 "every synonym maps to exactly one drug": 133 synonym rows have no drug id. The old
+  probe's "5,117 drugs" against 5,116 structures was that NULL counted as a drug.
+- New, not in rev 10: 1,449 ApplNos in Submissions are absent from Applications even after
+  zero-padding — real orphans, not a key format (`probe_source_files_4g.txt`). Approved
+  originals among them: 1,156 *(arithmetic, §4d '?' rows)*, 24 of them Type 1 NMEs.
+- No IND or application numbers in AACT: id_type 'FDA' holds FDA grant numbers; 'IND' occurs
+  only in free text, 447 rows *(arithmetic, `probe_ids_20261001.txt`)*.
+
+---
+
+## 4. Measured on the owner's machine
+
+Row pull (`pull_aact_rows_20261001.txt`, probe output alongside): 23 tables, 461,824
+interventional trials, 19,072,127 trial-table rows, 434 s; probe row counts equal pulled row
+counts for every table; 0 cross-trial links on all four checked keys. The second-run
+reproducibility check was requested and not yet reported.
+
+Resolver, first version (`resolve_trial_drugs_20261001.txt`, before D-11 and D-12):
+- Selection over 222,329 drug trials: arm rule 162,520; no-arms fallback 17,300;
+  undeterminable — no experimental arm 30,212, all background 9,958, experimental arms carry
+  no drug 2,103, only placebo 210, no drug linked 26.
+- Agents: resolved 148,033; partial 7,981; ambiguous 33; unresolved 127,509.
+- Trials matched: 100,715 of 179,820 determinable (56.0%); pivotal 21,280 of 34,774 (61.2%).
+- MeSH corroboration among matched trials with indexed MeSH: 91,970 corroborated, 5,411 not.
+- Top unresolved names are mostly non-US or never-approved agents (sintilimab, camrelizumab,
+  veliparib…) and non-drugs ('chemotherapy', 'blood sample'): misses that do not hurt the
+  market label. Misses that do: fludarabine (634), class names (G-CSF, interleukin-2),
+  development codes (CC-5013, ISIS 301012).
+
+**All resolver figures in this section predate D-19 and are superseded where drug identity
+matters** (match counts by route, MeSH corroboration, the comparator flag). Selection
+counts and the form-handling counts do not depend on drug ids.
+
+Resolver v6 (`resolve_trial_drugs_20261001_v6.txt`, after D-24; current): full 96,226 of
+179,820 determinable (53.5%), partial-only 6,832 (3.8%), none 76,762; pivotal full 20,308
+of 34,774 (58.4%), partial-only 1,457 (4.2%), none 13,009. Agents as v5. Tested moiety also
+a comparator moiety 4,437 (pivotal 1,346). MeSH corroboration 88,461 vs 4,943; trials not
+fully matched whose MeSH names a drug 16,364.
+
+Resolver v5 (`resolve_trial_drugs_20261001_v5.txt`, after D-22/D-23, before D-24): agents
+resolved 150,379, partial 9,531, ambiguous 72, unresolved 123,574; trials matched (full or
+partial, pre-D-24 definition) 103,058 of 179,820 determinable (57.3%); pivotal 21,765 of
+34,774 (62.6%). Source errors fired: bemiparin removed from 'dalteparin sodium' (25) and
+'fragmin' (24); diroximel fumarate from 'bafiertam' (2) and 'monomethyl fumarate' (2).
+Alkyl fragments skipped 70. Tested moiety also a comparator moiety: 5,501 (pivotal 1,723).
+
+Resolver v4 (`resolve_trial_drugs_20261001_v4.txt`, after D-19 to D-21, before D-22/D-23):
+agents resolved 150,515, partial 9,519, ambiguous 71, unresolved 123,451; trials matched
+103,147 of 179,820 determinable (57.4%); pivotal 21,786 of 34,774 (62.7%). Form handling:
+no_form_stated 141,251; kept 10,002; stripped 7,387; salt_inferred 1,394. Tested moiety also
+a comparator moiety: 5,504 trials (pivotal 1,723); not 80,564; cannot tell 136,261. MeSH
+corroboration 94,207 vs 5,460; unmatched trials with a MeSH-named drug 10,516.
+
+Resolver v3 (`resolve_trial_drugs_20261001_v3.txt`, form redesign, before D-19): matched
+103,303 of 179,820 determinable (57.4%); pivotal 21,806 of 34,774 (62.7%). Form handling:
+no_form_stated 141,445; stated_form_kept 9,998; stated_form_stripped 7,358; salt_inferred
+1,478. Comparator flag 5,530 True — conflated by D-19, do not use.
+
+`probe_unresolved_20261001.txt`: dictionary-side salt recovers 838 agents uniquely (837 to
+FDA-approved drugs), 27 currently-unmatched pivotal trials; wrong pairs seen: dalteparin ->
+bemiparin (15), clobetasol -> altizide (5). Unmatched trials whose MeSH names a drug: 12,571
+(MeSH drug FDA-approved in 12,101; pivotal 3,445) — a mix of leaks and comparators.
+
+`probe_salt_forms_20261001.txt`: form-vs-form trials 782 (early 439, pivotal 164,
+post-approval 131, unknown 48); includes noise (placebo routes; same drug named with and
+without its salt).
+
+---
+
+## 5. Built this session
+
+Delivered and run:
+- `audit/probe_source_files.py`, `audit/probe_restore_inventory.py`,
+  `audit/probe_intervention_arms.py` (scratch).
+- Row pull: `services/aact_rows.py`, `scripts/pull_aact_rows.py`, `tests/test_aact_rows.py`;
+  `aact_provenance.py` (10 tables appended), `aact_fields.py` (`ROW_LEVEL_ONLY_TABLES`),
+  `aact_snapshot.py` (required tables), `rebuild_aact.py` (fourth pull),
+  `tests/test_aact_fields.py`. The fields pull's SQL and columns are byte-identical to before.
+- Task 1 v1: `services/drug_names.py`, `drugsatfda.py`, `drug_dictionary.py`,
+  `tested_agent.py`, `drug_resolution.py`, `resolution_sample.py`;
+  `scripts/resolve_trial_drugs.py`, `scripts/build_resolution_sample.py`; six test files.
+- `audit/probe_unresolved.py`, `audit/probe_salt_forms.py`, `audit/probe_form_vocab.py`.
+
+Superseded: `fix1_resolution.zip` (held; its changes ship inside `form_redesign.zip`).
+
+Partial class, delivered 2026-10-07 as `partial.zip` (install after `cleanup.zip`):
+`services/drug_resolution.py` (MATCH_CLASSES, partial_drugs), `resolution_sample.py` (three
+strata), `scripts/resolve_trial_drugs.py` (rates by class), `scripts/build_resolution_sample.py`;
+two test files.
+
+Cleanup, delivered 2026-10-07 as `cleanup.zip` (install after `idfix.zip`):
+`services/drug_dictionary.py` (D-22, D-23a), `drug_names.py` (D-23b); two test files.
+
+Drug-id fix, delivered 2026-10-07 as `idfix.zip` (install after `form_redesign.zip`):
+`services/drug_dictionary.py` (D-19 parent groups; D-20 guard), `drug_names.py` (D-20,
+D-21, inhaler words), `drug_resolution.py` (original spelling to components, parent groups
+in the comparator flag and the trial file); `audit/probe_form_vocab.py`,
+`audit/probe_unresolved.py` (no parent remapping); three test files.
+
+Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
+`services/drug_names.py` (D-11 B/C, salt list, stated form), `drug_dictionary.py` (D-11 A),
+`drug_resolution.py` (form fields, matched entry, comparators), `tested_agent.py`
+(comparators), `resolution_sample.py` (sheet `tested_form`, key form fields);
+`scripts/resolve_trial_drugs.py` (route review, FORM and FORM REVIEW sections),
+`scripts/build_resolution_sample.py` (instructions per D-12/D-14/D-17);
+`audit/probe_unresolved.py` (label fix); five test files.
+
+---
+
+## 6. Known limitations and caveats
+
+- **Moiety-level judgement for unstated forms (D-14).** A new form tested under the bare
+  moiety name is judged as the moiety.
+- **Old forms without an NDA/BLA original.** Testosterone propionate has none; testosterone
+  cypionate's earliest NDA is 2022 although Depo-Testosterone dates from 1979 (old products
+  were sometimes filed as ANDAs). Counting ANDAs is not the fix: a generic approved after a
+  readout would then count as the form's approval.
+- **Development codes** for later-approved drugs are the main recall gap; no source maps them
+  yet.
+- **Dosage-form granularity.** `Products.Form` has 122 dosage forms and 92 routes over 12,288
+  NDA/BLA products; formulation words must map onto classes of these, not exact strings.
+- **'At least one' inflates matches** where only an established partner of a combination
+  resolves.
+- **The no-arms fallback** includes comparator drugs; its precision is the first suspect.
+- **MeSH corroboration is not precision**: MeSH and the resolver read the same names.
+- **Leading counter-ions are not read** as stated salts ('sodium valproate').
+- **Brand names containing a form word** read as that form ('Acthar Gel' is an injection,
+  read as topical).
+- **'infusion' reads as IV**; a name stating two routes records both classes.
+
+---
+
+## 7. Next, in order
+
+1. ~~Form redesign~~ built (§5).
+2. ~~Rerun and review~~ done (v6 is current).
+3. ~~Draw tranche 1~~ DEFERRED (D-25).
+4. Task 2: readout-to-first-approval lag (D-9, D-10), at the form level per D-12/D-14.
+   Builds the form-level approval matcher (Drugs@FDA NDA/BLA originals by ingredient
+   string and Products.Form), which the market label and the deferred sample both need.
+4b. Then the resolution sample per D-25.
+5. Rev 10 §14 items 3–9.
+6. Rename rev 8 and rev 9 handoff files (still `# Handoff — rev N supplement.md`).
+
+---
+
+## 8. Lessons from this session
+
+- `ORDER BY 1 COLLATE "C"` collates the literal 1; name the column. `SELECT DISTINCT x …
+  ORDER BY x COLLATE "C"` is rejected; collate in the select list.
+- `restore_aact_snapshot.py` needs `--pg-bin` outside the `pgtools` environment.
+- Redirected stdout on Windows is cp1252: scripts call
+  `sys.stdout.reconfigure(errors="backslashreplace")`.
+- Regexes that strip numbers must not touch digits inside codes (mk-3475, covid-19) or
+  locants (2,4-dinitrophenol); doses must be removed before splitting on '/'.
+- A name with nothing left after filtering is not a placebo.
+- Ambiguity guards only work if sibling forms strip to the same root ('furoate' was missing).
+- Mapping salts to the parent and stripping forms silently changes the drug's identity. For
+  training data, keep every level and let the label decide.
+- Every file delivered must be shown individually before installing.
+- **Check what a foreign key references before using it as an id.** struct2parent's
+  parent_id looked like a structure id and was not; synthetic tests that assumed the same
+  could never catch it. The route review on real data did, within one run.
+- A test fixture that encodes an assumption about a source's schema must say so, and the
+  assumption must be checked on the real file (here it was not).
+
+
+---
+---
+
+<!-- ===== Part 2: rev 10 — supplement (was: Handoff_rev10.md) ===== -->
+
+# Part 2: rev 10 — supplement
+
+# Handoff — rev 10 supplement
+
+**Read with rev 7, rev 8 and rev 9, not instead of them.** Rev 7 remains the durable record
+for every section no supplement names; each later revision wins where it disagrees, and
+says so. Rev 10's §13 adds items 37–48 and its §14 replaces rev 9's.
+
+**The goal from here is a predictor that trains and runs on the project machine.**
+Publishing the data for others to rebuild is out of scope: if the model is trained and
+works, people need to be able to replicate the results, not the data. Code for publishing
+was written this session and is parked (§0); nothing in §14 depends on it.
+
+Scope of this revision: the AACT tier is now **pinned to a monthly archive and rebuilt
+locally, byte-reproducibly**, so every result is stable against one fixed input, and
+every AACT figure was re-baselined on it. The market label's sources were probed and
+chosen (Drugs@FDA for dated approvals, DrugCentral for indication codes). DrugCentral is
+extracted from its release archive rather than queried. The events count for the boosting
+argument was printed. The market resolution gate was re-anchored on truth (§12.30). Expected test count **868 passed, `GATE: GREEN`**.
+
+**Every figure below comes from a run on the project machine**, unless it is marked
+*arithmetic* (derived from printed counts) or *literature* (from a source's own documents,
+cited by number from §15).
+No sandbox figures appear.
+
+**Rev 9 figures are superseded wherever this revision re-ran them.** They came from AACT's
+live database (labels about 2026-09-20, fields 2026-10-05) and cannot be regenerated by
+anyone. The superseded files are kept in `data/aact_live_20261005/` only until this
+revision is accepted.
+
+---
+
+## §0 — STATE
+
+- Docs file names are mangled: `docs/# Handoff #U2014 rev 8 supplement.md` and `… rev 9 …`,
+  not `Handoff_rev8.md` / `Handoff_rev9.md`. Rename them (§14 item 14).
+- `config.yaml` remains a stale Gen-1 artefact. `README.md` was rewritten this revision
+  (the Gen-1 text is in `archive/docs/README_gen1.md`), but its "Run it" and "Data" sections
+  describe the parked publishing setup and are stale too.
+- **Parked, not part of the current goal:** `services/data_registry.py`,
+  `services/zenodo.py`, `scripts/build_data_registry.py`, `scripts/bootstrap.py`,
+  `scripts/upload_zenodo.py`, `.devcontainer/`, `environment.yml` and their tests. They
+  work and are tested, but nothing on the path to a trained model uses them. Ignore them
+  unless publishing is taken up again.
+- The local PostgreSQL restore of the pinned AACT snapshot is in `data/pg/` on port 54320.
+  Restart it with `restore_aact_snapshot.py --start` and stop it with `--stop`.
+
+---
+
+## §12.24 — THE AACT TIER IS PINNED AND REPRODUCIBLE
+
+### Why
+
+AACT's live database changes nightly, so no pull from it could ever be reproduced, and
+every figure built on one drifts. Pinning to one archive makes every pull, audit and
+training run repeatable on the project machine. AACT keeps **permanent monthly archives**
+(*literature* [6]); its daily copies are deleted at the start of each month.
+
+### The pin (`services/aact_snapshot.py: PINNED`)
+
+| field | value |
+| --- | --- |
+| file | `20261001_clinical_trials_ctgov.zip` |
+| url | `https://aact.ctti-clinicaltrials.org/snapshots/4418/download` [7] |
+| bytes | 2,547,627,020 |
+| sha256 | `8f88d1f779c70050ee8679b4440ce3e62d8a5843cb61642bcb6f91f8669bc629` |
+| dump | custom format, created 2026-10-01 05:38:53; from PostgreSQL 14.3, by pg_dump 14.19 |
+
+`audit/probe_aact_archive.py` confirmed that all 23 tables the pulls read are present.
+The list is derived from the pull declarations (`aact_snapshot.required_tables`), not
+typed. Two members of the zip are 0 bytes, `schema.png` and `data_dictionary.csv`; nothing
+reads them.
+
+### The restore (`scripts/restore_aact_snapshot.py`)
+
+It verifies the zip against the pin, then:
+- creates a cluster with `initdb` in the C locale (byte-wise text order), listening on
+  localhost only;
+- extracts the dump and runs `pg_restore -j 4 --no-owner --no-privileges`;
+- checks that every required table exists and has rows.
+
+Run: **pg_restore exit 0, 0 error lines, 1,390 s.** `studies` and `calculated_values` both
+have 605,150 rows.
+
+### Determinism (`scripts/rebuild_aact.py`)
+
+The three pulls ran twice from the same restore, with `--as-of 2026-10-01`. **All 10 data
+files were byte-identical.** Only `trial_registration_fields.manifest.json` differs, and it
+carries run timestamps.
+
+Two fixes, made before the runs, are what made this hold:
+
+- Every `string_agg(DISTINCT …)` had no `ORDER BY`, so the order within a joined cell was
+  unspecified and depended on the server's collation. Every aggregate now sorts with
+  `ORDER BY … COLLATE "C"` (`aact_aggregates.ordered_text`), and two tests pin it.
+- The fields chunk query and both results-pull queries had no `ORDER BY`. They now order
+  by `nct_id`, and outcome rows by `nct_id, o.id, oa.id`. The surrogate ids are stable
+  within a single snapshot.
+
+Rebuilt files, as produced on the project machine. A rebuild that does not reproduce
+these hashes means the input or the code changed:
+
+| file | bytes | sha256 |
+| --- | --- | --- |
+| results_raw_outcomes.csv | 73,846,462 | `886f0dab90bcc4ca13bd3adcb01caecee2e32792567a5976856fdc23ff525ab9` |
+| results_raw_studies.csv | 81,618,574 | `e06754144a469dd6540af49391d6c98ac0f6ebfb53a43b4a7c6f53995b758727` |
+| trial_design_outcomes.csv | 308,094,649 | `024fb870285fc1426a920ab27adfa7d9793b4eec981c2722a21cf3c480f7496d` |
+| trial_design_outcomes.csv.manifest.json | 90 | `4f8685e70851cba1ff87349795ba756080e2d96c9bdb3285715e587d52751415` |
+| trial_entities.csv | 172,464,800 | `93c7a5ccdbee6a12c1562ae4201a88a7514503f1b67fb7b35fea0ffcee9ac5d3` |
+| trial_labels.csv | 179,194,174 | `5cc4276686c7fc365eb2327f87055b5e8b47bbdd9378c6c8531cc4b00b6e4db6` |
+| trial_labels.csv.manifest.json | 224 | `1c7dea42446ec35cc2a4d33d63f725daf4b1102ec86af309daad601e8b395a0c` |
+| trial_registration_fields.csv | 311,268,875 | `90a51c0b0c33799e1b08474ff276bc4bc41cbf062c84bd6547e9ad45ca4ce381` |
+| trial_registration_fields.provenance.csv | 16,045 | `8cd17bcf09ef68db2db907478dca918cc0e714366ca71584bf1baece76db948f` |
+| trial_registration_text.csv | 1,285,691,171 | `d94d75cf6681a0b56ccee66a0881bb38b3bbb49fdcd6c22996f0646cd1202d3c` |
+| trial_registration_fields.manifest.json | 6,312 | timestamps; verify by structure, not by hash |
+
+These now live in `data/aact/`. Not yet rebuilt: `recon_raw_*` (§14 item 11).
+
+## §12.25 — THE RE-BASELINE (snapshot 2026-10-01)
+
+**Use `--snapshot 2026-10-01` from now on**, not 2026-10-05.
+
+### Pull figures
+
+| | pinned 2026-10-01 |
+| --- | --- |
+| interventional trials | 461,824 |
+| drug trials (`is_drug_trial`) | 222,329 |
+| results posted | 75,607 (16.4%) |
+| ≥1 primary analysis | 24,276 |
+| strict labelled | 21,271, of which 13,011 positive |
+| headline A/B, all interventional | 20,099 = 12,510 met / 7,589 not met |
+| tiers A / B / C / E / D | 18,444 / 1,655 / 1,172 / 1,456 / 439,097 |
+| `endpoint_na_reason`: NI / geometric / percent-scaled / coverage | 1,568 / 212 / 204 / 48 |
+| any vs all primary readings differ | 1,874 of 21,271 |
+| registered primary outcome rows | 932,714 across 454,110 trials; 1 blank measure |
+| fields pull | 461,824 rows, 320 s, 0 trials with other than one lead sponsor |
+
+**The snapshot drift from rev 9 §12.21 is gone.** Labels and fields now come from one
+snapshot, so the first-submitted date merged onto 461,824 of 461,824 label rows.
+
+### Training population (`audit_posting_bias.py` §1)
+
+| disposition | n | met | not met |
+| --- | --- | --- | --- |
+| **eligible (the training population)** | **13,487** | **8,187** | **5,300** |
+| registered after primary completion | 600 | 428 | 172 |
+| registration timing unknown | 18 | 11 | 7 |
+| endpoint gate refuses | 306 | 196 | 110 |
+| labelled, before those three | 14,411 | 8,822 | 5,589 |
+
+Eligible, by phase group:
+
+| group | n | met | not met |
+| --- | --- | --- | --- |
+| phase 1 | 731 | 435 | 296 |
+| phase 2 | 4,137 | 2,036 | 2,101 |
+| pivotal | 6,053 | 4,200 | 1,853 |
+| post-approval | 1,916 | 1,140 | 776 |
+| unknown | 650 | 376 | 274 |
+
+The minority class among the eligible is not-met, at **5,300**. In phase 2, met is the
+minority.
+
+The live-database run printed 13,493 = 8,191 / 5,302 (labelled 14,417 = 8,826 / 5,591).
+That is superseded.
+
+### Other targets and the audit
+
+- Endpoint-met exclusion reasons: not a drug trial 239,495; no primary analysis 206,977;
+  non-headline tier 941; retrospective 600; gate-refused 306; timing unknown 18. The tier-C
+  sensitivity stratum is 880.
+- Advancement: eligible 85,059, with 11,105 removed as retrospective. Market: eligible
+  22,314, with 3,060 retrospective.
+- Market window series, 3 / 5 / 10 years: 22,314 / 19,798 / 13,471.
+- Both MeSH sides, market-eligible: 16,940 (75.9%). By era: pre-FDAAA 83.6%, FDAAA 77.2%,
+  Final Rule 71.2%. Market-only (no endpoint label): 16,677 (74.7%).
+- Disclosure denominator 140,613. The rev 9 §12.23 conclusions stand unchanged: the cliff
+  separates phase, sponsor class, responsible party and expanded access, and is flat by
+  era, FDA regulation and FDAAA verdict.
+- FDAAA verdicts over drug trials: applicable 32,752, not applicable 122,439,
+  undeterminable 67,138.
+- The endpoint-type gate figures are unchanged from rev 9: applicable 122,083, refused
+  10,564, undeterminable 83,550; 333 refused yet labelled.
+
+## §12.26 — THE EVENTS COUNT AND THE BOOSTING ARGUMENT
+
+Rev 9 §14 item 1 is done. The events count is **5,300**.
+
+- *Arithmetic*: at rev 8's planning figure of about 40 features, that is about 133 events
+  per variable.
+- Rev 7's argument against boosting (about 9 events per variable) is dead.
+- In simulation (*literature* [3]), random forests
+  and neural nets needed about 200 events per variable to stabilise, against 20–50 for
+  logistic regression; boosting was not tested.
+- At about 133, logistic regression with limited interactions is comfortably supported.
+  Shallow, regularised boosting is defensible; an unconstrained ensemble is not.
+
+What would make 5,300 not good:
+- **The training side of the temporal split.** It is not computed yet, and it is the
+  number that actually bounds the model.
+- **Parameters, not features.** Phase has 9 levels and sponsor class 8, so 40 features is
+  more than 40 parameters.
+- **Clustering.** Trials of the same drug or programme are not independent events, and
+  they can leak across the split.
+- **Selection.** A flexible model fitted to a graded 6.5% slice learns that slice's
+  structure, which transports worst.
+
+**Decided:** the model family is chosen by a pre-registered held-out comparison (logistic
+with limited interactions against shallow boosting, scored on Brier and ECE), run after the
+temporal split. It is not chosen by an events-per-variable rule. The hand labels are not
+training data and never limited this count. The labels come from the trials' own posted
+analyses, so the limit is the ClinicalTrials.gov posting cliff.
+
+## §12.27 — DRUGCENTRAL, EXTRACTED FROM THE RELEASE ARCHIVE
+
+### The public instance is not a source
+
+`unmtid-dbs.net:5433` serves the **2023-11-01** release (`dbversion` 54). It holds about
+200 tables belonging to other users, including a 3,915-row copy of `approval`, so other
+users can write to it and nothing read from it can be verified. Rev 10's first probe also
+found an unexplained inconsistency there (§13 item 44).
+
+### The release used
+
+| field | value |
+| --- | --- |
+| archive | `Drugcentral_2026-09-25.pgdump` (custom format, gzip, from PostgreSQL 16.15), from [8] |
+| sha256 | `5afea88f6a1916f250c28c10ab988e7464ca6fd5ccf2c42f080600473de732dc` |
+| bytes | 1,378,106,682 |
+| `dbversion` | 56, dated 2026-09-02 |
+
+`scripts/extract_drugcentral.py` converts it in two steps. First `pg_restore 18.6 -f`
+writes plain SQL for the 12 wanted tables; no server is needed. Then
+`services/pgdump.py` reads that SQL into CSVs (`data/drugcentral/dc_*.csv` plus a
+manifest). Rows:
+
+| table | rows |
+| --- | --- |
+| structures | 5,116 |
+| approval | 4,128 |
+| identifier | 87,135 |
+| synonyms | 23,875 |
+| omop_relationship | 42,515 |
+| ob_product | 55,242 |
+| struct2obprod | 77,694 |
+| doid / doid_xref | 10,040 / 34,645 (unchanged from 2023) |
+
+The only column holding both NULLs and empty strings is `approval.applicant`.
+
+### Findings (`audit/probe_drugcentral.py`, on the extracted CSVs)
+
+- **Approvals are per drug and agency, one row each.** FDA: 2,675 drugs, 503 of them
+  undated, latest approval 2026-03-26. No approval is dated per indication.
+- **New drugs carry indications.** 104 of 105 drugs first approved after 2023-08-18 have
+  an indication row. Coverage by stratum:
+  - first approved 2013 to 2023-08-18: 485 of 489;
+  - first approved by 2012: 1,447 of 1,578;
+  - FDA approval undated: 170 of 503 (33.8%).
+- **Indication coding gap, by era.** Indication rows coded in neither UMLS nor SNOMED:
+  2,276 of 9,335 for drugs first approved by 2012, against 13 of 890 for those approved
+  2013 to 2023-08-18. This confirms rev 7 §1.2.1 caveat 1.
+- **Crosswalk ceiling.** Of 1,722 distinct indication UMLS codes, 634 (36.8%) reach MeSH
+  through MONDO [5] and 559 (32.5%) through `doid_xref`. Both are measured by concept, not by
+  trial. The UMLS Metathesaurus, which needs a free licence, is the full route.
+- **The name key has no fan-out.** Every synonym maps to exactly one drug.
+  - Drug-trial distinct values matched exactly: MeSH terms 2,687 of 13,372; intervention
+    names 4,660 of 180,614; other names 4,922 of 82,469. None map to more than one drug.
+  - AACT's intervention MeSH terms include class ancestors (Pyridines, Heterocyclic
+    Compounds), so the MeSH denominator is padded.
+- **MeSH descriptor fan-out.** 103 descriptor ids map to more than one drug, up to 13.
+
+## §12.28 — DRUGS@FDA, FOR DATED APPROVALS (decision (b))
+
+**Decided:** dated approval events come from Drugs@FDA; indication codes come from
+DrugCentral. The files [9] were downloaded on 2026-10-06 to `data/drugsatfda/`: 12
+tab-delimited tables, with keys unique in Applications, Products and Submissions.
+
+- **Currency.** The latest approval is 2026-10-02, so a 3-year window closes for readouts
+  up to 2023-10-02 against Drugs@FDA. DrugCentral's bound is 2023-03-26, and it applies to
+  the indication target.
+- **New indications are dated.** `ActionTypes_Lookup` has a category "Efficacy-New
+  Indication" (level 1 EFFICACY, level 2 INDICATION), carried by 1,907 approved
+  supplements. That dates the supplement, but **not which indication it added**; only the
+  attached letter or label says, as a PDF. Public notes are filled on at most 0.6% of
+  supplements; 19.9% have any document attached.
+- **The application number links the two sources.** 26,891 of 29,380 Drugs@FDA
+  applications appear in DrugCentral's `ob_product`: every NDA (5,298) and ANDA (21,593).
+  The 485 BLAs are absent, because the Orange Book has none, so biologics need the name
+  route. 2,538 of 2,908 single ingredients (87.3%) match a DrugCentral synonym exactly.
+- **Gaps:**
+  - CBER biologics (vaccines, cell and gene therapies) are not in Drugs@FDA. Their trials
+    must be undeterminable, never 0.
+  - One original approval is dated 1900-01-01, a placeholder.
+  - 185 applications have more than one approved original; 3,988 have none (3,440 of them
+    ANDAs).
+  - Ingredient strings use three separators (`;` 689, `,` 79, `||` 3) and salt forms.
+
+## §12.29 — SMALLER CHANGES
+
+- **`audit_posting_bias.py` §1 prints the class balance.**
+  `eligibility.endpoint_met_outcome_counts` reports met / not met for the eligible
+  population and for each post-label exclusion, and `strict_outcome` fails closed on any
+  token other than 1/0.
+- **`build_endpoint_type_sample.py`.**
+  - The unit is now one distinct, non-blank primary text per trial
+    (`sampling.sampling_units`): 14,252 collapsed, the same as `build_confirm_sample.py`.
+  - Defaults are 100 rows, 12 repeats and a floor of 5. The floor was chosen so that 18
+    strata × 5 fits in 100, and a test pins that.
+  - It stratifies on three groups (`sampling.STRATUM_GROUPS`).
+  - The kappa gate was replaced by `GATING_CRITERIA` in its prose, and literal figures
+    were removed from printed prose.
+  - **None of the 18 strata reaches `MIN_STRATUM_FOR_VERDICT`.**
+  - This closes rev 8 §0.1 items 5 and 6 and rev 9 §14 item 2.
+- **Every pull takes `--port`;** port 5432 was hard-coded in four scripts.
+
+## §12.30 — THE RESOLUTION GATE, RE-ANCHORED ON TRUTH
+
+Rev 7 §1.2.2 set an absolute gate: below about 50% of drug trials resolving to a drug
+entity, the indication work is not worth starting. It was never ratified. **Owner
+direction, 2026-10-06: base the gate on the real-world truth, not on a fixed 50%.**
+
+### What "resolves" can mean in reality (*literature* [1], [2])
+
+- **A hand-annotated set of 500 interventional trials** [1]: 69.6% of intervention
+  mentions mapped to at least one DrugBank concept. NLM's automatic MeSH terms covered
+  66.6% of entries, and the authors note **MeSH does not include investigational drugs**.
+- **An automated multi-step match of ClinicalTrials.gov drug trials to DrugBank** [2]
+  reached 70.6% of drug trials on exact names
+  alone. Synonyms, product names and fuzzy matching added about 23,500 more trials:
+  about 87% in total (*arithmetic* from their counts).
+- So even with a perfect resolver, the share of drug-trial mentions that are real drug
+  entities is well below 100%: placebo, standard of care, comparators, unnamed codes.
+
+### Why a population-level rate cannot be the gate
+
+DrugCentral covers approved drugs [4]. A trial whose drug was **never approved** usually
+cannot resolve against it, and for the market target that trial's true label is 0. A
+low resolution rate is therefore partly a measure of how often drugs fail, not only of
+how well names match. The rate mixes two different things:
+
+- an approved drug the resolver missed, which becomes a **false 0**;
+- an unapproved drug that correctly finds no match, which is a **true 0**.
+
+Only a hand-checked truth can separate them. That is what rev 7 §1.2.1 caveat 3 already
+asked for.
+
+### The gate, as replaced
+
+Measured on a hand-labelled sample of pivotal drug trials, stratified by whether the
+resolver matched. For each trial the labeller records the **tested agent** (not placebo,
+comparator or background therapy) and whether it has an FDA approval. Two criteria, in
+the same shape as the endpoint gate's (rev 8 §12.11):
+
+- **recall on truly approved agents**: the share of trials whose tested agent is
+  FDA-approved that the resolver links to the right drug. Each miss is a false 0.
+- **precision of a match**: the share of the resolver's matches that are the right tested
+  agent. A wrong match onto an approved drug is a false 1.
+
+**Ratified by the owner, 2026-10-06, before any sample exists: recall ≥ 0.90 and
+precision ≥ 0.95.**
+
+**The gate is not the point of this output.** The point is the measured truth: how often
+the resolver finds a trial's real tested agent, and how often a match is wrong. Those two
+rates, each reported with a 95% interval, travel with the market label as its known error
+rate (rev 7 §1.2.1 caveat 3), and they are reported beside the market model. The gate only
+decides whether the market target proceeds on that resolver.
+
+Sizing, *arithmetic*: an interval of ±0.05 around a rate near 0.90 needs roughly 140
+trials whose tested agent is truly approved. The sample is drawn to reach that count in
+the recall stratum, not to a fixed total.
+
+The population-level resolution rate is still printed, as a plausibility check against
+the literature range above: far below it means a weak resolver; far above it means
+over-matching, such as placebo or class terms matching drugs.
+
+---
+
+## §13 — CORRECTION LEDGER, rev 10 additions
+
+| # | what was wrong | correct reading |
+| --- | --- | --- |
+| 37 | Rev 9's figures were treated as reproducible. | They came from the live database. Re-baselined on the pinned 2026-10-01 snapshot (§12.25); eligible endpoint-met is now 13,487 / 5,300. |
+| 38 | `string_agg(DISTINCT …)` with no `ORDER BY`, and chunk queries with no `ORDER BY`. | The order was unspecified and collation-dependent. Fixed; two runs are byte-identical (§12.24). |
+| 39 | Rev 7 §1.2.1 / §8.1c assumed DrugCentral could date an approval per indication. | It records the first approval per drug and agency only. Dated new indications come from Drugs@FDA action types, which still do not say which indication. |
+| 40 | The DrugCentral public instance was treated as the source. | It is shared, writable by others, and on the 2023 release. Use the extracted 2026-09-25 archive. |
+| 41 | `build_endpoint_type_sample.py` printed "rows collapsed, same outcome twice: 0". | It now collapses 14,252 repeated texts within a trial. Rev 8 item 5 closed. |
+| 42 | The rev 9 opener said the label and fields manifests were in the zip. | They were not; only data files carry them. |
+| 43 | Rev 9 §12.21: 175 more trials in the fields pull, one label row absent. | That was drift between two snapshots. With one pinned snapshot, the merge is 461,824 of 461,824. |
+| 44 | The first DrugCentral probe reported 29–31 matched terms mapping to more than one drug, while also reporting no name with more than one drug. | That came from the public instance; on the extracted release the count is 0. The cause is undetermined; do not cite that run. |
+| 45 | The public-instance probe's figures (latest FDA approval 2023-08-18, indication coverage, crosswalk 36.8% / 32.5%) were read as current. | Superseded by the 2026-09-25 release figures (§12.27). |
+| 46 | `recon_raw_*` in `data/aact/` still came from the live database. | Audit-only. Regenerate from the pinned restore when the reconstruction audit is next needed (§14 item 11). |
+| 47 | The results pull's "negative-class recount" prints ~369, ~9 per variable and ~40 features as fixed prose. | Stale printed figures (rev 9 lesson 75). Remove them (§14 item 10). |
+| 48 | Rev 7 §1.2.2's resolution gate: an absolute 50% of drug trials resolving. | Unconnected to truth, and confounded with approval, because DrugCentral holds approved drugs. Replaced by recall ≥ 0.90 and precision ≥ 0.95 against a hand-labelled sample, ratified 2026-10-06 (§12.30). |
+
+---
+
+## §14 — NEXT ACTIONS, rev 10
+
+Replaces rev 9 §14. The order follows rev 7 §8 and rev 9 §14: drug resolution (§8.1c),
+then the advancement label (§8.3), then features, then models (§8.4).
+
+Rev 9 items 1 and 2 are done (§12.26, §12.29). **Item 3 is only half done.** Both sources
+were probed and chosen (§12.27–28), but neither of its two numbers exists yet.
+
+1. **Trial-to-drug resolution** (rev 7 §8.1c, rev 9 §14 item 3).
+   - Resolve each drug trial's **tested agent** to a DrugCentral drug: through names
+     (synonyms, salt to parent), MeSH ids, and Drugs@FDA application numbers via
+     `ob_product`.
+   - Print the population-level rate against the literature range (§12.30).
+   - Draw the hand-labelled sample (sized for the recall stratum, §12.30) and report
+     recall and precision with 95% intervals; the ratified bars decide whether the market
+     target proceeds.
+   - This one join also feeds the advancement linkage key and grouping by drug in
+     evaluation, not only the market target.
+2. **The readout-to-first-approval lag** for pivotal trials of new molecules: actual
+   primary completion to Drugs@FDA's first ORIG approval, within the window bound of
+   §12.28. This confirms or kills the 3-year window (rev 7 §1.2.3: the check gates the
+   decision rather than follows it). If the 90th percentile sits under 3 years, the
+   window stands; if it is near 5, most successful programmes get labelled 0.
+3. **Settle the open decisions before any model:**
+   - the advancement linkage key (rev 7 §1.3 item 1, which waited on drug resolution);
+   - which multi-endpoint reading is the target (rev 7 §1.3 item 4; the strict label
+     currently uses any primary met);
+   - `TRAINING_EXCLUSION_MIN_EFFECT`, set before the comparison runs (rev 8 §12.11);
+   - **one headline metric per target, named in advance** (rev 7 §1.1 item 3). That is
+     the bar a model has to clear to count as working.
+4. **The advancement label** (rev 7 §8.3), on the linkage key from item 3.
+5. **Feature-build design** (rev 9 §14 item 4):
+   - which provenances each target admits;
+   - the `editable_current_value` fields named (start date, facilities, countries,
+     expanded access);
+   - the label encoders named;
+   - use `classified_agency_class` and the distinct facility counts;
+   - one pinned snapshot date;
+   - a temporal boundary per target (rev 7 §1.1 item 2).
+6. **The feature builder.** One module for all three targets, with the per-target leakage
+   registry asserted in code, so R7 becomes a test.
+7. **Temporal splits**, printing each target's training-side events count.
+8. **Models.**
+   - Endpoint-met first, by the pre-registered comparison (§12.26), with a simple baseline
+     (the met rate by phase) as the floor it must beat. Then advancement.
+   - Market after its label: windows close against the earlier source date; CBER
+     products are undeterminable; decide how to attribute an efficacy supplement to an
+     indication; decide the crosswalk route.
+   - Group by drug where the resolution allows.
+9. **A local predictor entry point.** Given an NCT id, read the trial from the local
+   restore, build its features, score it, and return the three outputs through
+   `fdaaa.trial_flag` with their flags.
+10. **Small:** remove the stale printed figures in `pull_aact_results.py` (§13 item 47).
+11. **Optional:** regenerate `recon_raw_*` from the restore, after auditing
+    `validate_reconstruction.py`'s SQL ordering; pin the MONDO release.
+12. **Carried from rev 9:** item 5 (registered primary-outcome titles across versions);
+    item 6 (the dose-finding estimand/input sample, visible as 10,075 `dose_finding`
+    over `safety_tolerability` decisions); item 7 (retire or re-run rev 8 §12.13's
+    sandbox figures); item 8 (rev 9 §0.1's two small items).
+13. **Cleanup, once this revision is accepted:** delete `data/aact_live_20261005/`. Keep
+    `data/aact_snapshots/` and `data/pg/`.
+14. **Rename the mangled docs files** to `Handoff_rev8.md` and `Handoff_rev9.md`.
+
+---
+
+## §15 — REFERENCES
+
+Literature and source documents cited in rev 10.
+
+1. Miftahutdinov Z, Kadurin A, Kudrin R, Tutubalina E. Medical concept normalization in
+   clinical trials with drug and disease representation learning. *Bioinformatics*. 2021.
+   doi:10.1093/bioinformatics/btab474. (500 hand-annotated interventional trials; 69.6% of
+   intervention mentions mapped to DrugBank; MeSH lacks investigational drugs.)
+2. Vasan K, Gysi DM, Barabási A-L. The clinical trials puzzle: how network effects limit
+   drug discovery. *iScience*. 2023;26(12):108361. PMC10749231. (Drug-trial interventions
+   matched to DrugBank: 70.6% of drug trials by exact name, then synonyms, product names
+   and fuzzy matching.)
+3. van der Ploeg T, Austin PC, Steyerberg EW. Modern modelling techniques are data hungry:
+   a simulation study for predicting dichotomous endpoints. *BMC Medical Research
+   Methodology*. 2014;14:137. doi:10.1186/1471-2288-14-137.
+4. Ursu O, Holmes J, Knockel J, et al. DrugCentral: online drug compendium. *Nucleic Acids
+   Research*. 2017;45(D1):D932–D939. doi:10.1093/nar/gkw993.
+5. Vasilevsky NA, Matentzoglu NA, Toro S, et al. Mondo: unifying diseases for the world, by
+   the world. medRxiv. 2022. doi:10.1101/2022.04.13.22273750. (Source of
+   `mondo_xref.csv`.)
+6. AACT (Clinical Trials Transformation Initiative). PostgreSQL database instructions:
+   daily snapshots and permanent monthly archives.
+   https://aact.ctti-clinicaltrials.org/downloads/postgres_instructions
+7. AACT snapshot downloads, the pinned archive's link:
+   https://aact.ctti-clinicaltrials.org/snapshots/4418/download
+8. DrugCentral downloads (release archive 09/25/2026). https://drugcentral.org/download
+9. U.S. Food and Drug Administration. Drugs@FDA data files.
+   https://www.fda.gov/drugs/drug-approvals-and-databases/drugsfda-data-files
+
+---
+
+## Lessons, 78–85
+
+78. A shared public database is not a source. If others can write to it, nothing read from
+    it can be verified. Extract a pinned release.
+79. An aggregate with no `ORDER BY` is a nondeterminism nobody sees until two runs are
+    compared, and collation makes it machine-dependent.
+80. Reproducibility is a property you test, not one you claim. Run twice from the same
+    input and compare hashes.
+81. "Latest" is not a version. DrugCentral's download link, MONDO's purl and Drugs@FDA's
+    daily file all move. Record a hash or a release tag at download.
+82. A test that pins a query's exact text breaks on a correct change. Assert the structure
+    the change must keep.
+83. Never paste a credential into a chat or a shared log. Revoke and reissue.
+84. Hand labels were never the bottleneck. The events count is set by how many sponsors
+    post an analysis, not by labelling effort.
+
+---
+
+85. A coverage rate against a source that only holds successes measures success as well as
+    coverage. Gate a resolver on recall and precision against a hand-checked truth, not on
+    how much of the population it touches.
+
+---
+
+## File inventory, rev 10
+
+**New, in use:**
+- services: `src/trial_pos/services/pgdump.py`, `aact_snapshot.py`;
+- tests: `tests/test_pgdump.py`, `test_aact_snapshot.py`;
+- scripts: `scripts/extract_drugcentral.py`, `restore_aact_snapshot.py`, `rebuild_aact.py`;
+- scratch probes: `audit/probe_drugcentral.py` (now reads the extracted CSVs),
+  `audit/probe_drugsatfda.py`, `audit/probe_aact_archive.py`;
+- docs: `archive/docs/README_gen1.md`, `docs/Handoff_rev10.md`.
+
+**New, parked** (publishing; see §0): `services/data_registry.py`, `services/zenodo.py`,
+`tests/test_data_registry.py`, `tests/test_zenodo.py`, `scripts/build_data_registry.py`,
+`scripts/bootstrap.py`, `scripts/upload_zenodo.py`, `.devcontainer/devcontainer.json`,
+`environment.yml`, `data_sources.json`.
+
+**Modified:**
+- `src/trial_pos/services/eligibility.py` (class-balance counts), `sampling.py` (defaults,
+  stratum groups, sampling units), `endpoint_type.py` (`endpoint_text_key`),
+  `aact_aggregates.py` and `aact_fields.py` (ordered aggregates and ordered chunks);
+- `scripts/audit_posting_bias.py`, `build_endpoint_type_sample.py` (rewritten),
+  `pull_aact_results.py`, `pull_aact_fields.py`, `pull_design_outcomes.py`,
+  `validate_reconstruction.py` (`--port`; ordering in the first two);
+- `tests/test_eligibility.py`, `test_sampling.py`, `test_endpoint_type.py`,
+  `test_aact_aggregates.py`, `test_aact_fields.py`;
+- `pyproject.toml` (optional `pull` extra), `.gitignore`, `README.md` (rewritten; partly
+  stale, §0).
+
+**Data on the project machine:**
+- `data/aact/`: rebuilt from the pin;
+- `data/aact_snapshots/`: the pinned zip;
+- `data/pg/`: the local restore;
+- `data/drugcentral/`: the `dc_*.csv` files, the manifest and the archive;
+- `data/drugsatfda/`: 12 tables;
+- `data/aact_live_20261005/`: superseded, to be deleted.
+
+
+---
+---
+
+<!-- ===== Part 3: rev 9 — supplement (was: rev 9 supplement) ===== -->
+
+# Part 3: rev 9 — supplement
+
+# Handoff — rev 9 supplement
+
+**Read with rev 7 and rev 8, not instead of them.** Rev 7 remains the durable record for
+every section neither supplement names; rev 8 for every section rev 9 does not name. Where
+they disagree, the later revision wins and says so.
+
+Scope of this revision: the endpoint clause reached the user, the gate was revised once more
+(B2), the training population is now decided by one predicate, the extra AACT fields were
+probed and pulled with per-column provenance, retrospective registration was measured and
+excluded, and the posting-bias audit (Step 6.3) ran. Three bugs were fixed and four stale
+printed figures removed. Expected test count **786 passed, `GATE: GREEN`**.
+
+**Every figure below comes from a run on the project machine** unless marked *eye-read*
+(the assistant reading printed endpoint text) or *arithmetic* (derived from printed counts).
+No sandbox figures appear in this revision. Rev 8 §12.13's sandbox figures are superseded
+in §12.16.
+
+---
+
+## §0.1 — SCRIPT BUGS: status
+
+Rev 8 item 4 (**clause not wired into `fdaaa.compose_flag`**) is **closed** — §12.16.
+Rev 8 items 5 and 6 (`build_endpoint_type_sample.py`: duplicate-text collapse, pre-§12.9
+defaults) are **still open**. Its closing print also still says nothing reaches
+`compose_flag`, which is now false.
+
+Two known and unfixed:
+
+- `FLAG_THIN_TRAINING` on a **pre-statute phase 3** trial: `NOT_APPLICABLE` attaches
+  not-required-to-post plus thin-training, whose text compares against "a later-phase
+  trial" — false for phase 3. Predates rev 9.
+- `DECLINE_SENTENCE` still carries entries for bioequivalence, dose-finding and safety,
+  which can no longer be produced. `MECHANISM_WORD` was pruned for that reason and this dict
+  was not. Harmless; inconsistent.
+
+---
+
+## §12.16 — THE CLAUSE REACHES THE USER
+
+`fdaaa.trial_flag(applicability, gate_record)` is the entry point and returns
+`{estimate_shown, flag, clause_required}`:
+
+| gate | number shown | flag |
+| --- | --- | --- |
+| refused | **no** | the decline sentence, *instead* of the FDAAA caveats |
+| qualified | yes | FDAAA caveats + the success-meaning clause |
+| plain | yes | FDAAA caveats only |
+| undeterminable | yes | FDAAA caveats; endpoint clause silent except under B2 (§12.18) |
+
+**Fails closed both ways**: a refusal with no sentence raises, and a record for which
+`requires_clause` is true but whose flag lacks the clause raises. A test iterates every
+multiset of up to three primaries under both roll-ups and asserts no qualified record ever
+returns a bare number. Run over every drug trial on the project machine: **`trial_flag`
+raised 0 times across 222,374 drug trials.**
+
+**Behaviour change.** `FLAG_THIN_TRAINING` was attached whenever any part was present,
+including an endpoint clause alone. Its text compares against "a later-phase trial", false
+on a phase 3 trial with a safety co-primary. It is now attached only by the FDAAA sentences.
+Nothing had ever passed a clause, so no user saw the old behaviour.
+
+## §12.17 — THE CO-PRIMARY CLAUSE
+
+The qualified sentence said "this trial's primary endpoint is …". On the project machine,
+**653 of 973 headline-labelled clause trials** (11,690 of 48,711 unlabelled) also
+registered an efficacy-shaped or bioequivalence primary, so the sentence was false for the
+trial as a whole in 67% of the labelled cases where it appeared.
+
+The co-primary form applies whenever the trial registered any primary outside the qualified
+class naming the clause (`is_coprimary`). Keyed by roll-up, because under ANY the qualified
+endpoint alone can carry a "met" and under ALL it cannot:
+
+> 1 of this trial's 2 primary endpoints is a safety or tolerability measurement. This
+> estimate counts meeting any one primary endpoint as success, so it may reflect only that
+> an adverse-event rate was acceptable, not that the treatment worked.
+
+Known gap: `[dose, safety, efficacy]` names only the dominant qualified class.
+
+## §12.18 — B2: PHARMACOKINETIC BESIDE UNREADABLE TEXT
+
+Under ANY, a trial whose primaries are value-reporting plus at least one unclassifiable is
+now **undeterminable with a mandatory clause** (`REASON_UNTESTABLE_BESIDE_UNREADABLE`), not
+refused. The unread primary may be the tested one; refusing asserted a reading nobody made.
+The clause names the untestable primaries and says the estimate applies only if the others
+were threshold-tested, which lowers the cost of the false allowance that §12.11 weights most
+heavily. Under ALL the case still refuses.
+
+Measured effect: **91 labelled and 2,707 unlabelled** trials moved from declined to shown
+with the clause. Labelled declined fell **424 → 333**, now all-pharmacokinetic.
+
+Evidence that motivated it, *eye-read*: in a 25-trial sample of the 424, the
+pharmacokinetic-plus-unreadable trials carried a real efficacy endpoint in the unreadable
+slot in 4 of 5 (intragastric pH, trough FEV1, time to first exacerbation, gastric emptying).
+
+**A pattern carve-out (B1) was considered and declined** — an exclusion for an AUC of a
+non-drug measure — as too likely to be fitted to the sample that suggested it. The known
+cost is recorded in `endpoint_type.py` and in §12.19.
+
+## §12.19 — THE TRAINING POPULATION IS ONE PREDICATE
+
+`eligibility.eligible_for_endpoint_met` now decides the endpoint-met training population
+completely. Two exclusions were added to the existing reasons, both **applied last** so
+every earlier count is unchanged:
+
+| reason | targets | count, endpoint-met |
+| --- | --- | --- |
+| `registered_after_primary_completion` | all three | 600 |
+| `endpoint_gate_refuses_this_trial` | endpoint-met only | 306 |
+| `registration_timing_unknown` (undeterminable) | all three | 18 |
+
+**Endpoint-met eligible: 13,493 drug trials.** 13,493 + 306 = 13,799, the eligible count
+before the gate was folded in. 306 is under the 333 refused-yet-labelled because 27 of those
+are already retrospective or timing-unknown.
+
+Full endpoint-met reasons: not a drug trial 239,599; no primary analysis posted 207,016;
+non-headline tier 941; retrospective 600; gate-refused 306; timing unknown 18.
+Advancement: eligible 85,132, of which retrospective exclusion took **11,106**.
+Market: eligible 22,337, retrospective **3,060**. Tier-C sensitivity stratum: **880**
+(899 before the gate was folded in; the loose-tier comparison now applies the gate too).
+
+**The gate exclusion rests on the hand labels, not on an outcome.** Of the 333
+refused-yet-labelled: tier A 258 / tier B 75; met 217 / not met 116; phase 1 135, phase 2
+79, pivotal 63, post-approval 41, unknown 15. Several genuine-PK labels in the sample were
+drug–drug interaction tests, where "met" means an interaction was found — inverted, not
+noisy. **Known cost, *eye-read*:** 9 of 25 in the post-B2 sample measured something other
+than the drug (FEV1 AUC ×4, pain-intensity AUC, nasal cross-sectional-area AUC,
+postprandial-glucose AUC, serum cortisol, troponin). Those labels are excluded too, and
+those trials are declined at serving.
+
+**Fails closed.** Endpoint-met eligibility raises on a row lacking the merged gate verdict
+or the first-submitted date, rather than reading the absence as "not excluded". This caught
+a stale script on its first run (lesson 67). The merges:
+
+- `merge_registration_timing(rows, submitted_by_nct)` — a trial absent from the fields file
+  gets a blank, so undeterminable, never prospective.
+- `merge_gate_exclusion(rows, classes_by_nct)` — runs the gate itself; a trial with no
+  primary text gets `trial_gate([])`, which is the gate's answer, not a default.
+
+`audit_posting_bias.py` performs both. Its run merged the first-submitted date onto 461,971
+of 461,973 label rows and found 11,620 rows the gate refuses across all trials (the extra
+over the serving audit's drug-only 10,564 are non-drug trials, ineligible earlier).
+
+**Not yet printed: the negatives inside the 13,493.** Do not estimate it. See §14 item 1.
+
+## §12.20 — RETROSPECTIVE REGISTRATION
+
+A trial first submitted after its primary completion wrote every "registration" field
+knowing the outcome, and no trial scored at serving — always before readout — can look like
+it. That is a property of the **row**, which no column provenance can express.
+`aact_fields.registered_after_primary_completion` is tri-state: false on or before
+completion whatever the date type; true after an actual or untyped completion; unknown
+after an *estimated* one (a plan already past at submission is incoherent) or with either
+date absent.
+
+| population | n | after | share |
+| --- | --- | --- | --- |
+| all pulled interventional | 462,148 | 55,411 | 12.0% |
+| drug trials | 222,373 | 19,496 | 8.8% |
+| drug, headline-labelled | 14,417 | 600 | 4.2% |
+| … strict negatives | 5,591 | 172 | 3.1% |
+
+Lag among labelled retrospective trials: p50 328 days, p90 1,837; **45.8% more than a year
+late.**
+
+**They meet their endpoint more often, within every phase group:**
+
+| phase group | retro n | retro met | prospective met | gap, pts |
+| --- | --- | --- | --- | --- |
+| phase2 | 110 | 67.3% | 49.4% | +17.8 |
+| post_approval | 155 | 72.9% | 59.6% | +13.3 |
+| pivotal | 203 | 73.9% | 69.3% | +4.5 |
+| phase1 | 58 | 79.3% | 60.1% | +19.2 |
+| unknown | 74 | 60.8% | 58.4% | +2.4 |
+
+*Arithmetic*: phase 2 and post-approval clear roughly four standard errors on the retro
+proportion alone; pivotal does not (≈1.5); the last two are under the 100-trial floor.
+**Quote the per-phase rows, not the pooled 71.3% vs 60.8%**, which mixes phase composition
+into the gap. The exclusion does not depend on the gap.
+
+## §12.21 — EXTRA AACT FIELDS: PROVENANCE, PROBE, PULL
+
+### Three provenances, not two
+
+AACT is a current snapshot; ClinicalTrials.gov's version history is not in it. So "knowable
+at registration" cannot be asserted from AACT. `services/aact_provenance.py` draws the line
+at whether the registry workflow overwrites a field **as a matter of course** during
+conduct:
+
+- `registration` — describes the protocol; edits possible, not systematic.
+- `editable_current_value` — registration-type but routinely updated: estimated dates
+  becoming actual, sites, countries, outcome lists, expanded access, data-sharing plans.
+- `post_hoc` — exists because the trial ran. `actual_duration`, and **`enrollment`**, which
+  is overwritten with the actual count at completion; the planned figure is not retained.
+
+18 tables are classified, every column of each, with cardinality **declared before it was
+measured**. An unclassified column raises. A test pins every `LABEL_DERIVED_FIELDS` entry
+as `post_hoc`. Judgment calls worth revisiting: `sponsors` registration despite
+post-readout partnering; `eligibilities.criteria` registration despite rescue amendments;
+`verification_date` and data-sharing editable; `source_class` and `has_dmc` registration.
+
+### The probe (`audit/probe_aact_fields.py`, read-only)
+
+- **Every declared one-per-trial table is exactly 1:1**, zero repeats, zero duplicates:
+  designs 600,802; eligibilities 604,612; calculated_values 605,592; brief_summaries
+  604,612; responsible_parties 587,162 — against 605,592 studies. Gaps are unknowns.
+- The 980 records missing from eligibilities and summaries are all `WITHHELD` with
+  `delayed_posting`; the interventional filter drops them.
+- **Exact duplicate rows**: interventions 3,759, facilities 1,106. Counts must be distinct.
+- **Exactly one lead sponsor per trial** (605,592 = studies).
+- **Empty columns**: `design_outcomes.population`, `nlm_download_date`, its description.
+- Tri-state traps: `phase` `'NA'` 238,060 vs null 143,572 (not applicable ≠ not stated);
+  masking subfields null on 405,074 rows (not applicable under `masking = NONE`, unknown
+  otherwise); `agency_class` `UNKNOWN` 47,302 and `AMBIG` 110 are not classes.
+- Presence encodes a label input: `last_known_status` non-null on exactly the 98,141
+  `UNKNOWN`-status trials; `results_first_submitted_qc_date` on exactly the 80,358 with
+  results. Already `post_hoc`, but must be named as label encoders when the per-target
+  registry (rev 7 §8.4) admits any post-hoc field.
+- 47 columns the probe found unclassified are now classified.
+
+### The pull (`scripts/pull_aact_fields.py`)
+
+Writes only its own files, to `.partial` then renamed after the last chunk passes; refuses
+to overwrite without `--overwrite` and refuses any filename another script owns (§0.3).
+Per chunk, fatal: exactly one row per requested id. One-per-trial tables LEFT JOIN;
+many-per-trial tables only inside `GROUP BY` subqueries scoped to the chunk. Every column
+carries provenance; an aggregate takes the worst among the columns it reads.
+
+Run: **462,148 rows, 136 field columns + 17 text, 388 s, 0 chunk mismatches, 0 trials with
+other than one lead sponsor.** Snapshot proxy (`max(studies.updated_at)`):
+`2026-10-05T04:14:30`.
+
+Outputs: `trial_registration_fields.csv`, `trial_registration_text.csv`,
+`trial_registration_fields.provenance.csv`, `trial_registration_fields.manifest.json`.
+`data/aact/smoke/` is a 4,000-trial smoke run and can be deleted.
+
+### What the post-pull audit found (`audit/audit_registration_fields.py`)
+
+- **§0.3 restore verified for drug trials**: the label file's lead sponsor class agrees with
+  a fresh pull of the sponsors table on **222,373 of 222,373**. Non-drug rows not compared.
+- `studies.source_class` disagrees with the lead class on 0.4%, led by NIH-vs-other (987).
+  It is the **submitting organisation's** class, not the lead sponsor's. Use the lead.
+- **AACT's facility counts count rows, duplicates included**: `number_of_facilities` equals
+  the raw row count in every trial; **497 single-site trials read as multi-site**; 894
+  trials have a count different from their distinct sites. Use `facilities__n_distinct`.
+  Nothing reads AACT's values today.
+- Interventions with rows beyond distinct (type, name): 10,237 trials (2.2%).
+- Snapshot drift: 175 more interventional trials than the label file; one drug label row
+  absent from the fields file. Features joined to labels mix two snapshots — record both.
+
+## §12.22 — §12.15 QUALIFIED: THE REGISTERED TEXT IS EDITED AT POSTING
+
+Registry history checked by hand on 2026-10-06 for NCT02100670, NCT00782210, NCT01040728:
+**in 3 of 3 the results-posting version also edited the registered Outcome Measures
+section**, and 2 of 3 edited it during conduct as well.
+
+So rev 8 §12.15's byte-identity between `design_outcomes.measure` and `outcomes.title` is
+most likely because the registered field is rewritten when results go in, not because the
+two agree independently. **The gate was validated on posting-time text; serving reads
+pre-results text.** How much that matters depends on whether the edits touch measure
+titles or only time frames and descriptions — the version list names sections, not fields.
+`design_outcomes` is classified `editable_current_value`.
+
+## §12.23 — POSTING BIAS (STEP 6.3) RAN
+
+Denominator: drug trials with an actual primary completion whose 12-month posting deadline
+has passed — 140,663.
+
+- **Posting is graded on 8 of 9 variables** at the 10% bar, which therefore does not
+  discriminate between them. Phase 1 16.8% to phase 3 52.2%; FDA-regulated false 10.6% to
+  true 61.8%; FDAAA not-applicable 16.1% to applicable 80.9%.
+- **The cliff row discriminates.** Analysis posted given results posted is graded by phase
+  (9.4% to 48.5%), lead sponsor class (19.5% to 36.3%), responsible-party type and expanded
+  access — and **flat** by era (2.9-point spread), FDA regulation (1.1) and FDAAA verdict
+  (9.2). The obligation drives whether a trial posts, not whether it posts an analysis.
+- **The applicability domain should name phase, lead sponsor class, responsible-party type
+  and expanded access.**
+- `has_expanded_access` true posts at 73.3% (n=726) against ~37%. It is `editable` — added
+  once a drug looks promising — so as a feature it may carry outcome information.
+- The sponsor table has **no `not_recorded` row**: every drug trial in the denominator has a
+  lead class, which corroborates the §0.3 restore from a second direction.
+- Market window series 22,337 / 19,802 / 13,477 at 3 / 5 / 10 years — non-increasing as
+  required. Market-only (no endpoint label) 16,696 of 22,337 (74.7%). Both-MeSH in the
+  market-eligible cohort 75.9%, with an era gradient: pre-FDAAA 83.6%, FDAAA 77.2%, Final
+  Rule 71.2%.
+
+**Negatives, clarified.** Drug-only strict headline negatives this run: **5,591** (rev 7:
+5,571). Rev 8's **7,589** is the all-interventional figure. The model trains on the drug
+population, and on 13,493 of it after §12.19, so neither figure is the events count for the
+boosting argument. §14 item 1.
+
+---
+
+## §13 — CORRECTION LEDGER, rev 9 additions
+
+| # | what was wrong | correct reading |
+| --- | --- | --- |
+| 23 | `FLAG_THIN_TRAINING` attached by an endpoint clause alone; its "later-phase" comparison is false on phase 3. | Attached only by the FDAAA sentences. |
+| 24 | The qualified clause said "this trial's primary endpoint is X" on trials that also registered an efficacy primary — 653 of 973 labelled. | Co-primary form, keyed by roll-up (§12.17). |
+| 25 | ANY roll-up refused pharmacokinetic beside unreadable text, asserting a reading of the unread endpoint. | Undeterminable with a mandatory clause (§12.18). 91 labelled moved. |
+| 26 | `RESPONSIBLE_PARTY_TYPES` held the old registry spellings, so `responsible_party_type_known` was False for every PI and sponsor-investigator trial. Nothing read it. | Canonical underscore tokens; both spellings fold. The label file's flag stays stale until the next **live** pull — **do not** re-derive with `--from-raw` (§0.3). |
+| 27 | `population.UNKNOWN == "unknown"` equals AACT's normalised `UNKNOWN` agency class, so an absent lead and an AACT-unknown lead shared one bucket in `sponsor_agreement` and the posting-bias stratifier. | `SPONSOR_NOT_RECORDED` via `lead_sponsor_bucket()`. |
+| 28 | `lead_sponsor_class_known` reads True for `unknown`/`ambig`: "known" means recognised token. Easy to misread as "the class is known". | Kept for drift detection; `classified_agency_class()` returns None for non-classes. Features use it. |
+| 29 | AACT `has_single_facility` / `number_of_facilities` count duplicate rows. | 497 misread trials; use distinct sites (§12.21). |
+| 30 | `fdaaa.REASON_DOC[phase_1_only]` claimed "the single largest source of confident NOT-APPLICABLE" (no regulated product is: 65,454 vs 31,969) and printed 16.9% (now 16.8%). | Numbers removed from the text. |
+| 31 | `audit_posting_bias.py` printed 14,368 / 221,887 / 460,569 / 63.0% as fixed prose. | Derived from the run, or replaced by a pointer to a computed column. |
+| 32 | Rev 8 §12.15: "nothing needs recomputing" read as independent agreement of two text fields. | The registered field is edited at posting (§12.22). The conclusion holds for the snapshot; its meaning changed. |
+| 33 | Rev 8 §12.13 sandbox figures (12,986 / 967 / 415). | Project machine (pre-B2): plain 8,358, clause 973, mixed 65, undeterminable 4,597, declined 424, of 14,417 labelled. The sandbox folded undeterminable and mixed into "plain". |
+| 34 | 7,589 negatives quoted as the boosting denominator. | All-interventional. Drug-only 5,591; the training population's figure is unprinted (§12.23). |
+| 35 | `studies.source_class` assumed to be the lead sponsor's class. | The submitting organisation's (§12.21). |
+| 36 | The gate's training exclusion lived in `endpoint_type`, the retrospective one in `eligibility` — two predicates for one population. | One predicate (§12.19). |
+
+---
+
+## §14 — NEXT ACTIONS, rev 9
+
+Replaces rev 8 §14. Rev 8 items 1, 2, 4 and 7 are done; item 3 only in part (below).
+
+1. **Print the strict negatives inside the 13,493** (endpoint-met eligible with
+   `endpoint_met_strict == 0`), add it to `audit_posting_bias.py` §1, then re-make or drop
+   the boosting argument on that number. Rev 7's ~9 events per variable is dead; rev 8's
+   7,589 is the wrong population.
+2. **Fix `build_endpoint_type_sample.py`**: duplicate-text collapse (rev 8 §0.1 item 5),
+   §12.9 defaults (item 6), and the stale closing print.
+3. **DrugCentral probe (rev 7 §8.1c)**: readout-to-approval lag, which confirms or kills the
+   3-year market window. The posting-bias audit's own "still missing before a model".
+   The entity file is restored and verified.
+4. **Feature-build design**, before any model: which provenances each target admits;
+   `editable_current_value` fields by name (start date, facilities, countries, expanded
+   access); label encoders by name; `classified_agency_class`; distinct facility counts;
+   both snapshot dates recorded.
+5. Optional, cheap: on the three §12.22 trials, compare version 1 with the latest and look
+   only at the primary outcome **title** — settles whether the gate's input text changes.
+6. Optional: a fresh sample stratified on the dose-finding estimand/input split (rev 8
+   §12.13). Unchanged.
+7. **The rest of rev 8 §12.13's sandbox figures are still unconfirmed** — only the
+   allowed/clause/refused split was re-run (§13 item 33). Still sandbox: false-refusal
+   against the sponsor reference (75.9% → 69.2%) and its pharmacokinetic ceiling variant;
+   all-dose-finding 881 and all-safety 3,684 trials; the 714 of 2,359 geometric-ratio
+   over-refusals. Re-run on the project machine or retire them; do not quote them.
+8. Small: the two items in §0.1.
+
+---
+
+## Lessons, 67–77
+
+67. Make an unmerged input raise. Eligibility refusing a row without the first-submitted
+    date caught a stale script on its first run; reading absence as "not excluded" would
+    have admitted 600 retrospective trials silently.
+68. Check a wording safeguard against the trial, not the class. A sentence true of every
+    safety endpoint was false for 67% of the labelled trials carrying it.
+69. A constant whose value equals a data token is a collision waiting. `UNKNOWN` was
+    `"unknown"`, which is also an AACT agency class.
+70. A drift flag only works if someone reads it. `responsible_party_type_known` had been
+    False for every PI trial since AACT changed spelling.
+71. A source's convenience fields inherit its defects. AACT's facility counts are row counts.
+72. Byte-identity between two fields can mean one overwrites the other, not that they agree.
+73. A bar nearly every stratum fails does not discriminate; find the decomposition that
+    does. Posting rate flagged 8 of 9; the cliff separated them.
+74. Two exclusion mechanisms in two modules is a denominator waiting to be computed wrong.
+75. Numbers written into printed prose rot. Derive them or delete them — one was also false.
+76. Retrospective registration is row-level provenance. No column classification can say it.
+77. Copying the files is part of the change. Three times this session a file did not land;
+    each was caught only because something failed closed — the test runner twice, an
+    eligibility raise once. Say which files changed, and make absence loud.
+
+---
+
+## File inventory, rev 9
+
+**New** — `src/trial_pos/services/aact_provenance.py`,
+`src/trial_pos/services/aact_fields.py`, `tests/test_aact_provenance.py`,
+`tests/test_aact_fields.py`, `scripts/pull_aact_fields.py`, `audit/audit_serving_flag.py`,
+`audit/probe_aact_fields.py`, `audit/audit_registration_fields.py`, `docs/Handoff_rev9.md`.
+
+**Modified** — `src/trial_pos/services/fdaaa.py` (`trial_flag`, thin-training rule, one
+reason text), `src/trial_pos/services/endpoint_type.py` (co-primary clause, B2, training
+exclusion and its decision record), `src/trial_pos/services/eligibility.py` (retrospective
+registration, gate refusal, both merges), `src/trial_pos/services/population.py`
+(responsible-party tokens, `AGENCY_NON_CLASSES`, `classified_agency_class`,
+`SPONSOR_NOT_RECORDED`, `lead_sponsor_bucket`), `scripts/audit_posting_bias.py` (both
+merges, derived prose figures), `tests/test_FDAAA.py`, `tests/test_endpoint_type.py`,
+`tests/test_eligibility.py`, `tests/test_population.py`.
+
+**Data, new on the project machine** — the four `trial_registration_*` files (§12.21).
+`data/aact/smoke/` is disposable.
+
+**Rev 8 was not in the last zip.** Check that `docs/` carries `Handoff.md` (rev 7),
+`Handoff_rev8.md` and `Handoff_rev9.md` before handing over.
+
+
+---
+---
+
+<!-- ===== Part 4: rev 8 — supplement (was: rev 8 supplement) ===== -->
+
+# Part 4: rev 8 — supplement
+
+# Handoff — rev 8 supplement
+
+**Read with rev 7, not instead of it.** Rev 7 remains the durable record for every section
+this document does not name. Where the two disagree, rev 8 wins and says so.
+
+Scope of this revision: the endpoint-type gate was unscored in rev 7 and is now scored,
+revised and partly ratified by hand labels. Four bugs in the label pipeline were found and
+fixed, three script bugs from §0.1 were closed, and one data-integrity incident destroyed
+two inputs. Expected test count **718 passed, `GATE: GREEN`**.
+
+---
+
+## §0.3 — DATA INTEGRITY INCIDENT, read this before trusting any file
+
+`--from-raw` was run to pick up a new column without checking what else that path writes.
+`results_raw_studies.csv` carries `intervention_types` but **none of the one-to-many
+aggregates** — the drug-name and MeSH columns in `ENTITY_FIELDS`, and the sponsor-class /
+responsible-party columns — because those come from separate AACT tables
+(`interventions`, `browse_conditions`, `browse_interventions`, `sponsors`,
+`responsible_parties`) that the raw dump never captured.
+
+`entity_record` found no source columns, produced 461,824 rows of blanks, and **overwrote a
+populated `trial_entities.csv`** with them. The sponsor columns in the label file went to
+`unknown` for every trial in the same run. Both losses printed as plausible findings:
+entity coverage read `0.0%` on every source and the sponsor table read `neither 461,824
+(100.0%)`, which looks like a fact about the data rather than a destroyed input.
+
+**Fixed.** `pull_aact_results.py` now fails closed: `--from-raw` detects the missing
+columns, writes nothing, and names the two ways forward. `--allow-missing-aggregates`
+re-derives the label columns only and leaves the entity file untouched. Verified against a
+172 MB copy of the real file — byte-identical before and after.
+
+**The principle, as a lesson:** a re-derive that cannot reproduce part of its output must
+not write that part. An empty file is indistinguishable from a real one to every downstream
+reader; a missing file is obvious.
+
+A live pull has since been run and both inputs are restored. **Any figure computed between
+those two runs that touched entity coverage or sponsor class is void.**
+
+---
+
+## §0.1 — SCRIPT BUGS: the three from rev 7 are closed
+
+1. **`validate_interval_rule.py` §5 caption claimed pre-fix data.** The file being read is
+   the current post-fix `trial_labels.csv`, and pre-fix labels are not recoverable from it.
+   The false caption is how the stale §3.1 breakdown survived two revisions — a reader
+   checking the number saw a plausible table under a heading that explained away its
+   disagreeing with the current one. Caption now reads "AS CURRENTLY LABELLED (post-fix)"
+   and states that this is not a before/after comparison.
+
+2. **§3.1 described the §2 design table as matched-coverage.** It is not: every validation
+   row reaches it whatever its `ci_percent`, because the design question is asked before
+   coverage is consulted. Fixed by stating the denominator in the output rather than by
+   conditioning the table, which would have silently altered figures §3.1 already quotes.
+   **§3.1's "matched coverage" wording is wrong and should be corrected in rev 7's text.**
+
+3. **Three verdict-producing flags missing from the manifest.** `ratio_scale_floor`,
+   `coverage_tolerance` and `as_of` are now in `MANIFEST_FIELDS` and written by the pull.
+   `MANIFEST_FIELDS_ADDED_LATER` names them so a script can explain why an older manifest
+   suddenly conflicts: those fields are **absent** from it, not different, so the settings
+   behind its rows are unknown rather than matching. `--force-resume` would silence the
+   message without answering the question.
+
+### New in rev 8
+
+4. **The endpoint clause is still not wired into `fdaaa.compose_flag`.** Rev 7 recorded
+   this as empty by design, blocked on a kappa clearing `GATE_KAPPA_MINIMUM`. That
+   threshold has been demoted (§12.11) and `GATING_CRITERIA` has now passed, so the
+   precondition is met. **`CLASS_GATE` was flipped on the explicit condition that a clause
+   accompanies the number, and nothing currently surfaces it to a user.** This is the most
+   urgent open item: the flips are live and the safeguard they were approved under is not.
+
+5. **`build_endpoint_type_sample.py` does not collapse duplicate endpoint text.** Its audit
+   prints `rows collapsed, same outcome twice : 0`, which cannot be true —
+   `build_confirm_sample.py` skips 14,252 exact text repeats on the same corpus. It is
+   almost certainly collapsing on `(nct_id, design_outcome_index)`, which is unique by
+   construction and therefore never collapses anything. **Its §2 per-class counts are
+   inflated by roughly 3% and should not be quoted.** Third instance of this bug family.
+
+6. **`build_endpoint_type_sample.py` predates §12.9's settled decisions.** Defaults are 5
+   phase groups, 200 rows, 40 duplicates against §12.9's 3, ~100 and 12. See §12.12 on why
+   none of those sizes produce a per-stratum verdict anyway.
+
+---
+
+## §12.10 — THE GATE IS SCORED. Results, and which are authoritative
+
+Two hand-labelling exercises were run, blind, by the project owner. **These are the only
+authoritative figures in this section.** Everything in §12.13 marked *sandbox* is a
+diagnostic computed off-machine and must be re-run before it enters the record.
+
+### The six-class carving is RATIFIED (25 endpoints, blind, `scheme_sheet.csv`)
+
+The labeller was asked to name, in their own words, what kind of thing each endpoint is —
+no vocabulary offered, because the existence of a natural vocabulary was the thing under
+test. They reproduced **five of the six classes unprompted**: "pharmacokinetic
+measurement" / "pk measurement" eight times, "max tolerated dose, phase I endpoint" four
+times, "safety measurement" five times, plus efficacy and bioequivalence.
+
+§12.7 says no automated reference can reach this question, because if the carving is wrong
+every automated reference agrees with the rule and reports a clean result. It came back
+clean. **The scheme survives and this question is closed.**
+
+### The class-to-gate MAPPING failed, for exactly two classes
+
+| class | gate at rev 7 | hand answer |
+| --- | --- | --- |
+| pharmacokinetic | refuse | no × 8 — correct |
+| efficacy_shaped | allow | yes × 3 — correct |
+| bioequivalence | allow | yes × 2, unclear × 1 — correct |
+| other | allow (undeterminable) | yes × 2, unclear × 1 — correct |
+| **dose_finding** | **refuse** | **yes × 3 — WRONG** |
+| **safety_tolerability** | **refuse** | **yes × 4**, no × 1 — **WRONG** |
+
+Binary collapse: raw 0.696, kappa 0.439, and **7 over-refusals against 0 under-refusals** —
+entirely one-directional, which §12.5 disqualifies at any kappa.
+
+### The confirming sample (86 presentations / 80 fresh endpoints, `confirm_sheet.csv`)
+
+Drawn after the bars were pre-registered, excluding by `nct_id` every trial seen in the
+ratification. Both mappings scored on the identical rows.
+
+| mapping | n | raw | kappa | allowance precision | false-refusal share | over | under |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| shipped | 74 | 0.284 | 0.053 | 100.0% | **84.1%** | 53 | 0 |
+| candidate | 74 | 0.959 | 0.834 | 98.4% | **18.2%** | 2 | 1 |
+
+Per class: dose_finding 25/26 have an answer, safety 26/28, pharmacokinetic 2/17,
+efficacy_shaped 11/15. Both **tested** classes cleared `MIN_STRATUM_FOR_VERDICT`; the two
+controls did not and carry no verdict of their own. Self-consistency **7/7** repeated pairs.
+
+**Shipped fails on false-refusal. Candidate passes both bars.**
+
+### What was applied
+
+`CLASS_GATE` now reads:
+
+```
+bioequivalence       applicable
+dose_finding         applicable   <- flipped, QUALIFIED
+pharmacokinetic      not_applicable
+safety_tolerability  applicable   <- flipped, QUALIFIED
+efficacy_shaped      applicable
+other                undeterminable
+```
+
+**Pharmacokinetic is the only refusing class.** It survived on replication: answerless 8 of
+8 in the ratification and 15 of 17 in the confirming sample, on disjoint endpoints. That is
+the strongest single finding in the exercise.
+
+---
+
+## §12.11 — THE DECISION BAR CHANGED, and why that is not rationalisation
+
+`GATE_KAPPA_MINIMUM = 0.60` is **demoted from gating threshold to reported diagnostic.**
+The value is unchanged and pinned by a test.
+
+The ratification scored 0.439 against it. **That is not the reason.** The reason is that
+0.60 was never connected to anything that ships: nobody has shown a gate at kappa 0.60
+produces a better model than one at 0.45, or than no gate at all. The number was chosen as
+a plausible agreement level before any class prevalence was known. The argument does not
+depend on which way the figure came out — it would hold identically at 0.85, which is what
+distinguishes demoting a threshold from lowering one.
+
+What gates instead, both pre-registered before the confirming sample was drawn:
+
+```
+MIN_ALLOWANCE_PRECISION = 0.90
+MAX_FALSE_REFUSAL_SHARE = 0.25
+GATING_CRITERIA = ("allowance_precision", "false_refusal_share")
+```
+
+**Two asymmetric criteria, not one symmetric kappa, and not their average.** A false
+allowance puts a success probability on a trial for which "success" has no defined meaning
+— an authoritative-looking number nothing downstream can detect. A false refusal withholds
+an answer that existed, which costs coverage and is at least visible. So allowance
+precision carries the tighter bar. Kappa cannot express this; averaging the two would
+discard the asymmetry that motivated having two.
+
+The values were chosen to **discriminate** rather than to be passed: on the ratification
+rows the shipped mapping scores allowance precision 1.00 (passes) and false-refusal 0.47
+(fails), the candidate roughly 0.93 and 0.00 (passes both). A bar both clear, or neither,
+is not a test. They **cannot be optimised** — there is no outcome to optimise against,
+which is the same reason kappa was demoted. A sweep after labelling is a diagnostic only.
+
+### The downstream test, pre-registered while no model exists
+
+```
+TRAINING_EXCLUSION_PREDICTED_DIRECTION = "improve"
+TRAINING_EXCLUSION_MIN_EFFECT = None        # not yet decidable
+SERVING_GATE_HAS_NO_OUTCOME_REFERENCE = True
+```
+
+Train with gate-refused trials included, train with them excluded, compare held-out
+performance. If "did this trial meet its primary endpoint" is close to meaningless for an
+MTD trial, that label is close to noise and including it should measurably hurt. If the two
+models are indistinguishable, the gate is not earning its complexity on the training side,
+and that is a finding.
+
+The effect size is `None`, not a placeholder: unknown is not zero, and 0.0 would read as
+"no improvement required" rather than "not yet decidable". **Set it before running the
+comparison, not after.**
+
+**The serving half can never be tested this way.** If a trial's primary endpoint is a
+maximum tolerated dose there is no ground truth for "did it meet its endpoint", so whether
+refusing to score it was right cannot be checked against what happened. For that half human
+judgment is not a stopgap — it is the only possible reference, permanently.
+
+---
+
+## §12.12 — THE QUALIFIED FLIP, and why 50 hand labels were enough
+
+The flips are **applicable with a mandatory clause**, not bare applicable. Amended before
+scoring, and the amendment makes the test harder rather than easier.
+
+The gate is binary — show a number or do not — and that is the wrong shape for what the
+labels found. A dose-escalation trial's success means a tolerable dose was identified; a
+comparative-safety trial's means the arms differed acceptably. Both are real answers and
+neither is what a user reading "68% chance of success" assumes. Silence misleads one way,
+an unqualified number the other. `CLASS_SUCCESS_MEANING` holds one sentence per qualified
+class, `requires_clause(record)` lets a caller assert it is present rather than discover it
+missing, and qualified is checked **before** mixed in `endpoint_clause` because what success
+meant serves a reader better than how many endpoints were excluded.
+
+**This is what makes 50 hand labels adequate.** A bare flip would ask those rows to license
+silently showing thousands of users a number whose meaning nobody stated. The qualified
+flip asks them to license showing a number together with its meaning — a far smaller claim.
+Given that the serving half has no possible outcome reference, reducing the cost of being
+wrong is the only available risk control.
+
+### Sample size arithmetic, which supersedes §12.9's row counts
+
+`MIN_STRATUM_FOR_VERDICT = 20`. Three phase groups × six classes is 18 strata, so **§12.9's
+indicative ~100 rows and the sampler's 200 default both clear the verdict threshold in NO
+stratum.** 18 strata above 20 needs ~360 rows. The ratification narrowed the question to two
+classes, so the confirming sample was scoped to them plus controls:
+
+```
+CONFIRM_SAMPLE_PER_TESTED_CLASS = 25      # dose_finding, safety_tolerability
+CONFIRM_SAMPLE_PER_CONTROL_CLASS = 15     # pharmacokinetic, efficacy_shaped
+```
+
+80 rows, both tested classes above the floor. It does **not** support a six-class kappa, a
+per-phase figure, or any statement about bioequivalence or other.
+
+### Phase grouping: settled
+
+**phase1 / phase2+pivotal / post_approval+unknown.** Chosen on within-stratum homogeneity —
+phase2 and pivotal are near-identical on endpoint type, and post_approval and unknown
+likewise. Pivotal remains reportable post hoc: it is 68,904 outcomes against phase2's
+94,238, so roughly 42% of the merged stratum's rows land there by construction.
+
+---
+
+## §12.13 — SANDBOX DIAGNOSTICS, not yet re-run on the project machine
+
+Every figure in this subsection was computed off-machine. **Do not quote them without a
+confirming run.**
+
+- Baseline false-refusal against the sponsor reference fell **75.9% → 69.2%** from the
+  flips alone. The `pharmacokinetic_applicable` ceiling variant drives over-refusal to 0
+  and under-refusal to 819, which confirms pharmacokinetic should keep refusing.
+- Of 14,368 headline-labelled drug trials: 12,986 allowed plain (90.4%), **967 allowed with
+  a clause (6.7%)**, **415 refused yet labelled (2.9%)**.
+- Trials whose every posted primary is dose_finding: 881, of which 874 are tier D and 7
+  headline. All-safety: 3,684, of which 3,554 tier D and 107 headline.
+- Geometric-ratio over-refusals before the reference was corrected: 714 of 2,359.
+
+### The 415 are an open incoherence
+
+Those trials carry usable labels, so they are training-eligible, and at serving time the
+gate declines to score a trial like them. **The model would learn from trials it then
+refuses to answer about.** Two defensible resolutions — exclude them from training, or treat
+a headline label as overriding the gate — and they are different claims about which signal
+is trusted. Recommendation: exclude and record why, because a label you would refuse to show
+is a label you do not trust. **Not yet decided.**
+
+### Recorded as a hypothesis, deliberately not acted on
+
+`DOSE_FINDING_SPLIT_UNTESTED` — the dose-finding class conflates two things:
+
+- **the estimand**: "Maximum tolerated dose (MTD)", "Recommended phase 2 dose". The trial
+  set out to produce a dose and either did or hit the stopping rule where every dose is too
+  toxic. Pass/fail exists.
+- **the input**: "Number of participants with a Dose Limiting Toxicity". The measurement
+  that *locates* the dose. The phase 1 target DLT rate is conventionally 20–33%, so zero
+  DLTs is not success (escalation stopped too low) and 60% is not drug failure (that dose is
+  above the MTD). There is no direction in which a DLT count is "met".
+
+The labeller answered yes to 9 of 10 input-type rows, which on their own stated criterion is
+arguably wrong. **Not acted on: the split was derived from the same 10 rows that would test
+it.** A fresh sample stratified on the distinction would settle it. The qualified clause is
+accurate for both halves, so the flip is robust to the split being real — which a bare flip
+would not have been.
+
+---
+
+## §12.14 — THE SPONSOR-ANALYSIS REFERENCE: built, and its bias is now known
+
+`services/sponsor_threshold.py` derives a tri-state sponsor verdict from the tier
+machinery per §12.9 decision 3, with 100 tests. It is independent of the **keyword rule**
+and not of the label pipeline, and never validates the label machinery.
+
+**It has a systematic bias that the hand labels exposed, and this bounds every figure
+computed from it.** The reference reads a posted p-value as "this endpoint was
+threshold-tested". For pharmacokinetic endpoints that inference is wrong — a sponsor can
+test whether exposure differs between arms without exposure being a success criterion. The
+reference named pharmacokinetic the largest over-refusal class; the hand labels called that
+mapping correct 8 of 8 and then 15 of 17. **The reference therefore overstates over-refusal
+in a known direction and cannot be the decision bar.** `HAND_ANSWER_TO_VERDICT` maps hand
+labels into the same three-state vocabulary so both references run through the same scoring
+code, and the module states that where they disagree the hand label governs.
+
+### Two denominators, and why the gating one is the refusals
+
+`false_refusal_share` divides by the refusals; `over_refusal_rate` divides by every decided
+unit. The second falls whenever the rule refuses **less often** — a rule refusing nothing
+scores a perfect 0.0 on it while gating nothing at all. §12.9 decision 4 asks whether the
+refusing classes are drawn wrongly, which is a question about the refusals, so the
+denominator is the refusals. `test_a_rule_that_refuses_less_scores_better_on_the_pooled_rate_only`
+pins the argument.
+
+---
+
+## §12.15 — REGISTERED vs POSTED TEXT: §12.2's blocker does not exist
+
+`design_outcomes.measure` and `outcomes.title` are **byte-identical on all 17,859
+overlapping drug trials** — identical class sets, identical text sets, 2.10 primaries per
+trial on both sides. `audit/audit_text_sources.py`, project machine.
+
+So §12.2's warning — that a gate validated on results-side titles could not be deployed
+against registered text — is empirically void wherever both fields exist. **Every
+endpoint-type figure computed on posted titles is already the registered-text figure, and
+nothing needs recomputing.**
+
+Two caveats. First, it cannot be determined from AACT whether the fields match because
+ClinicalTrials.gov stores one text or because AACT derives one from the other; the practical
+conclusion is the same but the confidence differs, and a manual spot-check of three NCT ids
+against the registry would settle it. Second, the registered field covers 216,197 drug
+trials against 53,309 that posted — the ~163,000 that never posted are where the gate does
+nearly all its work, are unreachable by any sponsor reference, and are why the hand labels
+were necessary.
+
+`design_outcomes.measure` max length is 255 characters, which is a `varchar` boundary rather
+than a natural maximum; **61 of 932,714 rows (0.007%) sit at it**, so truncation is not a
+material concern.
+
+---
+
+## §13 — CORRECTION LEDGER, rev 8 additions
+
+| # | what was wrong | correct reading |
+| --- | --- | --- |
+| 15 | Geometric mean ratios produced **inverted labels**. `met_from_ci` tests exclusion of 1; a successful bioequivalence or equivalence study's interval *contains* 1. Reading containment as exclusion errs **both** ways, so interval position carries no information about which error was made. | New refusal `geometric_ratio_equivalence` → tier E, keyed on the statistic's **name**, not the interval. **Zero** geometric-ratio rows now reach tier C. Project machine: 2,190 analysis rows / 291 trials. |
+| 16 | `coverage_mismatch` dropped from 1,222 rows / 299 trials to **544 / 147** as a side effect of #15 — geometric ratios previously coverage-refused now refuse earlier as design-refused. Unanticipated. | Correct: coverage only matters if exclusion-of-null were the right test. The refusal's justification (error direction flipping, tighter 0.01 / looser 17.62) still holds. |
+| 17 | `percent_scaled_ratio` precedence. Most percent-scaled rows are **also** geometric ratios, so putting geometric first would have absorbed that refusal and destroyed its independent evidence base (n=296, kappa 0.000, one-directional). | Geometric sits **below** percent_scaled. The latter keeps all 1,341 rows / 226 trials unchanged. |
+| 18 | The geometric refusal shipped **with no count column**. Three call sites hardcoded the three kinds that existed, so 2,190 refused rows reported zero everywhere, visible only via `endpoint_na_reason` and only for the 212 trials where every analysis refused. | `REFUSAL_COUNT_FIELD` maps every kind to its column; `aggregate_trial`, the output columns and the accounting block all derive from it. New column `n_analyses_geometric_refused`. |
+| 19 | The same geometric correction was applied in `endpoint_label` and **not propagated** to `sponsor_threshold`, which kept reading those rows as "the sponsor threshold-tested this". | Inflated the over-refusal cell by 714 of 2,359 (sandbox). One correction became two bugs; the coupling is now pinned by a test. |
+| 20 | `CLASS_BIOEQUIVALENCE` refused at the gate. A BE study **does** have a pass/fail endpoint — containment inside 0.80–1.25. The gate was covering for a label-layer bug, at the wrong layer. | Flipped to applicable. It was also nearly inert: it caught **6 of 862** BE-shaped analysis rows, because the gate reads registered text while the analysis shape lives in posted statistics. |
+| 21 | §13's 152 phase-3 all-PK headline trials. | Recomputes to **60** on `PHASE3` exactly and **63** on the pivotal group with these patterns. A difference between two rules, not a bug in either — which is §13's own point. **Do not reconcile by adjusting a pattern.** |
+| 22 | `pull_design_outcomes.py` died on `can't use a named cursor outside of transactions`. A server-side cursor needs a transaction; that script sets `autocommit=True` while `pull_aact_results.py` does not — which is why one pull worked and the other never had. | Autocommit toggled off around the stream and restored in a `finally`, rather than dropped from the connection, so a long chunked pull does not hold a snapshot on a shared read-only server. |
+
+---
+
+## §14 — NEXT ACTIONS, rev 8
+
+Ordered. Items 1–3 are small and unblock the rest.
+
+1. **Wire the endpoint clause into `fdaaa.compose_flag`.** §0.1 item 4. The flips are live
+   and the safeguard they were approved under is not. Highest priority.
+2. **Settle the 415 trials** the gate refuses that carry headline labels. A decision, not a
+   build. Recommendation in §12.13.
+3. **Re-run the sandbox diagnostics in §12.13** on the project machine so they can enter
+   the record.
+4. **Extra AACT fields**, with per-column provenance marking — *knowable at registration*
+   versus *post-hoc*. `designs`, `eligibilities`, `sponsors` class and `browse_*` are
+   registration-time and safe; `calculated_values` is mixed and `actual_duration` is
+   **leakage** (a trial stopped for futility has a short duration, so duration encodes
+   failure). Pull liberally, gate at feature-build time, and record provenance per column or
+   every extra field is a liability nobody downstream can assess. This is also how §R7
+   becomes an assertion rather than a printed reminder. **A read-only cardinality probe
+   first** — a one-to-many join that silently multiplies rows is invisible until a count is
+   wrong three steps downstream.
+5. **Fix `build_endpoint_type_sample.py`** — the duplicate-text collapse (§0.1 item 5) and
+   the §12.9 defaults (item 6).
+6. **DrugCentral probe (§8.1c)**, which delivers the readout-to-approval lag distribution
+   that confirms or kills the 3-year market window — currently an assumption holding up a
+   whole target. Needs the restored entity file.
+7. **Posting-bias audit (Step 6.3).** Unchanged from rev 7, and still before any modelling.
+8. **Optionally: a fresh sample stratified on the dose-finding estimand/input split**
+   (§12.13), which is the one open endpoint-type question.
+
+The negative-class recount is worth re-reading before item 7: **7,589 strict headline
+negatives** against ~40 features. Rev 7's argument against boosting rested on ~369
+negatives and ~9 events per variable. **That argument is dead on its own terms** and must be
+re-made on other grounds or dropped.
+
+---
+
+## Lessons, 54–66
+
+54. A re-derive that cannot reproduce part of its output must not write that part. An empty
+    file is indistinguishable from a real one downstream; a missing file is obvious.
+55. Two scripts with the same code pattern can differ by one connection flag, and reading
+    either alone tells you nothing. The named-cursor bug was invisible in both files.
+56. A stop rule's denominator decides what it can detect. Dividing a cell by every decided
+    unit rewards a rule that acts less often rather than one that acts more accurately.
+57. A refusal added without a count column is a refusal that vanishes. Derive the columns
+    from the kind vocabulary so a new kind cannot be added without one.
+58. A correction applied in one module and not its sibling becomes two bugs. Pin the
+    coupling with a test that iterates the vocabulary.
+59. A boolean one-sidedness flag cannot see an 8:1 imbalance. Report the ratio beside the
+    flag rather than replacing an established convention.
+60. A negative result from a diagnostic fitted to its own reference is trustworthy; a
+    positive one is not. Attribution is the sound reading, confirmation is not.
+61. `str.replace` without an assertion is a silent no-op. Twice this revision, once shipping
+    a `NameError` as two failing tests.
+62. Appending joined rows per row instead of keying on the entity's id duplicates every
+    multi-child entity. It produced a spurious 100.0% agreement across 17,859 trials, and a
+    perfect diagonal was the symptom rather than the result. Three instances this revision.
+63. Demoting a threshold on the argument that it was never linked to the outcome is a
+    different act from lowering it because the rule failed it. The test is whether the
+    argument would hold had the number come out the other way.
+64. When a measurement can only be taken on a selected 4% of a population, the figure is
+    the error rate *where measurable* and not the error rate. Say which.
+65. A diagnostic variant that becomes identical to its baseline must be retired, not kept.
+    A measurement that cannot come back different is not a measurement.
+66. Where a gate's behaviour can never be validated against outcomes, reducing the cost of
+    being wrong is the only available risk control — which is why a qualified allowance
+    needs far less evidence than a bare one.
+
+---
+
+## File inventory, rev 8
+
+**New** — `src/trial_pos/services/sponsor_threshold.py`,
+`src/trial_pos/services/scheme_probe.py`, `tests/test_sponsor_threshold.py`,
+`tests/test_scheme_probe.py`, `scripts/build_scheme_sheet.py`,
+`scripts/build_confirm_sample.py`, `audit/falsify_endpoint_type.py`,
+`audit/probe_scheme_repairs.py`, `audit/probe_be_inversion.py`,
+`audit/audit_text_sources.py`.
+
+**Modified** — `src/trial_pos/services/endpoint_label.py` (geometric refusal, refusal count
+fields), `src/trial_pos/services/endpoint_type.py` (flips, qualified clause,
+pre-registration), `src/trial_pos/services/resume.py` (manifest fields),
+`scripts/pull_aact_results.py` (manifest, refusal columns, from-raw guard),
+`scripts/pull_design_outcomes.py` (cursor fix), `scripts/validate_interval_rule.py`
+(captions), `tests/test_endpoint_label.py`, `tests/test_endpoint_type.py`,
+`tests/test_resume.py`.
+
+**`audit/` is a new folder** for scratch diagnostics and probes. The older `audit_*.py`,
+`validate_*.py`, `probe_ctgov.py` and `inspect_data_dir.py` remain in `scripts/` because
+rev 7 names them by path; moving them needs a matching text edit.
+
+`scripts/score_endpoint_type.py` was never written and is **no longer needed** —
+`build_confirm_sample.py --score` enforces `GATING_CRITERIA` against hand labels, which is
+what the 0.60 kappa gate was supposed to do and could not.
+
+
+---
+---
+
+<!-- ===== Part 5: rev 7 — the base handoff (was: Handoff.md) ===== -->
+
+# Part 5: rev 7 — the base handoff
+
 # Handoff: clinical-trial success predictor — rev 7
 
 Supersedes rev 6. Rev 6's structure and arguments stand; what changed is that **eleven

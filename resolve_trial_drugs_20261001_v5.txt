@@ -1,0 +1,1718 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  aact data\aact | drugcentral data\drugcentral | drugs@fda data\drugsatfda | out data\labels | show 25 | per route 12 | mesh token 'mesh-list'
+
+==============================================================================
+INPUTS
+==============================================================================
+  drug trials in trial_labels.csv: 222329
+  drug trials with interventions 222329, arms 205024, links 204999, other names 97870, indexed MeSH 171120
+  intervention MeSH rows by mesh_type: {'mesh-ancestor': 1483943, 'mesh-list': 336682}
+  dc synonyms             rows    23875
+  dc structures           rows     5116
+  dc struct2parent        rows      361
+  dc ob_product           rows    55242
+  dc struct2obprod        rows    77694
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+
+==============================================================================
+DICTIONARY
+==============================================================================
+  abbreviation-length key not looked up                               6
+  fda_brand: entries added                                        51025
+  fda_brand: skipped, blank name or no drug                          13
+  fda_ingredient: entries added                                   51025
+  fda_ingredient: skipped, blank name or no drug                     13
+  fda_product linked by: ingredient_name                           2866
+  fda_product linked by: ob_application                             271
+  fda_product linked by: ob_product                               47901
+  fda_product linked by: unlinked                                   828
+  fda_product: application absent from Applications                  11
+  known source error removed: bemiparin from 'dalteparin sodium'       25
+  known source error removed: bemiparin from 'fragmin'               24
+  known source error removed: diroximel fumarate from 'bafiertam'        2
+  known source error removed: diroximel fumarate from 'monomethyl fumarate'        2
+  ob_ingredient: entries added                                    55229
+  ob_ingredient: skipped, blank name or no drug                      13
+  ob_trade: entries added                                         55229
+  ob_trade: skipped, blank name or no drug                           13
+  salt-stripped key skipped: alkyl fragment                          70
+  salt-stripped key skipped: bare element                           111
+  salt-stripped keys indexed                                       2191
+  structure: entries added                                         5116
+  synonym: entries added                                          23741
+  synonym: row without a drug id, dropped                           133
+  synonym: skipped, blank name or no drug                             1
+
+==============================================================================
+TESTED-AGENT SELECTION (drug trials)
+==============================================================================
+  outcome                                                trials         early       pivotal post_approval       unknown
+  arm_rule                                               162520        100405         30663         18273         13179
+  no_arms_fallback                                        17300          9075          4111          2278          1836
+  no_drug_intervention                                        0             0             0             0             0
+  no_drug_intervention_linked_to_an_arm                      26            12             3             9             2
+  no_experimental_arm_and_some_arms_untyped                   0             0             0             0             0
+  no_experimental_arm                                     30212         10306          5515          8270          6121
+  every_experimental_drug_also_in_a_comparator_arm         9958          3847          2329          1770          2012
+  experimental_arms_carry_no_drug                          2103           444           386           314           959
+  every_candidate_is_a_placebo                              210            70            51            40            49
+  placebo-type interventions dropped from candidates: 5266
+
+==============================================================================
+AGENT STATUS (tested agents)
+==============================================================================
+  resolved               150379  53.0%
+  partial                  9531  3.4%
+  ambiguous                  72  0.0%
+  unresolved             123574  43.6%
+
+  matching agents by (name kind, how, step):
+    intervention_name  whole_name   exact                                      109902
+    intervention_name  whole_name   no_dose_or_form                             12994
+    intervention_name  components   exact                                       10206
+    other_name         whole_name   exact                                        6706
+    intervention_name  whole_name   no_parentheticals                            5916
+    intervention_name  whole_name   compact                                      2757
+    intervention_name  comma_components exact                                        1809
+    intervention_name  whole_name   parenthetical_content                        1709
+    intervention_name  whole_name   dictionary_no_salt                           1181
+    other_name         whole_name   compact                                       893
+    other_name         components   exact                                         871
+    other_name         whole_name   no_dose_or_form                               697
+    intervention_name  components   no_dose_or_form                               519
+    other_name         comma_components exact                                         508
+    intervention_name  components   compact                                       433
+    intervention_name  components   exact+no_dose_or_form                         375
+    other_name         whole_name   no_parentheticals                             296
+    intervention_name  components   no_parentheticals                             271
+    intervention_name  components   exact+no_parentheticals                       234
+    intervention_name  components   compact+exact                                 216
+    intervention_name  whole_name   no_salt                                       211
+    other_name         whole_name   parenthetical_content                         176
+    intervention_name  comma_components compact+exact                                 125
+    intervention_name  comma_components no_dose_or_form                               113
+    intervention_name  components   dictionary_no_salt+exact                       67
+    intervention_name  comma_components compact                                        64
+    intervention_name  comma_components dictionary_no_salt+exact                       51
+    other_name         components   compact                                        46
+    other_name         components   compact+exact                                  42
+    other_name         components   no_dose_or_form                                39
+    intervention_name  comma_components exact+no_dose_or_form                          38
+    other_name         comma_components compact+exact                                  35
+    other_name         components   exact+no_dose_or_form                          35
+    intervention_name  comma_components no_parentheticals                              34
+    intervention_name  comma_components exact+no_parentheticals                        33
+    other_name         comma_components compact                                        29
+    intervention_name  components   dictionary_no_salt                             25
+    other_name         whole_name   no_salt                                        22
+    other_name         components   no_parentheticals                              21
+    other_name         whole_name   dictionary_no_salt                             20
+    other_name         comma_components exact+no_dose_or_form                          19
+    other_name         components   exact+no_parentheticals                        18
+    intervention_name  components   exact+no_biosimilar_suffix                     16
+    other_name         comma_components no_dose_or_form                                16
+    intervention_name  components   no_dose_or_form+no_parentheticals              15
+    intervention_name  components   no_salt                                        11
+    intervention_name  components   compact+no_parentheticals                       9
+    intervention_name  components   exact+no_salt                                   9
+    other_name         comma_components no_parentheticals                               9
+    other_name         comma_components dictionary_no_salt+exact                        6
+    other_name         comma_components exact+no_parentheticals                         6
+    intervention_name  components   compact+no_dose_or_form                         5
+    other_name         components   exact+no_salt                                   5
+    intervention_name  comma_components exact+no_salt                                   4
+    other_name         components   dictionary_no_salt+exact                        4
+    other_name         comma_components compact+no_dose_or_form                         3
+    other_name         components   dictionary_no_salt                              3
+    other_name         components   exact+no_biosimilar_suffix                      3
+    intervention_name  comma_components compact+exact+no_dose_or_form                   2
+    intervention_name  comma_components compact+no_dose_or_form                         2
+    intervention_name  comma_components compact+no_parentheticals                       2
+    intervention_name  comma_components no_salt                                         2
+    intervention_name  components   compact+exact+no_dose_or_form                   2
+    intervention_name  components   dictionary_no_salt+no_parentheticals            2
+    intervention_name  components   exact+no_dose_or_form+no_parentheticals         2
+    intervention_name  whole_name   no_biosimilar_suffix                            2
+    other_name         components   no_salt                                         2
+    intervention_name  comma_components dictionary_no_salt+exact+no_parentheticals        1
+    intervention_name  components   compact+dictionary_no_salt                      1
+    intervention_name  components   compact+exact+no_parentheticals                 1
+    intervention_name  components   no_biosimilar_suffix                            1
+    intervention_name  components   no_dose_or_form+no_salt                         1
+    other_name         comma_components dictionary_no_salt+exact+no_dose_or_form        1
+    other_name         comma_components dictionary_no_salt+exact+no_parentheticals        1
+    other_name         components   compact+no_parentheticals                       1
+    other_name         components   compact+no_salt                                 1
+    other_name         components   no_biosimilar_suffix                            1
+    other_name         components   no_dose_or_form+no_parentheticals               1
+    other_name         whole_name   no_biosimilar_suffix                            1
+
+  matching agents by deciding source:
+    synonym                                    153390
+    ob_trade                                     3718
+    drugcentral_salt_stripped                    1229
+    ob_ingredient                                 640
+    fda_brand                                     372
+    ob_trade+synonym                              234
+    fda_ingredient                                154
+    drugcentral_salt_stripped+synonym             133
+    ob_ingredient+synonym                          18
+    fda_brand+synonym                              15
+    fda_brand+ob_trade                              2
+    fda_ingredient+synonym                          2
+    drugcentral_salt_stripped+ob_trade+synonym        1
+    fda_brand+ob_trade+synonym                      1
+    ob_ingredient+ob_trade                          1
+
+==============================================================================
+FORM (D-12 to D-15): how each match treated the form its name states
+==============================================================================
+  no_form_stated             141180  88.3%   the name used states no salt and no formulation or route
+  stated_form_kept             9987  6.2%   every stated salt and formulation word is in the dictionary entry matched
+  stated_form_stripped         7381  4.6%   matching removed a stated salt or formulation word to find the moiety
+  salt_inferred                1362  0.9%   the name states no salt; the dictionary-side salt step matched the only salt DrugCentral holds
+
+  agents stating more than one salt across their names: 411
+  formulation/route classes stated (agents; an agent may state several):
+    oral                         3665
+    intravenous                  3423
+    topical                      2976
+    extended_release             2464
+    inhalation                   1263
+    liposomal                    1074
+    ophthalmic                   1006
+    subcutaneous                  839
+    nasal                         762
+    transdermal                   739
+    delayed_release               276
+    intramuscular                 266
+    vaginal                       253
+    implant                       198
+    sublingual                    196
+    intrathecal                   190
+    intravitreal                  189
+    modified_release              108
+    orally_disintegrating          99
+    rectal                         79
+    buccal                         64
+    lipid_complex                   2
+
+  trials whose tested moiety is also a comparator moiety: 5501; not 80476; cannot tell 136352
+    by phase class: {'early': 2174, 'pivotal': 1723, 'post_approval': 1117, 'unknown': 487}
+
+==============================================================================
+POPULATION-LEVEL RATE: trials with at least one tested agent resolved
+==============================================================================
+  all drug trials                          matched  103058 of determinable  179820 (57.3%); of all  222329 (46.4%)
+  pivotal drug trials                      matched   21765 of determinable   34774 (62.6%); of all   43058 (50.5%)
+  route arm_rule                           matched   91188 of determinable  162520 (56.1%); of all  162520 (56.1%)
+  route no_arms_fallback                   matched   11870 of determinable   17300 (68.6%); of all   17300 (68.6%)
+
+  matched trials with indexed MeSH: corroborated 94162, not 5448 (94.5% corroborated)
+  unmatched trials whose indexed MeSH names a drug: 10528  (MeSH never creates a match)
+
+  literature, for context only (different denominators, DrugBank not DrugCentral):
+    [1] Miftahutdinov 2021, intervention mentions mapped to DrugBank   69.6%
+    [1] Miftahutdinov 2021, intervention mentions covered by MeSH      66.6%
+    [2] Vasan 2023, drug trials matched on exact name                  70.6%
+    [2] Vasan 2023, drug trials matched after every step incl. fuzzy   87.6%
+
+==============================================================================
+ROUTE REVIEW: top 12 name -> drug pairs per route (plain exact whole-name matches omitted)
+==============================================================================
+
+  intervention_name / whole_name / no_dose_or_form / synonym: 12730 agents
+        93  liposomal bupivacaine  ->  bupivacaine
+        66  nicotine patch  ->  nicotine
+        52  empagliflozin 10 mg  ->  empagliflozin
+        41  paliperidone er  ->  paliperidone
+        33  dapagliflozin 10mg tab  ->  dapagliflozin
+        31  iv acetaminophen  ->  paracetamol
+        31  oxytocin nasal spray  ->  oxytocin
+        29  ropivacaine injection  ->  ropivacaine
+        28  empagliflozin 25 mg  ->  empagliflozin
+        27  dapagliflozin 10 mg  ->  dapagliflozin
+        27  letrozole 2.5mg  ->  letrozole
+        27  unfractionated heparin  ->  heparin
+
+  intervention_name / components / exact / synonym: 10068 agents
+        37  insulin degludec/insulin aspart  ->  insulin aspart + insulin degludec
+        34  buprenorphine/naloxone  ->  buprenorphine + naloxone
+        22  budesonide/formoterol  ->  budesonide + formoterol
+        20  decitabine and cedazuridine  ->  cedazuridine + decitabine
+        14  cisplatin or carboplatin  ->  carboplatin + cisplatin
+        14  torcetrapib/atorvastatin  ->  atorvastatin
+        13  gemcitabine and cisplatin  ->  cisplatin + gemcitabine
+        12  fluticasone propionate/salmeterol  ->  fluticasone propionate + salmeterol
+        12  pf-07321332/ritonavir  ->  nirmatrelvir + ritonavir
+        12  tiotropium + olodaterol  ->  olodaterol + tiotropium bromide
+        12  trifluridine and tipiracil hydrochloride  ->  tipiracil + trifluridine
+        11  ceftolozane/tazobactam  ->  ceftolozane + tazobactam
+
+  intervention_name / whole_name / no_parentheticals / synonym: 5705 agents
+        54  bevacizumab [avastin]  ->  bevacizumab
+        53  tocilizumab [roactemra/actemra]  ->  tocilizumab
+        47  peginterferon alfa-2a [pegasys]  ->  peginterferon alfa-2a
+        45  rivaroxaban (xarelto, bay59-7939)  ->  rivaroxaban
+        41  ribavirin (rbv)  ->  ribavirin
+        37  levitra (vardenafil, bay38-9456)  ->  vardenafil
+        36  mycophenolate mofetil (mmf)  ->  mycophenolate mofetil
+        34  sorafenib (nexavar, bay43-9006)  ->  sorafenib
+        32  capecitabine [xeloda]  ->  capecitabine
+        32  methoxy polyethylene glycol-epoetin beta [mircera]  ->  methoxy polyethylene glycol-epoetin beta
+        31  5-fluorouracil (5-fu)  ->  fluorouracil
+        31  rituximab [mabthera/rituxan]  ->  rituximab
+
+  intervention_name / comma_components / exact / synonym: 1776 agents
+        10  mk0653, ezetimibe  ->  ezetimibe
+         8  gemcitabine, cisplatin  ->  cisplatin + gemcitabine
+         8  vandetanib, selumetinib  ->  selumetinib + vandetanib
+         7  mk0966, rofecoxib  ->  rofecoxib
+         6  filgrastim, granulocyte-colony stimulating factor (g-csf); subcutaneous  ->  filgrastim
+         6  mk0869, aprepitant  ->  aprepitant
+         5  oxaliplatin, capecitabine  ->  capecitabine + oxaliplatin
+         5  paclitaxel, carboplatin  ->  carboplatin + paclitaxel
+         5  paclitaxel, cisplatin  ->  cisplatin + paclitaxel
+         4  bedaquiline, pretomanid and tbd09  ->  bedaquiline + pretomanid
+         4  ckd-501, d745, d150  ->  lobeglitazone
+         4  docetaxel, cisplatin  ->  cisplatin + docetaxel
+
+  intervention_name / whole_name / compact / synonym: 1775 agents
+       102  nab paclitaxel  ->  paclitaxel
+        99  cp-690,550  ->  tofacitinib
+        48  n-acetyl cysteine  ->  acetylcysteine
+        44  tmc435  ->  simeprevir
+        38  bibw 2992  ->  afatinib
+        27  byl719  ->  alpelisib
+        22  astx727  ->  cedazuridine
+        21  su011248  ->  sunitinib
+        20  gsk1349572  ->  dolutegravir
+        16  5fluorouracil  ->  fluorouracil
+        16  fty720  ->  fingolimod
+        15  cp-675,206  ->  tremelimumab
+
+  intervention_name / whole_name / parenthetical_content / synonym: 1489 agents
+        15  pembrolizumab injection [keytruda]  ->  pembrolizumab
+        12  nivolumab injection [opdivo]  ->  nivolumab
+        11  alirocumab sar236553 (regn727)  ->  alirocumab
+        11  mra(tocilizumab)  ->  tocilizumab
+        10  dexmedetomidine injection [precedex]  ->  dexmedetomidine
+        10  ku-0059436 (azd2281)(parp inhibitor)  ->  olaparib
+         8  atezolizumab (mpdl3280a), an engineered anti-pd-l1 antibody  ->  atezolizumab
+         7  aflibercept injection [eylea]  ->  aflibercept
+         7  keytruda« (pembrolizumab)  ->  pembrolizumab
+         7  sarilumab sar153191 (regn88)  ->  sarilumab
+         7  spd489 (lisdexamfetamine dimesylate)  ->  lisdexamfetamine
+         6  reformulated oxy (oxycodone hcl)  ->  oxycodone
+
+  intervention_name / whole_name / dictionary_no_salt / drugcentral_salt_stripped: 1181 agents
+       968  fludarabine  ->  fludarabine phosphate
+        56  abiraterone  ->  abiraterone acetate
+        22  valproate  ->  valproic acid
+        16  fludrocortisone  ->  fludrocortisone acetate
+        12  pregnenolone  ->  pregnenolone succinate
+        11  beclomethasone  ->  beclometasone dipropionate
+        10  fludarabine (flu)  ->  fludarabine phosphate
+         8  eravacycline  ->  eravacycline dihydrochloride
+         6  folate  ->  folic acid
+         6  mometasone  ->  mometasone furoate
+         5  clobetasol  ->  clobetasol propionate
+         3  fludarabine injection  ->  fludarabine phosphate
+
+  other_name / components / exact / synonym: 808 agents
+        19  elexacaftor/tezacaftor/ivacaftor  ->  elexacaftor + ivacaftor + tezacaftor
+         9  gs-9883/f/taf  ->  bictegravir
+         9  methotrexate/hydrocortisone/cytarabine  ->  cytarabine + hydrocortisone + methotrexate
+         6  vx-121/vx-661/ctp-656  ->  deutivacaftor + tezacaftor
+         6  xanomeline/trospium chloride  ->  trospium + xanomeline
+         5  arginine deiminase formulated with polyethylene glycol  ->  macrogol
+         5  articaine hydrochloride 40 mg/ml + epinephrine 10 \u03bcg/ml  ->  articaine
+         5  budesonide/formoterol  ->  budesonide + formoterol
+         5  chlorhexidine gluconate and isopropyl alcohol  ->  chlorhexidine + isopropanol
+         5  lumacaftor/ivacaftor  ->  ivacaftor + lumacaftor
+         5  vanzacaftor/tezacaftor/deutivacaftor  ->  deutivacaftor + tezacaftor + vanzacaftor
+         4  azd8895 + azd1061  ->  cilgavimab + tixagevimab
+
+  other_name / whole_name / no_dose_or_form / synonym: 632 agents
+        13  oral insulin  ->  insulin human
+        10  oral azacitidine  ->  azacitidine
+         9  nicotine patch  ->  nicotine
+         8  doxorubicin hcl liposomal  ->  doxorubicin
+         7  bupivacaine 0.25%  ->  bupivacaine
+         6  intravenous meloxicam  ->  meloxicam
+         6  liposomal adriamycin  ->  doxorubicin
+         6  liposomal bupivacaine  ->  bupivacaine
+         6  tlc590 (ropivacaine extended-release injectable suspension)  ->  ropivacaine
+         5  isopropyl alcohol 70%  ->  isopropanol
+         5  iv arginine  ->  arginine
+         4  adderall xr  ->  amfetamine
+
+  intervention_name / whole_name / compact / ob_ingredient: 575 agents
+        77  lopinavir/ritonavir  ->  lopinavir + ritonavir
+        38  lamivudine/zidovudine  ->  lamivudine + zidovudine
+        29  artemether-lumefantrine  ->  artemether + lumefantrine
+        17  emtricitabine/tenofovir disoproxil fumarate  ->  emtricitabine + tenofovir disoproxil
+        17  sacubitril/valsartan  ->  sacubitril + valsartan
+        15  nirmatrelvir/ritonavir  ->  nirmatrelvir + ritonavir
+        14  glecaprevir/pibrentasvir  ->  glecaprevir + pibrentasvir
+        14  sacubitril-valsartan  ->  sacubitril + valsartan
+        14  sulfamethoxazole-trimethoprim  ->  sulfamethoxazole + trimethoprim
+        13  estradiol/norethindrone acetate  ->  estradiol + norethindrone acetate
+        12  ombitasvir/paritaprevir/ritonavir  ->  ombitasvir + paritaprevir + ritonavir
+        11  ezetimibe (+) simvastatin  ->  ezetimibe + simvastatin
+
+  intervention_name / components / no_dose_or_form / synonym: 507 agents
+         4  1 tablet empagliflozin/2 tablets metformin xr  ->  empagliflozin + metformin
+         4  rocuronium dose + remifentanil infusion  ->  remifentanil + rocuronium
+         3  1 tab empagliflozin +1 tab linagliptin +2 tabs metformin xr  ->  empagliflozin + linagliptin + metformin
+         3  azvudine tablets(fnc) and dolutegravir sodium tablets (dtg)  ->  dolutegravir
+         3  azvudine tablets(fnc) and itraconazole capsules (icz)  ->  itraconazole
+         3  azvudine tablets(fnc) and rifampicin capsules (rif)  ->  rifampicin
+         3  hydroxyethyl starch 130/0.4 and sodium chloride injection  ->  sodium chloride
+         3  povidone-iodine nasal spray and gargle  ->  povidone-iodine
+         3  tmc435 hpmc or gelatin capsule  ->  gelatin
+         3  toripalimab injection(subcutaneous)/js001sc  ->  toripalimab
+         2  azd5363 when combined with weekly paclitaxel  ->  paclitaxel
+         2  azvudine tablets(fnc) and rilpivirine tablets (rpv)  ->  rilpivirine
+
+  other_name / whole_name / compact / synonym: 503 agents
+        31  vx-770  ->  ivacaftor
+        14  keytruda«  ->  pembrolizumab
+        12  abi 007  ->  paclitaxel
+        12  pegasys«  ->  peginterferon alfa-2a
+        12  vbp15  ->  vamorolone
+         9  abl001  ->  asciminib
+         8  kl4surfactant  ->  lucinactant
+         7  gallium ga 68 psma-11  ->  gallium (68Ga) gozetotide
+         7  hpth(1-34)  ->  teriparatide
+         7  jascayd«  ->  nerandomilast
+         7  sovaldi«  ->  sofosbuvir
+         6  5fu  ->  fluorouracil
+
+  intervention_name / components / compact / synonym: 414 agents
+         6  pembrolizumab (+) berahyaluronidase alfa  ->  berahyaluronidase alfa + pembrolizumab
+         5  niacin (+) laropiprant  ->  laropiprant + nicotinic acid
+         5  tmc114/rtv  ->  darunavir
+         4  hr011408 injection; novorapid«  ->  insulin aspart
+         4  losartan potassium (+) hydrochlorothiazide  ->  hydrochlorothiazide + losartan
+         4  mk0653a, ezetimibe (+) simvastatin  ->  simvastatin
+         3  capox (oxaliplatin/capecitabine)  ->  capecitabine
+         3  fluoropyrimidine (capecitabine or 5-fluorouracil)  ->  fluorouracil
+         3  mfolfox6 (oxaliplatin, calcium folinate, and 5-fu)  ->  fluorouracil
+         3  platinum (cisplatin or carboplatin)  ->  carboplatin
+         3  q8003 (morphine sulfate and oxycodone hydrochloride)  ->  oxycodone
+         3  simvastatin (+) ezetimibe  ->  ezetimibe + simvastatin
+
+  other_name / comma_components / exact / synonym: 405 agents
+         7  prasterone, dehydroepiandrosterone  ->  prasterone
+         6  js001, tab001  ->  toripalimab
+         6  lisdexamfetamine dimesylate, ldx, vyvanse  ->  lisdexamfetamine
+         4  cannabidiol, cbd  ->  cannabidiol
+         3  aldesleukin, proleukin, recombinant human interleukin 2  ->  aldesleukin
+         3  capecitabine, oxaliplatin  ->  capecitabine + oxaliplatin
+         3  cyclophosphamide, doxorubicin, vincristine, prednisone  ->  cyclophosphamide + doxorubicin + prednisone + vincristine
+         3  palbociclib, pd-0332991  ->  palbociclib
+         3  rhil-11, neumega  ->  oprelvekin
+         3  temocillin, ceftriaxone, meropenem  ->  ceftriaxone + meropenem + temocillin
+         3  toripalimab, tab001  ->  toripalimab
+         2  aldesleukin, proleukin  ->  aldesleukin
+
+  intervention_name / components / exact+no_dose_or_form / synonym: 369 agents
+         9  xanomeline and trospium chloride capsules  ->  trospium + xanomeline
+         7  liposomal bupivacaine plus bupivacaine  ->  bupivacaine
+         6  hydrocodone/acetaminophen extended release  ->  hydrocodone + paracetamol
+         5  daratumumab / hyaluronidase injection  ->  daratumumab + hyaluronidase
+         4  budesonide/formoterol pmdi  ->  budesonide + formoterol
+         4  sertraline/[s,s]-reboxetine  ->  reboxetine + sertraline
+         3  brinzolamide 1%/brimonidine 0.2% ophthalmic suspension  ->  brimonidine + brinzolamide
+         3  emtricitabine / tenofovir disoproxil oral tablet  ->  emtricitabine + tenofovir disoproxil
+         3  ferumoxytol or oral iron  ->  ferumoxytol + iron
+         3  fluticasone furoate/vilanterol inhalation powder  ->  fluticasone furoate + vilanterol
+         3  gemigliptin and metformin hcl extended release  ->  gemigliptin + metformin
+         3  gemigliptin/metformin hcl extended release  ->  gemigliptin + metformin
+
+  other_name / whole_name / compact / ob_trade: 311 agents
+        34  harvoni«  ->  ledipasvir + sofosbuvir
+        27  epclusa«  ->  sofosbuvir + velpatasvir
+        18  biktarvy«  ->  bictegravir + emtricitabine + tenofovir alafenamide
+        16  genvoya«  ->  cobicistat + elvitegravir + emtricitabine + tenofovir alafenamide
+        14  copegus«  ->  ribavirin
+         9  ribasphere«  ->  ribavirin
+         9  truvada«  ->  emtricitabine + tenofovir disoproxil
+         8  descovy«  ->  emtricitabine + tenofovir alafenamide
+         6  cytoxan«  ->  cyclophosphamide
+         6  subsys«  ->  fentanyl
+         6  vosevi«  ->  sofosbuvir + velpatasvir + voxilaprevir
+         5  rebetol«  ->  ribavirin
+
+  intervention_name / components / no_parentheticals / synonym: 268 agents
+         4  esterified estrogens (ee) and methyltestosterone (mt)  ->  methyltestosterone
+         3  fixed dose combination capsule containing dutasteride 0.5mg and tamsulosin 0.2mg (fasted state)  ->  tamsulosin
+         2  apalutamide (erleadatm) 60 mg or 240 mg tablets  ->  apalutamide
+         2  cetylpyridinium chloride (0.075%) and zinc alcohol free mouthwash  ->  cetylpyridinium
+         2  delta-9-tetrahydrocannabinol (thc) and cannabidiol (cbd)  ->  cannabidiol
+         2  emtricitabine [ftc]/tenofovir [tdf]  ->  emtricitabine + tenofovir
+         2  ethinyl estradiol (ee) and levonogestrel (ln)  ->  ethinylestradiol
+         2  fenofibrate (f) + metformin (m) hydrochloride fixed combination  ->  fenofibrate
+         2  linaglptin 5mg and metformin hydrochloride 1000mg(period 2)  ->  metformin
+         2  serdexmethylphenidate (sdx) and dexmethylphenidate (d-mph)  ->  dexmethylphenidate + serdexmethylphenidate
+         1  0.075% cetylpyridinium chloride (cpc) and 0.28% zinc lactatmouthwashe  ->  cetylpyridinium
+         1  1% lidocaine, 0.5% bupivacaine, and epinephrine (1:150,000)  ->  epinephrine
+
+  intervention_name / whole_name / no_dose_or_form / ob_trade: 251 agents
+         6  bupivacaine liposome injectable suspension  ->  bupivacaine
+         4  asacol 400 mg  ->  mesalazine
+         4  bupivacaine liposome injection  ->  bupivacaine
+         4  zanaflex capsules  ->  tizanidine
+         3  balanced salt solution  ->  calcium chloride + magnesium chloride + potassium chloride + sodium acetate + sodium chloride + sodium citrate
+         3  glyburide and metformin hydrochloride tablets 5 mg/500 mg  ->  glibenclamide + metformin
+         3  kovanaze nasal spray  ->  oxymetazoline + tetracaine
+         3  oral vitamin d  ->  ergocalciferol
+         2  100 mg/ml virazole  ->  ribavirin
+         2  50 mg/ml virazole  ->  ribavirin
+         2  adapalene and benzoyl peroxide gel  ->  adapalene + benzoyl peroxide
+         2  clindamycin phosphate 1.2% and tretinoin 0.025% gel  ->  clindamycin phosphate + tretinoin
+
+  other_name / whole_name / no_parentheticals / synonym: 246 agents
+        14  enbrel (etanercept)  ->  etanercept
+         6  carfilzomib (kyprolis«)  ->  carfilzomib
+         5  datopotamab deruxtecan (dato-dxd, ds-1062a)  ->  datopotamab deruxtecan
+         5  paraplatin (carboplatin)  ->  carboplatin
+         4  bevacizumab (avastin)  ->  bevacizumab
+         4  clobazam (onfi)  ->  clobazam
+         4  docosahexaenoic acid (dha)  ->  doconexent
+         3  amlodipine (am)  ->  amlodipine
+         3  docetaxel (taxotere)  ->  docetaxel
+         3  eslicarbazepine acetate (esl)  ->  eslicarbazepine acetate
+         3  paclitaxel (albumin-bound)  ->  paclitaxel
+         2  aldara (imiquimod)  ->  imiquimod
+
+  intervention_name / components / exact+no_parentheticals / synonym: 226 agents
+         6  ethinylestradiol/gestodene (bay86-5016)  ->  ethinylestradiol + gestodene
+         3  calcipotriol plus betamethasone dipropionate (leo80185 gel)  ->  betamethasone dipropionate + calcipotriene
+         3  indacaterol and glycopyrronium (qva149)  ->  glycopyrronium bromide + indacaterol
+         2  0.5 mg estradiol / 0.1 mg norethisterone acetate (neta)  ->  estradiol + norethindrone acetate
+         2  0.5 mg estradiol / 0.25 mg norethisterone acetate (neta)  ->  estradiol + norethindrone acetate
+         2  calcipotriol plus hydrocortisone (leo 80190)  ->  calcipotriene + hydrocortisone
+         2  carboplatin + paclitaxel (cp)  ->  carboplatin + paclitaxel
+         2  dabrafenib and trametinib (combination)  ->  dabrafenib + trametinib
+         2  estradiol valerate/dienogest (natazia, qlaira, bay86-5027)  ->  dienogest + estradiol valerate
+         2  gemcitabine and cisplatin (dd gc)  ->  cisplatin + gemcitabine
+         2  irinotecan, trifluridine/tipiracil (tas-102) plus bevacizumab  ->  bevacizumab + tipiracil
+         2  pembrolizumab & enfortumab vedotin (pev)  ->  enfortumab vedotin + pembrolizumab
+
+  intervention_name / whole_name / no_salt / synonym: 210 agents
+        17  creatine monohydrate  ->  creatine
+        11  doxycycline monohydrate  ->  doxycycline
+         7  valemetostat tosylate  ->  valemetostat
+         6  anamorelin hcl  ->  anamorelin
+         6  olanzapine hydrochloride  ->  olanzapine
+         6  varenicline free base patch  ->  varenicline
+         5  felbinac trometamol injection  ->  felbinac
+         4  arginine butyrate  ->  arginine
+         4  glucosamine sulphate  ->  glucosamine
+         4  prednisone acetate tablets  ->  prednisone
+         4  triptorelin embonate  ->  triptorelin
+         3  glucosamine sulfate  ->  glucosamine
+
+  intervention_name / whole_name / parenthetical_content / ob_trade: 198 agents
+         6  budesonide/formoterol (symbicort)  ->  budesonide + formoterol
+         4  pn400 (vimovo)  ->  esomeprazole + naproxen
+         4  sulfadoxine-pyrimethamine (fansidar)  ->  pyrimethamine + sulfadoxine
+         3  desloratadine 5 mg (clarinex)  ->  desloratadine
+         3  pn 400 (vimovo)  ->  esomeprazole + naproxen
+         3  sacubitril / valsartan oral tablet [entresto]  ->  sacubitril + valsartan
+         3  sulfur hexafluoride lipid type a microspheres 25 mg injection powder for suspension [lumason]  ->  sulfur hexafluoride
+         2  budesonide/formoterol (symbicort) pmdi  ->  budesonide + formoterol
+         2  buprenorphine + naloxone (suboxone)  ->  buprenorphine + naloxone
+         2  dexamethasone 0.4 mg [dextenza]  ->  dexamethasone
+         2  dexamethasone drug delivery system (ozurdex)  ->  dexamethasone
+         2  dolutegravir/lamivudine 50 mg-300 mg oral tablet [dovato]  ->  dolutegravir + lamivudine
+
+  intervention_name / whole_name / compact / ob_trade: 190 agents
+         7  solumedrol  ->  methylprednisolone succinate
+         4  azasite«  ->  azithromycin
+         4  lidoderm«  ->  lidocaine
+         4  liposomal bupivacaine (exparel«)/bupivacaine  ->  bupivacaine
+         3  abacavir sulfate, lamivudine, and zidovudine  ->  abacavir + lamivudine + zidovudine
+         3  asacol«  ->  mesalazine
+         2  comtan«  ->  entacapone
+         2  copegus«  ->  ribavirin
+         2  definity«  ->  perflutren
+         2  depakote-er  ->  valproic acid
+         2  depo medrol  ->  methylprednisolone acetate
+         2  depomedrol  ->  methylprednisolone acetate
+
+  intervention_name / components / compact+exact / synonym: 189 agents
+         4  elc200 (carbidopa+levodopa+entacapone)  ->  entacapone + levodopa
+         4  nab paclitaxel / gemcitabine  ->  gemcitabine + paclitaxel
+         3  spm927/lacosamide  ->  lacosamide
+         3  sulopenem-etzadroxil/probenecid  ->  probenecid + sulopenem etzadroxil
+         2  cis platinum/carboplatin  ->  carboplatin + cisplatin
+         2  cytoflavin (inosine + nicotinamide + riboflavin + succinic acid)  ->  nicotinamide + riboflavin + succinic acid
+         2  flot (fluorouracil+leucovorin+oxaliplatin+docetaxel)  ->  docetaxel + leucovorin + oxaliplatin
+         2  hr070803; oxaliplatin; 5fluorouracil; calcium folinate  ->  fluorouracil + leucovorin + oxaliplatin
+         2  intrathecal triple therapy (methotrexate + hydrocortisone + cytarabine)  ->  cytarabine + hydrocortisone
+         2  telmisartan/s-amlodipine + rosuvastatin  ->  levamlodipine + rosuvastatin + telmisartan
+         1  4% articaine hydrochloride with 1:100,000 adrenaline  ->  articaine + epinephrine
+         1  5-aza-cytidine and thalidomide  ->  azacitidine + thalidomide
+
+  intervention_name / whole_name / no_parentheticals / ob_trade: 172 agents
+         5  angeliq (drospirenone/17ss-estradiol, bay86-4891)  ->  drospirenone + estradiol
+         5  probuphine (buprenorphine implant)  ->  buprenorphine
+         4  kaletra (lopinavir/ritonavir)  ->  lopinavir + ritonavir
+         4  viagra (sildenafil citrate)  ->  sildenafil
+         3  actos (pioglitazone)  ->  pioglitazone
+         3  androgel (testosterone gel)  ->  testosterone
+         3  cipro xr (ciprofloxacin, bayq3939)  ->  ciprofloxacin
+         3  gemzar (gemcitabine)  ->  gemcitabine
+         3  rebetol (ribavirin; sch 18908)  ->  ribavirin
+         2  adalat (nifedipine, baya1040)  ->  nifedipine
+         2  copegus (ribavirin)  ->  ribavirin
+         2  exparel (bupivacaine liposome injectable suspension)  ->  bupivacaine
+
+  other_name / whole_name / parenthetical_content / synonym: 161 agents
+        20  gadolinium magnevist« (gadopentetate dimeglumine)  ->  gadopentetate dimeglumine
+        12  gm-csf (sargramostim)  ->  sargramostim
+         4  avastin« (bevacizumab)  ->  bevacizumab
+         4  ugn-102 (mitomycin) for intravesical solution  ->  mitomycin
+         3  6alpha-ethylchenodeoxycholic acid (6-ecdca)  ->  obeticholic acid
+         3  domperidone suspension(motilium), b12200018238  ->  domperidone
+         2  (ovidrel)  ->  choriogonadotropin alfa
+         2  6\u03b1-ethyl chenodeoxycholic acid;(6-ecdca), int-747  ->  obeticholic acid
+         2  cg200745 ppa (phosphoric acid)  ->  phosphoric acid
+         2  eylea« (aflibercept) injection  ->  aflibercept
+         2  krdd = kyprolis (carfilzomib), revlimid (lenalidomide), dexamethasone, darzalex (daratumumab)  ->  carfilzomib
+         2  sinuva (mometasone furoate) sinus implant  ->  mometasone furoate
+
+  intervention_name / whole_name / compact / fda_brand: 131 agents
+        23  trifluridine/tipiracil  ->  tipiracil + trifluridine
+        10  abacavir/lamivudine  ->  abacavir + lamivudine
+         7  rebif«  ->  interferon beta-1a
+         6  brinzolamide 1%/brimonidine tartrate 0.2% ophthalmic suspension  ->  brimonidine + brinzolamide
+         4  gonal-f«  ->  follitropin
+         4  irbesartan/hydrochlorothiazide  ->  hydrochlorothiazide + irbesartan
+         4  saizen«  ->  somatropin
+         3  sitagliptin phosphate (+) metformin hydrochloride  ->  metformin + sitagliptin
+         3  trifluridine + tipiracil  ->  tipiracil + trifluridine
+         3  valsartan/hydrochlorothiazide  ->  hydrochlorothiazide + valsartan
+         2  abacavir 600 mg/lamivudine 300 mg  ->  abacavir + lamivudine
+         2  abacavir+lamivudine  ->  abacavir + lamivudine
+
+  intervention_name / comma_components / compact+exact / synonym: 122 agents
+         6  folfox (5-fluorouracil, leucovorin, oxaliplatin)  ->  leucovorin + oxaliplatin
+         6  mk0663, etoricoxib  ->  etoricoxib
+         2  beam (carmustine (bcnu), etoposide, cytarabine, melphalan)  ->  cytarabine + etoposide + melphalan
+         2  mk0462, rizatriptan benzoate / duration of treatment: 1day  ->  rizatriptan
+         2  mk0663, arcoxia, etoricoxib / duration of treatment: 3 days  ->  etoricoxib
+         2  mk0663, etoricoxib / duration of treatment : 12 weeks  ->  etoricoxib
+         2  mk0663, etoricoxib / duration of treatment: 4 weeks  ->  etoricoxib
+         2  p2y12 inhibitor (clopidogrel, ticagrelor, prasugrel)  ->  prasugrel + ticagrelor
+         1  (capecitabine, oxaliplatin, 5-fluorouracil)  ->  capecitabine + fluorouracil + oxaliplatin
+         1  (daunorubicin, cytarabine, venetoclax)  ->  cytarabine + daunorubicin + venetoclax
+         1  2 antipsychotic medications (combinations of olanzapine, risperidone, clozapine, seroquel, haldol, perphenazine)  ->  clozapine + perphenazine + quetiapine + risperidone
+         1  5fu, leucovorin, oxaliplatin  ->  fluorouracil + leucovorin + oxaliplatin
+
+  intervention_name / comma_components / no_dose_or_form / synonym: 112 agents
+         2  apraclonidine ophthalmic solution, 0.125% unit dose preservative free  ->  apraclonidine
+         2  bromocriptine mesylate capsules, usp 5 mg  ->  bromocriptine
+         2  cc-223, oral azacitidine  ->  azacitidine
+         2  da-1229_01(a), sugamet sr tab 5/1000mg«  ->  evogliptin
+         2  divalproex sodium delayed-release tablets, usp, 500 mg  ->  valproic acid
+         2  metformin hcl 500 mg extended-release tablets, geneva ptc  ->  metformin
+         2  oral salmon calcitonin, salmon calcitonin nasal spray  ->  calcitonin (salmon synthetic)
+         2  tazarotene 0.1% gel,top  ->  tazarotene
+         1  0.9% sodium chloride injection, usp  ->  sodium chloride
+         1  20% mannitol solution, 125 ml, iv infusion in 15 min  ->  mannitol
+         1  3.1% sodium chloride solution, 125 ml, iv infusion in 15 min  ->  sodium chloride
+         1  adjuvant therapy in experimental group,toripalimab injection and gemcitabine based therapy  ->  toripalimab
+
+  intervention_name / whole_name / compact / fda_ingredient: 86 agents
+        19  insulin degludec/liraglutide  ->  insulin degludec + liraglutide
+        12  piperacillin/tazobactam  ->  piperacillin + tazobactam
+         7  insulin glargine/lixisenatide (hoe901/ave0010)  ->  insulin glargine + lixisenatide
+         7  piperacillin-tazobactam  ->  piperacillin + tazobactam
+         5  dapagliflozin/metformin  ->  dapagliflozin + metformin
+         4  norethindrone/ethinyl estradiol  ->  ethinylestradiol + norethisterone
+         3  iglarlixi (insulin glargine/lixisenatide)  ->  insulin glargine + lixisenatide
+         3  insulin glargine/lixisenatide  ->  insulin glargine + lixisenatide
+         2  dapagliflozin/metformin xr 10/1000mg  ->  dapagliflozin + metformin
+         2  dapagliflozin/metformin xr 5/500mg  ->  dapagliflozin + metformin
+         1  10 mg dapagliflozin / 1000 mg metformin xr tablet  ->  dapagliflozin + metformin
+         1  5 days antibiotherapy (piperacillin-tazobactam)  ->  piperacillin + tazobactam
+
+  intervention_name / components / exact / ob_trade+synonym: 70 agents
+         2  aggrenox and omeprazole  ->  acetylsalicylic acid + dipyridamole + omeprazole
+         2  buprenorphine/subutex  ->  buprenorphine
+         2  exparel + bupivacaine  ->  bupivacaine
+         2  kaletra + isentress  ->  lopinavir + raltegravir + ritonavir
+         1  2l golytely/bisacodyl  ->  bisacodyl + macrogol + potassium chloride + sodium bicarbonate + sodium chloride + sodium sulfate
+         1  5-fu/kenalog  ->  fluorouracil + triamcinolone acetonide
+         1  adriamycin/cytoxan  ->  cyclophosphamide + doxorubicin
+         1  alendronate/vitamin d  ->  alendronic acid + ergocalciferol
+         1  alogliptin and actoplus met  ->  alogliptin + metformin + pioglitazone
+         1  ambisome + miltefosine  ->  amphotericin B + miltefosine
+         1  ambisome and paromomycin  ->  amphotericin B + paromomycin
+         1  atazanavir + ritonavir + combivir  ->  atazanavir + lamivudine + ritonavir + zidovudine
+
+  intervention_name / components / dictionary_no_salt+exact / drugcentral_salt_stripped+synonym: 67 agents
+         6  fludarabine and cyclophosphamide  ->  cyclophosphamide + fludarabine phosphate
+         3  cyclophosphamide and fludarabine  ->  cyclophosphamide + fludarabine phosphate
+         3  fludarabine + cyclophosphamide  ->  cyclophosphamide + fludarabine phosphate
+         2  abiraterone + prednisone  ->  abiraterone acetate + prednisone
+         2  beclometasone/formoterol/glycopyrrolate  ->  beclometasone dipropionate + formoterol + glycopyrronium bromide
+         2  cart123 cells; cyclophosphamide; fludarabine  ->  cyclophosphamide + fludarabine phosphate
+         2  fludarabine + cyclophosphamide + car-nk-cd19 cells  ->  cyclophosphamide + fludarabine phosphate
+         2  fludarabine and melphalan  ->  fludarabine phosphate + melphalan
+         2  hydrocortisone plus fludrocortisone  ->  fludrocortisone acetate + hydrocortisone
+         1  35 mcg ethinylestradiol/2 mg cyproterone  ->  cyproterone acetate + ethinylestradiol
+         1  35 mcg ethinylestradiol/2 mg cyproterone and selmevit  ->  cyproterone acetate + ethinylestradiol
+         1  abiraterone 250 mg with food + prednisone  ->  abiraterone acetate + prednisone
+
+  other_name / whole_name / no_dose_or_form / ob_trade: 65 agents
+         5  sodium heparin 1%, 5000 iu/5ml  ->  heparin
+         5  syntocinon spray  ->  oxytocin
+         3  lipitor 20mg  ->  atorvastatin
+         3  pliaglis cream  ->  lidocaine + tetracaine
+         3  syntocinon nasal spray  ->  oxytocin
+         3  vivitrol 380 mg  ->  naltrexone
+         2  flector patch  ->  diclofenac
+         2  narcan nasal spray  ->  naloxone
+         2  prograf xl  ->  tacrolimus
+         2  xopenex hfa mdi  ->  levosalbutamol
+         1  10% xylocaine spray  ->  lidocaine
+         1  2.5% lidocaine and 2.5% prilocaine  ->  lidocaine + prilocaine
+
+  intervention_name / components / exact / ob_trade: 59 agents
+         2  calcium and vitamin d  ->  ergocalciferol
+         1  50 mcg duramorph+ exparel + multi-modal pain regimen  ->  bupivacaine
+         1  adriamycin, taxol and cytoxan  ->  cyclophosphamide
+         1  aerosolized 13 cis retinoic acid plus vitamin d  ->  ergocalciferol
+         1  aerosolized all trans retinoic acid plus vitamin d  ->  ergocalciferol
+         1  apetrol es / megace  ->  megestrol acetate
+         1  atrovent + bricanyl or atrovent + ventoline  ->  ipratropium + terbutaline
+         1  beta-hydroxy-beta-methylbutyrate and vitamin d  ->  ergocalciferol
+         1  bioimpedance and vitamin d  ->  ergocalciferol
+         1  calcium 500 mg/day and vitamin d 700 iu/day  ->  ergocalciferol
+         1  calcium supplement with vitamin d  ->  ergocalciferol
+         1  celexa or other antidepressant as clinically indicated  ->  citalopram
+
+  intervention_name / comma_components / compact / synonym: 51 agents
+         3  high-dose dual therapy (rabeprazole, amoxicillin)  ->  amoxicillin
+         3  uft (uracil, tegafur)  ->  tegafur
+         2  flavoquine«, camoquin« suspension  ->  amodiaquine
+         1  administration of study drug (esomeprazole, mosapride)  ->  mosapride
+         1  angiotensin ii receptor blocker (arb, losartan) and calcium channel blocker (ccb, amlodipine)  ->  amlodipine + losartan
+         1  angiotensin ii receptor blockers (arbs, losartan) and calcium channel blockers (ccb, amlodipine)  ->  amlodipine + losartan
+         1  anti-her2 monoclonal antibody (trastuzumab, pertuzumab)  ->  pertuzumab
+         1  as needed pharmacological rate control with beta-blocker (metoprolol tartrate, metoprolol succinate) or calcium channel blocker (diltiazem, verapamil)  ->  metoprolol + verapamil
+         1  brilique«, ticagrelor ir tablet (90 mg) administered with 200ml of water  ->  ticagrelor
+         1  cardiac mri taken using contrast agent, dotarem« (gd-dota)  ->  gadoterate meglumine
+         1  cera, darbepoetin, epoetin-beta  ->  epoetin beta
+         1  chemotherapy (nab-paclitaxel auc=2 and carboplatin 80mg/m2),immunotherapy (camrelizumab 200mg)\u3001radiotherapy(primary lesion and adjacent lymph nodes 41.4gy, distant lymph node 0.5gy*4)  ->  carboplatin
+
+  intervention_name / comma_components / dictionary_no_salt+exact / drugcentral_salt_stripped+synonym: 50 agents
+         5  cyclophosphamide,fludarabine  ->  cyclophosphamide + fludarabine phosphate
+         3  busulfan, melphalan, fludarabine, g-csf  ->  busulfan + fludarabine phosphate + melphalan
+         3  fludarabine, busulfan, thymoglobulin  ->  busulfan + fludarabine phosphate
+         3  fludarabine, cyclophosphamide  ->  cyclophosphamide + fludarabine phosphate
+         2  cyclophosphamide, fludarabine  ->  cyclophosphamide + fludarabine phosphate
+         1  beclomethasone 200mcg, salbutamol 100mcg , beclomethasone 200 mcg/formoterol 6 mcg, 250 mg of lyophilized saccharomyces boulardii  ->  beclometasone dipropionate + formoterol + salbutamol
+         1  budesonide, beclomethasone  ->  beclometasone dipropionate + budesonide
+         1  busulfan, cyclophosphamide, thymoglobulin, fludarabine (conditioning regimen)  ->  busulfan + cyclophosphamide + fludarabine phosphate
+         1  busulfan, fludarabine and atg  ->  busulfan + fludarabine phosphate
+         1  busulfan, melphalan, fludarabine, anti-thymocyte globulin, palifermin, stem cell transplant  ->  busulfan + fludarabine phosphate + melphalan + palifermin
+         1  campath, fludarabine, cyclophosphamide  ->  alemtuzumab + cyclophosphamide + fludarabine phosphate
+         1  clofarabine, fludarabine and busulfan, cloflubu  ->  busulfan + clofarabine + fludarabine phosphate
+
+  other_name / comma_components / exact / ob_trade+synonym: 50 agents
+         3  horse antithymocyte globulin, cyclosporine, promacta, eltrombopag  ->  ciclosporin + eltrombopag
+         3  zofran, ondansetron  ->  ondansetron
+         2  cyclophosphamide, cytoxan  ->  cyclophosphamide
+         2  epirubicin, ellence  ->  epirubicin
+         2  remifentanil, ultiva, glaxo wellcome, marly-le-roi, france  ->  remifentanil
+         2  suganon, amaryl  ->  evogliptin + glimepiride
+         2  viagra, revatio  ->  sildenafil
+         2  zyban, wellbutrin  ->  bupropion
+         1  actonel, atelvia  ->  risedronic acid
+         1  actos, glustin, zactos  ->  pioglitazone
+         1  adipex-p, cyanocobalamin  ->  cyanocobalamin + phentermine
+         1  apretude, cabotegravir  ->  cabotegravir
+
+  other_name / comma_components / exact / ob_trade: 47 agents
+         3  lialda, mmxtm mesalazine  ->  mesalazine
+         3  lialda, spd476  ->  mesalazine
+         3  sch 34117, clarinex, aerius  ->  desloratadine
+         2  ass, plavix  ->  clopidogrel
+         2  nifedipine: adalat, procardia  ->  nifedipine
+         2  truvada, descovy  ->  emtricitabine + tenofovir alafenamide + tenofovir disoproxil
+         1  apo-verap, isoptin  ->  verapamil
+         1  aspirin placebo, vitamin d  ->  ergocalciferol
+         1  bactrim, bactrim ds, sulfatrim  ->  sulfamethoxazole + trimethoprim
+         1  bactrim, trimethoprim sulfamethoxazole, septra, sulfatrim  ->  sulfamethoxazole + trimethoprim
+         1  blopress, atacand, amias, and ratacand  ->  candesartan cilexetil
+         1  camptosar, hm30181  ->  irinotecan
+
+  other_name / whole_name / no_parentheticals / ob_trade: 43 agents
+         7  apresoline (hydralazine)  ->  hydralazine
+         4  cytoxan(r) (cyclophosphamide)  ->  cyclophosphamide
+         2  arestin (brand name)  ->  minocycline
+         2  lidoderm (trade mark)  ->  lidocaine
+         2  qnasl(tm)  ->  beclometasone dipropionate
+         2  ritalin (methylphenidate hydrochloride)  ->  methylphenidate
+         2  zofran (ondansetron hydrochloride)  ->  ondansetron
+         1  adrenalin (epinephrine)  ->  epinephrine
+         1  alesse (20 mg ethinyl estradiol + 0.1 mg levonorgestrel)  ->  ethinylestradiol + levonorgestrel
+         1  atripla (atr)  ->  efavirenz + emtricitabine + tenofovir disoproxil
+         1  copegus (tm)  ->  ribavirin
+         1  cycloset (brand)  ->  bromocriptine
+
+  other_name / whole_name / compact / ob_ingredient: 39 agents
+        10  liposomal cytarabine-daunorubicin  ->  cytarabine + daunorubicin
+         5  sacubitril/valsartan  ->  sacubitril + valsartan
+         4  doravirine/islatravir  ->  doravirine
+         3  chlorhexidine gluconate 2% / isopropyl alcohol 70%  ->  chlorhexidine + isopropanol
+         1  aluvia (lopinavir/ritonavir)  ->  lopinavir + ritonavir
+         1  artemether-lumefantrine  ->  artemether + lumefantrine
+         1  artemether/lumefantrine (a/l)  ->  artemether + lumefantrine
+         1  artemether: lumefantrine  ->  artemether + lumefantrine
+         1  brimonidine tartrate 2.0mg, timolol maleate 6.8mg(without preservative)  ->  brimonidine + timolol
+         1  desogestrel/ethinyl estradiol  ->  desogestrel + ethinylestradiol
+         1  emtricitabine/tenofovir disoproxil fumarate  ->  emtricitabine + tenofovir disoproxil
+         1  ethinyl estradiol/norgestimate, 0.035 mg/0.250 mg  ->  ethinylestradiol + norgestimate
+
+  other_name / components / compact+exact / synonym: 38 agents
+         5  vx-661/vx-770  ->  ivacaftor + tezacaftor
+         4  vx-659/vx-661/vx-770  ->  ivacaftor + tezacaftor
+         4  vx-809/vx-770  ->  ivacaftor + lumacaftor
+         3  bupivacaine 0.25% (0.5 ml/kg) + dexmedetomidine 0.5 mcg/kg  ->  bupivacaine + dexmedetomidine
+         2  afinitor; votubia; rad-001  ->  everolimus
+         2  vx-445/vx-661/vx-770  ->  ivacaftor + tezacaftor
+         1  1.tac(docetaxel/doxorubicin/cyclophosphamide)  ->  cyclophosphamide + doxorubicin
+         1  5fu + oxaliplatin + folinic acid  ->  fluorouracil + leucovorin + oxaliplatin
+         1  aldesleukin; il-2 or proleukin«  ->  aldesleukin
+         1  caffeine + warfarin (plus vitamin k) + omeprazole + dextromethorphan + midazolam  ->  caffeine + dextromethorphan + midazolam + omeprazole + phytomenadione + warfarin
+         1  cisplatin / cisplatinum  ->  cisplatin
+         1  cisplatin plus 5fluorouracil  ->  cisplatin + fluorouracil
+
+  other_name / whole_name / compact / fda_brand: 37 agents
+         5  novolin-r  ->  insulin human
+         3  gonal f  ->  follitropin
+         3  saizen«  ->  somatropin
+         2  bravelle«  ->  follitropin
+         2  nutropinaq  ->  somatropin
+         2  pregnyl«  ->  chorionic gonadotrophin
+         2  rebif«  ->  interferon beta-1a
+         1  afrezza«  ->  insulin human
+         1  avtozma«  ->  tocilizumab
+         1  emtricitabine 200mg/tenofovir alafenamide 25 mg (f/taf)  ->  emtricitabine + tenofovir alafenamide
+         1  epogen«; procrit«  ->  epoetin alfa
+         1  eylea « hd  ->  aflibercept
+
+  intervention_name / comma_components / exact+no_dose_or_form / synonym: 36 agents
+         2  ngx-4010, 8% capsaicin patch  ->  capsaicin
+         1  5-fluorouracil, hydroxyurea-[fhx], bevacizumab  ->  bevacizumab + fluorouracil + hydroxycarbamide
+         1  bupivacaine 0.25% injectable solution, magnesium sulfate 200 mg, buprenorphine 300 mcg  ->  bupivacaine + buprenorphine + magnesium sulfate
+         1  bupropion, transdermal nicotine patch  ->  bupropion + nicotine
+         1  docetaxel injection, oxaliplatin, s-1  ->  docetaxel + oxaliplatin
+         1  efavirenz, stavudine extended release, lamivudine  ->  efavirenz + lamivudine + stavudine
+         1  fluvastatin extended release, fenofibrate  ->  fenofibrate + fluvastatin
+         1  glucarpidase, high-dose methotrexate, leucovorin  ->  glucarpidase + leucovorin + methotrexate
+         1  high dose gemcitabine, busulfan, and thiotepa as conditioning therapy  ->  busulfan + gemcitabine
+         1  hydroxychloroquine, clindamycin, primaquine - high dose  ->  clindamycin + hydroxychloroquine + primaquine
+         1  hydroxychloroquine, clindamycin, primaquine - low dose  ->  clindamycin + hydroxychloroquine + primaquine
+         1  intramuscular aripiprazole, olanzapine  ->  aripiprazole + olanzapine
+
+  other_name / components / exact / ob_trade+synonym: 36 agents
+         3  thiola or tiopronin; d-penicillamine  ->  penicillamine + tiopronin
+         2  pegasys and copegus  ->  peginterferon alfa-2a + ribavirin
+         1  abilify/ lexapro  ->  aripiprazole + escitalopram
+         1  ambisome and fluconazole  ->  amphotericin B + fluconazole
+         1  apap: n-acetyl-p-aminophenol; acetaminophen; tylenol  ->  paracetamol
+         1  camptosar; xeloda; eloxatin  ->  capecitabine + irinotecan + oxaliplatin
+         1  ciprodex with 2% n-acetylcysteine  ->  acetylcysteine + ciprofloxacin + dexamethasone
+         1  daunorubicin or idarubicin, rubidomycin or idamycin  ->  daunorubicin + idarubicin
+         1  effexor and effexor xr  ->  venlafaxine
+         1  elavil plus prozac  ->  amitriptyline + fluoxetine
+         1  eloxatin and xeloda  ->  capecitabine + oxaliplatin
+         1  emtricitabine/tenofovir disoproxil fumarate; truvada  ->  emtricitabine + tenofovir disoproxil
+
+  other_name / components / no_dose_or_form / synonym: 36 agents
+         3  tegafur,gimeracil and oteracil potassium capsules  ->  oteracil
+         2  oral hm30181a + oral paclitaxel  ->  paclitaxel
+         1  4% lidocaine gel with functional microarray  ->  lidocaine
+         1  5-fu infusion:1200mg/m2/day, as a continuous iv infusion over 2 days, day 1 and day 2 (for a total dose of 2400mg/m2 over 46 hours.)  ->  fluorouracil
+         1  50:50 mixture of (s)- and (r)-nicotine  ->  nicotine
+         1  aricept 10 mg daily or exelon 9.5 mg patch  ->  donepezil + rivastigmine
+         1  china import - abiraterone acetate tablet plus prednisone tablet plus bicalutamide tablet for oral  ->  prednisone
+         1  cyclophosphamide 750 mg/m2, hydroxydoxorubicin iv 50 mg/m2, vincristine iv 1.4 mg/m2 and prednisone 100 mg daily  ->  prednisone
+         1  dexamethasone intravenous 8mg+ tap block  ->  dexamethasone
+         1  dornase alfa inhalation solution and best available care  ->  dornase alfa
+         1  entacapone, levodopa and carbidopa tablets  ->  carbidopa
+         1  etoposide injection;carboplatin injection;serplulimab injection  ->  carboplatin + etoposide + serplulimab
+
+  other_name / components / compact / synonym: 35 agents
+         2  iai; eylea«; bay86-5321; vegf trap-eye  ->  aflibercept
+         2  s(+)ketamine  ->  ketamine
+         2  tmc114/jnj-48763364  ->  darunavir
+         2  u.s. p. equivalent: brexanolone (sage therapeutics) (iv allopregnanolone with captisol)  ->  betadex
+         2  u.s.p. equivalent: brexanolone (iv allopregnanolone with captisol) (sage therapeutics)  ->  betadex
+         1  (daunorubicin and cytarabine)  ->  cytarabine + daunorubicin
+         1  a combination of 2 mabs (azd8895 and azd1061)  ->  cilgavimab
+         1  acetylcysteine « ;south egypt drug industries company, sedico,egypt  ->  acetylcysteine
+         1  capeox regimen (oxaliplatin + capecitabine)  ->  capecitabine
+         1  caz104 (2000mg ceftazidime/500mg avibactam)  ->  avibactam
+         1  caz104 (3000mg ceftazidime/1000mg avibactam)  ->  avibactam
+         1  cisplatin(or carboplatin), 5-fluouracil  ->  cisplatin
+
+  other_name / components / exact+no_dose_or_form / synonym: 34 agents
+         4  cytarabine and daunorubicin liposomal  ->  cytarabine + daunorubicin
+         2  evogliptin 5 mg + metformin xr 1000 mg  ->  evogliptin + metformin
+         2  extended-release (er) niacin/laropiprant  ->  laropiprant + nicotinic acid
+         2  hydrocodone and acetaminophen extended-release  ->  hydrocodone + paracetamol
+         1  abraxane coated with rituximab  ->  paclitaxel + rituximab
+         1  acc017 tablets co-administered with emtricitabine/tenofovir alafenamide fumarate tablets (ii)  ->  emtricitabine + tenofovir alafenamide
+         1  buprenorphine and naloxone capsules  ->  buprenorphine + naloxone
+         1  calcipotriol + betamethasone dipropionate cream  ->  betamethasone dipropionate + calcipotriene
+         1  canagliflozin tablets or glucophage  ->  canagliflozin + metformin
+         1  dexlansoprazole and/or theophylline sr  ->  dexlansoprazole + theophylline
+         1  eperisone sr + aceclofenac  ->  aceclofenac + eperisone
+         1  hyaluronic acid and ketorolac injection  ->  hyaluronic acid + ketorolac
+
+  intervention_name / comma_components / exact+no_parentheticals / synonym: 32 agents
+         2  mk0683, vorinostat, suberoylanilide hydroxamic acid (saha) / duration of treatment 6 months  ->  vorinostat
+         2  oxaliplatin (oxa), levofolinate calcium (l-lv), 5-fu, panitumumab  ->  fluorouracil + oxaliplatin + panitumumab
+         1  2 cycles of bortezomib, lenalidomide, dexamethasone (vrd)  ->  dexamethasone + lenalidomide
+         1  5-fu, leucovorin, docetaxel, oxaliplatin (flot)  ->  docetaxel + fluorouracil + leucovorin + oxaliplatin
+         1  5-fu, leucovorin, docetaxel, oxaliplatin (flot), trastuzumab  ->  docetaxel + fluorouracil + leucovorin + oxaliplatin + trastuzumab
+         1  bevacizumab,irinotecan liposome (ii),5-fu/lv  ->  bevacizumab + fluorouracil + irinotecan
+         1  captopril, losartan (drug)  ->  captopril + losartan
+         1  chemotherapy in regimen with oxaliplatin, fluorouracil, folinic acid (folfox4)  ->  fluorouracil + leucovorin + oxaliplatin
+         1  cisplatin, vindesine, dacarbazine (drugs)  ->  cisplatin + dacarbazine + vindesine
+         1  cyclosporin, methotrexate (gvhd prophylaxis)  ->  ciclosporin + methotrexate
+         1  dacarbazine (dtic), trofosfamide, etoricoxib, pioglitazone, temsirolimus  ->  dacarbazine + etoricoxib + pioglitazone + temsirolimus + trofosfamide
+         1  docetaxel, cisplatin, cetuximab and bevacizumab (tpe-a) followed by concurrent radiation, cisplatin, cetuximab and bevacizumab (xpe-a), surgery  ->  bevacizumab + cetuximab + cisplatin + docetaxel
+
+  intervention_name / comma_components / no_parentheticals / synonym: 31 agents
+         2  mirabegron (beta3-adrenoceptor agonist), anticholinergics  ->  mirabegron
+         1  100 ml of 0.9% normal saline (57ml), 0.5% ropivacaine (40 ml), 10 mg morphine (10 mg/ml), 0.1 mg of epinephrine (0.1 mg/ml), and 30 mg of ketorolac (30 mg/ml)  ->  morphine + ropivacaine
+         1  5-aminolevulinic acid (5-ala), is a non fluorescent prodrug  ->  aminolevulinic acid
+         1  adebrelimab, irinotecan liposome (ii)  ->  irinotecan
+         1  adebrelimab, irinotecan liposome (ii), famitinib  ->  irinotecan
+         1  atenolol (drug), lisinopril (drug)  ->  atenolol + lisinopril
+         1  bevacizumab (drug), herceptin (drug)  ->  bevacizumab + trastuzumab
+         1  capecitabine (xeloda, roche), oxaliplatin (sanofi-aventis), docetaxel (sanofi-aventis)  ->  docetaxel + oxaliplatin
+         1  carboxymethylcellulose 0.5% , glycerin 0.9% (optive« md)  ->  glycerol
+         1  cetylpyridinium chloride (cpc), zinc lactate and sodium fluoride mouthwash  ->  cetylpyridinium
+         1  chop (cyclophosphamide (c), adriamycin (h), vincristine (o), and prednisone (p)) chemotherapy  ->  doxorubicin + vincristine
+         1  clenbuterol (cst-103), nadolol (cst-107), matching placebo  ->  clenbuterol + nadolol
+
+  other_name / comma_components / compact+exact / synonym: 29 agents
+         4  keytruda«, mk-3475  ->  pembrolizumab
+         2  pegasys, peginterferon alfa 2a, baraclude  ->  entecavir + peginterferon alfa-2a
+         2  wc3035, sarecycline  ->  sarecycline
+         1  (finerenone, empagliflozin, losartan)  ->  empagliflozin + finerenone + losartan
+         1  5fu, leucovorin, irinotecan, oxaliplatin  ->  fluorouracil + irinotecan + leucovorin + oxaliplatin
+         1  alfatronol, glucoferon, heberon alfa, ifn alpha-2b, interferon alfa 2b, intron a, recombinant interferon alfa-2b, recombinant interferon alfa-2b, sch  ->  interferon alfa-2b
+         1  antibiotics: amoxicillin, amoxicillin«; clarithromycin, klaricid«; levofloxacin, cravit«; metronidazole, metrozole«; tetracyclline, tetracycline«  ->  amoxicillin + clarithromycin + levofloxacin + metronidazole + tetracycline
+         1  blt (benzocaine 20%, lidocaine 6%, tetracaine 4%)  ->  lidocaine + tetracaine
+         1  cisplatin, mitomycin-c  ->  cisplatin + mitomycin
+         1  cocktail (tirofiban, bivalirudin, tenecteplase)  ->  bivalirudin + tenecteplase
+         1  filgrastim, neupogen«  ->  filgrastim
+         1  interleukin-2, proleukin«, aldesleukin  ->  aldesleukin
+
+  intervention_name / whole_name / no_parentheticals / fda_ingredient: 28 agents
+         4  incobotulinumtoxina (xeomin) (20 units)  ->  botulinum toxin type A
+         3  incobotulinumtoxina (xeomin)  ->  botulinum toxin type A
+         3  tebipenem pivoxil hydrobromide (tbpm-pi-hbr)  ->  tebipenem pivoxil
+         2  incobotulinumtoxina (100 units)  ->  botulinum toxin type A
+         2  incobotulinumtoxina (400 units)  ->  botulinum toxin type A
+         1  enfortumab vedotin-ejfv (ev)  ->  enfortumab vedotin
+         1  incobotulinumtoxina (12 units per kg body weight)  ->  botulinum toxin type A
+         1  incobotulinumtoxina (16 units per kg body weight)  ->  botulinum toxin type A
+         1  incobotulinumtoxina (16-20 units per kg body weight)  ->  botulinum toxin type A
+         1  incobotulinumtoxina (2 units per kg body weight)  ->  botulinum toxin type A
+         1  incobotulinumtoxina (4 units per kg body weight)  ->  botulinum toxin type A
+         1  incobotulinumtoxina (6 units per kg body weight)  ->  botulinum toxin type A
+
+  intervention_name / components / dictionary_no_salt / drugcentral_salt_stripped: 25 agents
+         2  busulfan, melphalan and fludarabine  ->  fludarabine phosphate
+         2  fludarabine + cyclophosphamide combination  ->  fludarabine phosphate
+         1  abiraterone+shr3162  ->  abiraterone acetate
+         1  adt combined with abiraterone  ->  abiraterone acetate
+         1  adt plus abiraterone or other arpis(apalutamide, enzalutamide, rezvilutamide, darolutamide)  ->  abiraterone acetate
+         1  after preconditioning with fludarabine and cyclophosphamide, f01 will be evaluated  ->  fludarabine phosphate
+         1  beclomethasone plus formoterol fixed combination  ->  beclometasone dipropionate
+         1  beclomethasone/salbutamol combination  ->  beclometasone dipropionate
+         1  clobetasol + resveratrol patch  ->  clobetasol propionate
+         1  coenzyme a combined with abiraterone  ->  abiraterone acetate
+         1  fludarabine 30 mg/m2/d for 3 days  ->  fludarabine phosphate
+         1  fludarabine and cyclophosphosphamide  ->  fludarabine phosphate
+
+  other_name / components / exact / ob_trade: 24 agents
+         1  all-trans-retinoic acid; vesanoid  ->  tretinoin
+         1  amikin;amk  ->  amikacin
+         1  atacand/amias  ->  candesartan cilexetil
+         1  azasite plus  ->  azithromycin
+         1  cellcept and prograf  ->  mycophenolate mofetil + tacrolimus
+         1  combivent or placebo (nebulization)  ->  ipratropium + salbutamol
+         1  cytoxan; neosar  ->  cyclophosphamide
+         1  descovy with a boosted protease inhibitor  ->  emtricitabine + tenofovir alafenamide
+         1  descovy with a boosted protease inhibitor and harvoni  ->  emtricitabine + ledipasvir + sofosbuvir + tenofovir alafenamide
+         1  fosamax plus 70/5600  ->  alendronic acid
+         1  golytely or generic equivalent  ->  macrogol + potassium chloride + sodium bicarbonate + sodium chloride + sodium sulfate
+         1  haldol and trilafon  ->  perphenazine
+
+  intervention_name / whole_name / parenthetical_content / fda_brand: 22 agents
+         3  denosumab 120 mg/1.7 ml subcutaneous solution [xgeva]  ->  denosumab
+         2  r-hgh liquid (saizen)  ->  somatropin
+         2  rituximab injection [truxima]  ->  rituximab
+         1  botulinum toxin type a injection [xeomin]  ->  botulinum toxin type A
+         1  crizanlizumab-tmca 10 mg/1 ml intravenous solution [adakveo]  ->  crizanlizumab
+         1  denosumab 70 mg/ml [xgeva]  ->  denosumab
+         1  gh treatment (genotropin)  ->  somatropin
+         1  growth hormone (genotropin)  ->  somatropin
+         1  growth hormone (humatrope)  ->  somatropin
+         1  growth hormone (nutropin)  ->  somatropin
+         1  incobotulinumtoxina (xeomin), 12.5 units  ->  botulinum toxin type A
+         1  incobotulinumtoxina 100 unt [xeomin]  ->  botulinum toxin type A
+
+  other_name / whole_name / no_salt / synonym: 22 agents
+         4  lysergide tartrate  ->  lysergide
+         2  atabrine dihydrochloride  ->  mepacrine
+         2  metopimazine mesylate  ->  metopimazine
+         1  100 mg colistin sulphate  ->  colistin
+         1  abacavir acetate  ->  abacavir
+         1  arginine butyrate  ->  arginine
+         1  atropine hydrochloride  ->  atropine
+         1  cosyntropin acetate  ->  tetracosactide
+         1  creatine monohydrate  ->  creatine
+         1  folinic acid calcium salt hydrate  ->  leucovorin
+         1  pantoprazole magnesium  ->  pantoprazole
+         1  procaterol hcl  ->  procaterol
+
+  other_name / whole_name / dictionary_no_salt / drugcentral_salt_stripped: 20 agents
+         6  tedizolid  ->  tedizolid phosphate
+         5  fludarabine  ->  fludarabine phosphate
+         2  clobetasol  ->  clobetasol propionate
+         2  halobetasol  ->  ulobetasol propionate
+         1  abiraterone  ->  abiraterone acetate
+         1  beclomethasone  ->  beclometasone dipropionate
+         1  folate  ->  folic acid
+         1  megestrol  ->  megestrol acetate
+         1  mometasone  ->  mometasone furoate
+
+  other_name / components / no_parentheticals / synonym: 19 agents
+         2  budesonide, glycopyrronium, and formoterol fumarate (bgf)  ->  formoterol
+         1  arginine deiminase (adi) formulated with polyethylene glycol (peg)  ->  macrogol
+         1  c group: patients received propofol (2 mg/kg), fentanyl (1 \u03bcg/kg), and atracurium (0.5 mg/kg)  ->  atracurium
+         1  cannabis oil containing 10% delta-9-tetrahydrocannabinol (thc) and 5% cannabidiol (cbd)  ->  cannabidiol
+         1  deoxycytidine (dc) and deoxythymidine (dt)  ->  doxecitine + doxribtimine
+         1  docosahexaenoic acid (dha)/eicosapentaenoic acid (epa)  ->  doconexent + eicosapentaenoic acid
+         1  eicosapentaenoic acid (2120mg)/ docosahexaenoic acid (600mg)  ->  doconexent + eicosapentaenoic acid
+         1  eicosapentaenoic acid (epa) / docosahexaenoic acid (dha)  ->  doconexent + eicosapentaenoic acid
+         1  ethinyl estradiol (ee) and norethindrone (net)  ->  ethinylestradiol + norethisterone
+         1  gemcitabine (zefei) and cisplatin(nuoxin)  ->  cisplatin + gemcitabine
+         1  igg with proline (igpro)  ->  proline
+         1  levofloxacin(cravit), amoxicillin/clavulanate(augmentin) and  ->  clavulanic acid
+
+  other_name / comma_components / compact / synonym: 17 agents
+         2  bi 1015550, jascayd«  ->  nerandomilast
+         2  bi 1810631, hernexeos«  ->  zongertinib
+         2  mdv3800, bmn 673  ->  talazoparib tosylate
+         2  pegasys«, peg-ifn-alfa-2a  ->  peginterferon alfa-2a
+         1  byl719, a-specific phosphoinositide 3-kinase inhibitor byl719  ->  alpelisib
+         1  ga-68 psma-11, psma-hbed-cc  ->  gallium (68Ga) gozetotide
+         1  gemox(gemcitabine, oxaliplatin)  ->  oxaliplatin
+         1  histoacryl«, n-butyl-2-cyanoacrylate, tissue adhesive injection  ->  enbucrilate
+         1  lantus«, hoe901 (internal code number sanofi-aventis)  ->  insulin glargine
+         1  mk-0869, emend«  ->  aprepitant
+         1  pegasys«, roche  ->  peginterferon alfa-2a
+         1  pegifn\u03b1-2a, pegasys«  ->  peginterferon alfa-2a
+
+  other_name / components / exact+no_parentheticals / synonym: 17 agents
+         7  daunorubicin and cytarabine (liposomal)  ->  cytarabine + daunorubicin
+         2  0.3% tobramycin/dexamethasone (tobradex, alcon)  ->  dexamethasone + tobramycin
+         1  (a1) glimepiride/vildagliptin/metformin  ->  glimepiride + metformin + vildagliptin
+         1  (b1) glimepiride/vildagliptin/metformin  ->  glimepiride + metformin + vildagliptin
+         1  amoxicillin/clavulanic acid (augmentin) + gentamicin  ->  amoxicillin + clavulanic acid + gentamicin
+         1  bictegravir (previously referred to as gs-9883)/emtricitabine/tenofovir alafenamide  ->  bictegravir + emtricitabine + tenofovir alafenamide
+         1  cisplatin+doxorubicin (5 pat.)  ->  cisplatin + doxorubicin
+         1  lomustine (ccnu) and temozolomide  ->  lomustine + temozolomide
+         1  rituximab and lenalidomide (r2)  ->  lenalidomide + rituximab
+         1  sunitinib and doxorubicin and cyclophosphamide (ac)  ->  cyclophosphamide + doxorubicin + sunitinib
+
+  intervention_name / components / compact+exact / ob_ingredient+synonym: 16 agents
+         2  artemether-lumefantrine + amodiaquine  ->  amodiaquine + artemether + lumefantrine
+         2  artemether-lumefantrine + primaquine  ->  artemether + lumefantrine + primaquine
+         2  budesonide, formoterol fumarate, and umeclidinium bromide  ->  budesonide + formoterol + umeclidinium
+         1  amodiaquine+artesunate/artemether-lumefantrine  ->  amodiaquine + artemether + artesunate + lumefantrine
+         1  artemether lumefantrine and imatinib mesylate  ->  artemether + imatinib + lumefantrine
+         1  artemether-lumefantrine + amodiaquine + primaquine  ->  amodiaquine + artemether + lumefantrine + primaquine
+         1  bismuth subcitrate potassium, metronidazole,tetracycline hydrochloride and omeprazole  ->  bismuth subcitrate + metronidazole + omeprazole + tetracycline
+         1  isoniazid, rifampin + isoniazid or rifampin + pyrazinamide  ->  isoniazid + pyrazinamide + rifampicin
+         1  isoniazid, rifampin + isoniazid, rifampin + pyrazinamide or not treatment  ->  isoniazid + pyrazinamide + rifampicin
+         1  neomycin sulfate, polymyxin b sulfate and gramicidin  ->  Polymyxin B + gramicidin + neomycin
+         1  roxadustat;sacubitril valsartan sodium tablets  ->  roxadustat + sacubitril + valsartan
+         1  tenofovir + emtricitabine + lopinavir-ritonavir  ->  emtricitabine + lopinavir + ritonavir + tenofovir
+
+  intervention_name / components / exact+no_biosimilar_suffix / synonym: 16 agents
+         9  daratumumab and hyaluronidase-fihj  ->  daratumumab + hyaluronidase
+         3  hyaluronidase-zzxf/pertuzumab/trastuzumab  ->  hyaluronidase + pertuzumab + trastuzumab
+         1  daratumumab/daratumumab and hyaluronidase-fihj  ->  daratumumab + hyaluronidase
+         1  fruquintinib plus cetuximab-beta  ->  cetuximab + fruquintinib
+         1  trastuzumab and hyaluronidase-oysk  ->  hyaluronidase + trastuzumab
+         1  trastuzumab/hyaluronidase-oysk  ->  hyaluronidase + trastuzumab
+
+  other_name / comma_components / no_dose_or_form / synonym: 16 agents
+         1  (-)-fencamfamine hydrochloride, (-)-fcf hcl  ->  fencamfamin
+         1  docetaxel injection, hengrui medicine  ->  docetaxel
+         1  estradiol patch, mylan pharmaceuticals inc  ->  estradiol
+         1  insulin injection,h10890001,jiangsu wanbang biochemical medicine group co., ltd  ->  insulin human
+         1  itrizole oral solution 1%, jk1211  ->  itraconazole
+         1  liporaxel«, oral paclitaxel  ->  paclitaxel
+         1  liposomal amikacin inhalation, lai  ->  amikacin
+         1  mazindol extended-release (er), mazindol controlled-release (cr)  ->  mazindol
+         1  mp-376, levofloxacin inhalation solution 240 mg  ->  levofloxacin
+         1  nicotine gum, nicotine losenges, nicotine spray  ->  nicotine
+         1  nrt, nicotine patch  ->  nicotine
+         1  reduced-dose systemic thrombolysis, low-dose alteplase, tpa  ->  alteplase
+
+  other_name / whole_name / parenthetical_content / ob_trade: 15 agents
+         2  tas-102 [lonsurf]  ->  tipiracil + trifluridine
+         1  (omidria), phenylephrine (1%) and ketorolac (0.3%) intraocular solution  ->  ketorolac + phenylephrine
+         1  0.75 mac desflurane (suprane)  ->  desflurane
+         1  [duraprep]  ->  isopropanol
+         1  carbidopa/levodopa (sinemet)  ->  carbidopa + levodopa
+         1  cyclosporin 0.05% emulsion (restasis)  ->  ciclosporin
+         1  elbasvir / grazoprevir oral tablet (zepatier)  ->  elbasvir + grazoprevir
+         1  eplerenone (inspra), bumetanide (burinex) and empagliflozin (jardiance)  ->  eplerenone
+         1  ferric gluconate (ferrlecit)  ->  ferrous gluconate
+         1  intrathecal liposomal ara-c (depocyt)  ->  cytarabine
+         1  oxaliplatin (eloxatin), 5fu (5-fluorouracil) and leucovorin (folinic acid)  ->  oxaliplatin
+         1  phentermine or phentermine-topiramate (qsymia)  ->  phentermine + topiramate
+
+  intervention_name / comma_components / exact / ob_trade: 14 agents
+         3  azt/3tc/nvp, azt/d4t/nvp, truvada/nvp  ->  emtricitabine + tenofovir disoproxil
+         1  aspirin placebo, vitamin d  ->  ergocalciferol
+         1  durysta, bimatoprost intracameral implant 10 \u03bcg  ->  bimatoprost
+         1  ev/dng (qlaira, natazia, bay86-5027)  ->  dienogest + estradiol valerate
+         1  gtn, diamox  ->  acetazolamide
+         1  lexapro, an antidepressant medicine  ->  escitalopram
+         1  mtd of velcade, nipent and rituxan established in part 1  ->  pentostatin
+         1  natrecor, a recombinant form of b-type natriuretic peptide, made by scios, inc. vs. placebo  ->  nesiritide
+         1  ortho evra, the contraceptive patch  ->  ethinylestradiol + norelgestromin
+         1  stribild, crushed  ->  cobicistat + elvitegravir + emtricitabine + tenofovir disoproxil
+         1  symbicort, used twice daily (b.i.d) and as needed (prn)  ->  budesonide + formoterol
+         1  tagitol v, lo so, readi-cat 2  ->  barium sulfate
+
+  intervention_name / comma_components / exact / ob_trade+synonym: 14 agents
+         1  atorvastatin, lipitor  ->  atorvastatin
+         1  bupivacaine, dexmedetomidine, caffeine, tylenol  ->  bupivacaine + caffeine + dexmedetomidine + paracetamol
+         1  campath-1h, rituximab, myfortic  ->  mycophenolic acid + rituximab
+         1  cipro, metronidazole, neomycin combo  ->  ciprofloxacin + metronidazole
+         1  cisplatin, gemzar, docetaxel, alimta  ->  cisplatin + docetaxel + gemcitabine + pemetrexed
+         1  doxorubicin, cytoxan  ->  cyclophosphamide + doxorubicin
+         1  ketoconazole, dexamethesone, androgel,gnrh  ->  ketoconazole + testosterone
+         1  lactulose, vitamin d, calcium  ->  ergocalciferol + lactulose
+         1  lantus, amaryl  ->  glimepiride + insulin glargine
+         1  marcaine, duramorph , ketorolac  ->  bupivacaine + ketorolac
+         1  nipent, cytoxan, rituxan  ->  cyclophosphamide + pentostatin + rituximab
+         1  protopic, advantan  ->  methylprednisolone aceponate + tacrolimus
+
+  other_name / comma_components / exact+no_dose_or_form / synonym: 14 agents
+         4  dvs-233 sr, pristiq  ->  desvenlafaxine
+         3  5-fu infusion, leuocovorin, oxaliplatin, abraxane  ->  fluorouracil + oxaliplatin + paclitaxel
+         2  0.9% sodium chloride solution, glycerol, glycerin  ->  glycerol + sodium chloride
+         1  (rs)-baclofen, naltrexone hydrochloride and d-sorbitol oral fixed dose combination  ->  baclofen + naltrexone
+         1  ameluz gel, 10% aminolevulinic acid  ->  aminolevulinic acid
+         1  conditioning regimen (alternative): midi: fludarabine: 30 mg/m2/day iv x 5 days, cyclophosphamide: 50 mg/kg iv , thiotepa: 5 mg/kg/day iv x 2 days , tbi: 400 cgy  ->  cyclophosphamide + thiotepa
+         1  hezkue turbo«, sildenafil citrate oral suspension, sildenafil  ->  sildenafil
+         1  vincristine, cisplatin, cyclophosphamide, etoposide, high-dose methotrexate  ->  cisplatin + cyclophosphamide + etoposide + methotrexate + vincristine
+
+  intervention_name / components / no_dose_or_form+no_parentheticals / synonym: 12 agents
+         1  acetylsalicylic acid (asa)/aspirin 100 mg daily  ->  acetylsalicylic acid
+         1  acetylsalicylic acid (asa)/aspirin 200 mg daily  ->  acetylsalicylic acid
+         1  budesonide(160ug) and formoterol(4.5ug) bid  ->  budesonide + formoterol
+         1  ferric carboxymaltose (fcm) and folic acid tablets  ->  ferric carboxymaltose + folic acid
+         1  high dose etoposide and cytarabine (hivac)  ->  cytarabine + etoposide
+         1  olmesartan medoxomil (om)+ hydrochlorothiazide (hctz) tablets  ->  hydrochlorothiazide + olmesartan medoxomil
+         1  olmesartan medoxomil (om)/hydrochlorothiazide (hctz) tablets  ->  hydrochlorothiazide + olmesartan medoxomil
+         1  olmesartan medoxomil (om)/hydrochlorothiazide (hctz) tablets and placebo  ->  hydrochlorothiazide + olmesartan medoxomil
+         1  paracetamol (500 mg)/dimethindene maleate (1 mg)/ phenylephrine hydrochloride (10 mg) tablets  ->  dimetindene + paracetamol + phenylephrine
+         1  polyethylene glycol (peg-els) and bisacodyl tablets  ->  bisacodyl + macrogol
+         1  relugolix (40 mg) /estradiol (1 mg)/norethisterone acetate (0.5 mg) oral tablet  ->  estradiol + norethindrone acetate + relugolix
+         1  temocillin (negaban«) 2 g intravenous with lidocaine (3ml)  ->  lidocaine + temocillin
+
+  intervention_name / components / no_salt / synonym: 11 agents
+         4  opc-34712fum/ brexpiprazole fumarate  ->  brexpiprazole
+         1  cefixime trihydrate 100 mg/5 ml dry syrup  ->  cefixime
+         1  glucosamine sulfate + chondroitin sulfate - mantecorp  ->  glucosamine
+         1  glucosamine sulfate /chondroitin sulfate - sachet  ->  glucosamine
+         1  group a with creatine monohydrate  ->  creatine
+         1  ipratropium bromide 500 \u03bcg/salbutamol sulphate 3 mg  ->  salbutamol
+         1  quadruple sequential helicobacter pylori eradication + iron sulfate  ->  iron
+         1  topical vancomycin paste (1g vancomycin powder + 4ml sterile saline) and collatamp g gentamicin-eluting sponge (azralez pharmaceuticals; 2.0mg gentamicin sulphate/cm2 to cover wound)  ->  gentamicin
+
+  intervention_name / whole_name / no_parentheticals / fda_brand: 11 agents
+         2  saizen (human growth hormone)  ->  somatropin
+         1  bravelle(follicle stimulating hormone)  ->  follitropin
+         1  cathflo activase (alteplase)  ->  alteplase
+         1  ethinyl estradiol (ee) and levonorgestrel (ln)  ->  ethinylestradiol + levonorgestrel
+         1  ethinyl estradiol (ee) and levonorgestrel(ln)  ->  ethinylestradiol + levonorgestrel
+         1  genotropin (recombinant human growth hormone)  ->  somatropin
+         1  genotropin (somatropin)  ->  somatropin
+         1  novolin r (human recombinant insulin)  ->  insulin human
+         1  nutropin [somatropin (rdna origin) for injection]  ->  somatropin
+         1  nutropin aq [somatropin (dna origin) injection]  ->  somatropin
+
+  intervention_name / components / no_dose_or_form / ob_trade: 10 agents
+         1  2 capsules oral tylenol 2000 mg and iv "salt water  ->  paracetamol
+         1  combination oral and topical vitamin d  ->  ergocalciferol
+         1  epiduo once daily with detailed instruction for how to apply it  ->  adapalene + benzoyl peroxide
+         1  flolan injection with currently marketed diluent  ->  epoprostenol
+         1  flolan injection with reformulated diluent  ->  epoprostenol
+         1  iv tylenol 1000mg and 2 oral capsule "sugar pills  ->  paracetamol
+         1  oros« hydromorphone hcl; dilaudid cr (controlled release); dilaudid ir (immediate release) as rescue medicine  ->  hydromorphone
+         1  scalp nerve block with 0.25% hydrochloride bupivacaine and 0.67% bupivacaine liposome solution  ->  bupivacaine
+         1  supplementation with calcium + vitamin d daily  ->  ergocalciferol
+         1  symbicort pmdi with spacer device  ->  budesonide + formoterol
+
+  other_name / comma_components / compact / ob_trade: 10 agents
+         2  chf1535, atimos«, ventolair«, ventolin«  ->  salbutamol
+         2  proair« respiclick, albuterol multi-dose dry powder inhaler (mdpi)  ->  salbutamol
+         2  proair« respiclick, albuterol spiromax«  ->  salbutamol
+         1  (idhifa, ag 221)  ->  enasidenib
+         1  coartem«, novartis, switzerland  ->  artemether + lumefantrine
+         1  cytoxan«, neosar«  ->  cyclophosphamide
+         1  floseal", a thrombin and collagen based agent  ->  warfarin
+
+  intervention_name / components / compact / ob_trade: 9 agents
+         1  10% reduction of combination of esmeron« and nimbex«  ->  cisatracurium
+         1  20% reduction of combination of esmeron« and nimbex«  ->  cisatracurium
+         1  choriomon« injection+endometrin «  ->  progesterone
+         1  cto and temodar«  ->  temozolomide
+         1  definity« with high mechanical index ultrasound  ->  perflutren
+         1  endometrin« plus progesterone in oil (pio)  ->  progesterone
+         1  exforge« 5/160mg & lipitor« 20mg  ->  amlodipine + atorvastatin + valsartan
+         1  plavix« and pa32540  ->  clopidogrel
+         1  spiriva« respimat« 5 mcg/day  ->  tiotropium bromide
+
+  intervention_name / components / exact+no_salt / synonym: 9 agents
+         1  5-hydroxytryptophan and creatine monohydrate  ->  creatine + oxitriptan
+         1  azd1722 free base tablet + omeprazole  ->  omeprazole + tenapanor
+         1  brimonidine tartrate/timolol malate ophthalmic solution  ->  brimonidine + timolol
+         1  glucosamine sulphate 1500mg and meloxicam 15mg  ->  glucosamine + meloxicam
+         1  indacaterol acetate/mometasone furoate  ->  indacaterol + mometasone furoate
+         1  polymyxin b sulphate + prednisolone + benzocaine + clioquinol  ->  Polymyxin B + benzocaine + clioquinol + prednisolone
+         1  salbutamol sulfate + ipratropium bromide  ->  ipratropium + salbutamol
+         1  salbutamol sulfate and ipratropium bromide  ->  ipratropium + salbutamol
+         1  taurolidine citrate 4% and heparin 500  ->  heparin + taurolidine
+
+  other_name / comma_components / no_parentheticals / synonym: 9 agents
+         1  alcar, l-carnitine (if used locally)  ->  levocarnitine
+         1  bortezomib(v), lenalidomide(r), dexamethasone(d)  ->  bortezomib + dexamethasone + lenalidomide
+         1  botox, botulinum toxin type a (bta)  ->  botulinum toxin type A
+         1  botulinum toxin type a (150 kilodalton), free from complexing proteins  ->  botulinum toxin type A
+         1  dha, docosahexaenoic acid (dha), eicosapentaenoic acid (epa), epa (fish oils)  ->  doconexent + eicosapentaenoic acid
+         1  jardiance(r), ozempic(r)  ->  empagliflozin + semaglutide
+         1  maintenance immunosuppressive regimen is the same in experimental and control groups combining tacrolimus, mycophenolate mofetil (mmf) or enteric-coated mycophenolate sodium (ec-mps) and steroids  ->  mycophenolate mofetil
+         1  medroxyprogesterone acetate (mpa), i.e. provera  ->  medroxyprogesterone
+         1  pegylated interferon alpha 2a, pegasys(r)  ->  peginterferon alfa-2a
+
+  intervention_name / components / exact+no_parentheticals / ob_trade+synonym: 8 agents
+         2  coreg cr and lisinopril (fdc)  ->  carvedilol + lisinopril
+         2  fexofenadine/allegra (m016455)  ->  fexofenadine
+         2  rhbmp-2/cpm injection and bisphosphonates, calcium, and vitamin d (oral bisphosphonate therapy)  ->  dibotermin alfa + ergocalciferol
+         1  adriamycin and cytoxan (ac)  ->  cyclophosphamide + doxorubicin
+         1  naropeine or chirocaine (arthroscopic rotator cuff repair under lra)  ->  levobupivacaine + ropivacaine
+
+  other_name / components / compact / ob_trade: 8 agents
+         3  bem (at-527)/rzr (at-038) and prilosec«  ->  omeprazole
+         1  dulera«/zenhale«  ->  formoterol + mometasone furoate
+         1  evg/cobi/ftc/taf; genvoya«  ->  cobicistat + elvitegravir + emtricitabine + tenofovir alafenamide
+         1  prochieve« 8%/crinone 8%«  ->  progesterone
+         1  prp + solumedrol  ->  methylprednisolone succinate
+         1  sublocade«; prev. rbp-60000  ->  buprenorphine
+
+  intervention_name / components / compact+no_parentheticals / synonym: 7 agents
+         1  apatinib (250 mg/d) + docetaxel (60 mg/m2)  ->  apatinib + docetaxel
+         1  apatinib (500 mg/d) + docetaxel (60 mg/m2)  ->  apatinib + docetaxel
+         1  apatinib (750 mg/d) + docetaxel (60 mg/m2)  ->  apatinib + docetaxel
+         1  chromium picolinate (600 mcg cr+3) + biotin (2 mg)  ->  biotin + chromium picolinate
+         1  cp-690,550 + ethinyloestradiol (ee) and levonorgestrel (ln), ethinyloestradiol (ee) and levonorgestrel (ln)  ->  ethinylestradiol + levonorgestrel + tofacitinib
+         1  fluticasone furoate(ff)/umeclidinium (umec)/vilanterol(vi) (100/62.5/25) mcg  ->  fluticasone furoate + umeclidinium + vilanterol
+         1  truvada (fixed dose combination of tenofovir + emtricitabine) + zidovudine (zdv) + abacavir (abc)  ->  abacavir + emtricitabine + zidovudine
+
+  intervention_name / whole_name / no_dose_or_form / fda_brand: 7 agents
+         1  150iu gonal-f  ->  follitropin
+         1  20 mcg ethinyl estradiol and 100 mcg levonorgestrel  ->  ethinylestradiol + levonorgestrel
+         1  225iu gonal-f  ->  follitropin
+         1  300iu gonal-f  ->  follitropin
+         1  75iu gonal-f  ->  follitropin
+         1  genotropin 4mg  ->  somatropin
+         1  hcg (pregnyl 5000iu)  ->  chorionic gonadotrophin
+
+  intervention_name / comma_components / compact / ob_trade: 6 agents
+         2  mycophenol mofetil (mmf, cellcept«) 500 mg bid  ->  mycophenolate mofetil
+         1  cto, temodar«, radiation therapy  ->  temozolomide
+         1  hr19042 capsule, tarpeyo«, budenofalk«  ->  budesonide
+         1  hrg2010 capsule, sinemet«, madopar«  ->  carbidopa + levodopa
+         1  vardenafil odt, (staxyn, bay38-9456)  ->  vardenafil
+
+  intervention_name / comma_components / compact / ob_trade+synonym: 6 agents
+         1  1 (lipitor«, ezetrol«)  ->  atorvastatin + ezetimibe
+         1  2(lipitor«, ezetrol«)  ->  atorvastatin + ezetimibe
+         1  3(lipitor«, ezetrol«)  ->  atorvastatin + ezetimibe
+         1  4(lipitor«, ezetrol«)  ->  atorvastatin + ezetimibe
+         1  5 (lipitor«, ezetrol«)  ->  atorvastatin + ezetimibe
+         1  6(lipitor«, ezetrol«)  ->  atorvastatin + ezetimibe
+
+  intervention_name / whole_name / no_dose_or_form / ob_ingredient: 6 agents
+         2  inclisiran sodium 300 mg  ->  inclisiran
+         2  inclisiran sodium injection  ->  inclisiran
+         1  100 mg inclisiran sodium (equivalent to 94.5 mg inclisiran)  ->  inclisiran
+         1  300 mg inclisiran sodium (equivalent to 284 mg inclisiran)  ->  inclisiran
+
+  other_name / comma_components / dictionary_no_salt+exact / drugcentral_salt_stripped+synonym: 6 agents
+         1  beclomethasone, ciclesonide, placebo  ->  beclometasone dipropionate + ciclesonide
+         1  beclomethasone, placebo, ciclesonide  ->  beclometasone dipropionate + ciclesonide
+         1  ciclesonide, beclomethasone, placebo  ->  beclometasone dipropionate + ciclesonide
+         1  ciclesonide, placebo, beclomethasone  ->  beclometasone dipropionate + ciclesonide
+         1  fludarabine, cyclophosphamide, alemtuzumab  ->  alemtuzumab + cyclophosphamide + fludarabine phosphate
+         1  fludarabine,cyclophosphamide  ->  cyclophosphamide + fludarabine phosphate
+
+  other_name / whole_name / no_parentheticals / fda_brand: 6 agents
+         1  genotropin (pfizer inc.)  ->  somatropin
+         1  genotropin(r)  ->  somatropin
+         1  gonal-f (r-hfsh)  ->  follitropin
+         1  hylenex (r) recombinant  ->  hyaluronidase
+         1  pre-pen (benzylpenicilloyl polylysine)  ->  benzylpenicilloyl polylysine
+         1  saizen (somatoptropin; human growth hormone)  ->  somatropin
+
+  intervention_name / components / compact / ob_ingredient: 5 agents
+         1  artemether-lumefantrine and amodiaquine drug combination  ->  artemether + lumefantrine
+         1  artemether-lumefantrine with a single dose of 0.25mg/kg primaquine  ->  artemether + lumefantrine
+         1  artemether-lumefantrine with a single dose of 0.4mg/kg primaquine  ->  artemether + lumefantrine
+         1  artemether-lumefantrine+ amodiaquine (al+aq)  ->  artemether + lumefantrine
+         1  topical analgesia with lidocaine-prilocaine cream  ->  lidocaine + prilocaine
+
+  intervention_name / components / compact+exact / ob_trade+synonym: 5 agents
+         1  4l peglyte + 15 mg bisacodyl  ->  bisacodyl + macrogol + potassium chloride + sodium bicarbonate + sodium chloride + sodium sulfate
+         1  6l peglyte + 15 mg bisacodyl  ->  bisacodyl + macrogol + potassium chloride + sodium bicarbonate + sodium chloride + sodium sulfate
+         1  casodex and zoladex (or lupron)  ->  bicalutamide + goserelin + leuprorelin
+         1  maxalt 10mg mlt plus caffeine 75mg  ->  caffeine + rizatriptan
+         1  peg-intron plus rebetol  ->  peginterferon alfa-2b + ribavirin
+
+  intervention_name / components / exact+no_dose_or_form / ob_trade+synonym: 5 agents
+         1  high dose aspirin & vitamin d  ->  acetylsalicylic acid + ergocalciferol
+         1  kaletra and intelence tablets  ->  etravirine + lopinavir + ritonavir
+         1  kenalog with bupivacaine injection  ->  bupivacaine + triamcinolone acetonide
+         1  oral topotecan and temodar  ->  temozolomide + topotecan
+         1  truvada plus leuprolide 11.25mg intramuscular injection  ->  emtricitabine + leuprorelin + tenofovir disoproxil
+
+  other_name / components / exact+no_salt / synonym: 5 agents
+         1  chondroitin sulfate+glucosamine sulfate  ->  chondroitin sulfate + glucosamine
+         1  dexamethasone sodium phosphate; prednisone acetate tablets  ->  dexamethasone phosphate + prednisone
+         1  glucosamine sulphate and chondroitin sulphate  ->  chondroitin sulfate + glucosamine
+         1  indacaterol acetate/glycopyrronium bromide/mometasone furoate  ->  glycopyrronium bromide + indacaterol + mometasone furoate
+         1  indacaterol acetate/mometasone furoate  ->  indacaterol + mometasone furoate
+
+  intervention_name / comma_components / exact+no_salt / synonym: 4 agents
+         2  neutral salts of dextroamphetamine sulfate, usp, amphetamine sulfate, usp, d-amphetamine saccharate, d, l-amphetamine aspartate monohydrate  ->  amfetamine + levamfetamine
+         1  fos-amprenavir calcium, ritonavir  ->  fosamprenavir + ritonavir
+         1  rivoceranib mesylate, paclitaxel  ->  apatinib + paclitaxel
+
+  intervention_name / components / compact+exact / fda_brand+synonym: 4 agents
+         1  (e) stavudine, lamivudine, and nevirapine  ->  lamivudine + nevirapine + stavudine
+         1  (f) stavudine, lamivudine and efavirenz  ->  efavirenz + lamivudine + stavudine
+         1  irbesartan and irbesartan-hydrochlorothiazide  ->  hydrochlorothiazide + irbesartan
+         1  valsartan, hydrochlorothiazide and amlodipine  ->  amlodipine + hydrochlorothiazide + valsartan
+
+  intervention_name / components / compact+no_dose_or_form / synonym: 4 agents
+         1  17\u03b2-estradiol/dydrogesterone tablets  ->  dydrogesterone + estradiol
+         1  nestorone« /testosterone gel  ->  elcometrine + testosterone
+         1  topical tretinoin 0.05% + oral isotretinoin (0.5 mg/kg/day)  ->  isotretinoin + tretinoin
+         1  tqb2930 injection +(oxaliplatin for injection + capecitabine tablets)/( irinotecan hydrochloride injection+ capecitabine tablets)+bevacizumab injection  ->  bevacizumab + irinotecan
+
+  intervention_name / components / exact / fda_brand: 4 agents
+         1  autologous monocytes + actimmune + sylatron  ->  peginterferon alfa-2b
+         1  herzuma+mfolfox  ->  trastuzumab
+         1  ilet bionic pancreas insulin-only configuration with fiasp  ->  insulin aspart
+         1  menopur; gonal-f  ->  follitropin
+
+  other_name / comma_components / exact / fda_brand: 4 agents
+         3  norditropin, novo nordisk  ->  somatropin
+         1  pregnyl, profasi  ->  chorionic gonadotrophin
+
+  other_name / comma_components / exact+no_dose_or_form / ob_trade+synonym: 4 agents
+         1  bupropion hcl controlled-release, bupropion hcl extended release, bupropion hydrochloride extended-release, forfivo xl, wellbutrin sr, wellbutrin xl, zyban, zyban  ->  bupropion
+         1  clobetasol propionate, impoyz cream  ->  clobetasol propionate
+         1  liposomal bupivacaine, exparel  ->  bupivacaine
+         1  nicoderm cq, nicotine patch  ->  nicotine
+
+  other_name / comma_components / exact+no_parentheticals / synonym: 4 agents
+         2  folinic acid, oxaliplatin, 5-fluorouracil (fu)  ->  fluorouracil + leucovorin + oxaliplatin
+         1  eslicarbazepine acetate (esl), bia 2-093  ->  eslicarbazepine acetate
+         1  interleukin-2: il-2, aldesleukin, proleukin(r)  ->  aldesleukin
+
+  other_name / components / compact+exact / ob_trade+synonym: 4 agents
+         1  eloxatin«/leucovorin/5-fu  ->  fluorouracil + leucovorin + oxaliplatin
+         1  epiduo« forte and clindamycin  ->  adapalene + benzoyl peroxide + clindamycin
+         1  mecasermin and vivelle dot patch  ->  estradiol + mecasermin
+         1  peg-intron; rebetol  ->  peginterferon alfa-2b + ribavirin
+
+  other_name / components / dictionary_no_salt+exact / drugcentral_salt_stripped+synonym: 4 agents
+         1  cyclophosphamide and fludarabine  ->  cyclophosphamide + fludarabine phosphate
+         1  glycopyrrolate + beclometasone/formoterol  ->  beclometasone dipropionate + formoterol + glycopyrronium bromide
+         1  mometasone/indacaterol/glycopyrronium  ->  glycopyrronium bromide + indacaterol + mometasone furoate
+         1  pregnenolone 60mg & pyridoxal phosphate 20mg & dydrogesterone 10mg & impatien balsamina extract 100 mg  ->  dydrogesterone + pregnenolone succinate + pyridoxal phosphate
+
+  intervention_name / comma_components / compact+exact / ob_trade+synonym: 3 agents
+         1  art (atripla, truvada, efavirenz, combivir)  ->  efavirenz + emtricitabine + lamivudine + tenofovir disoproxil + zidovudine
+         1  remifentanil, ultiva«  ->  remifentanil
+         1  tacrolimus, prograf«  ->  tacrolimus
+
+  intervention_name / components / compact / ob_trade+synonym: 3 agents
+         1  duac« gel / differin« gel  ->  adapalene + benzoyl peroxide + clindamycin phosphate
+         1  exforge« tab 10/160mg, crestor« tab 20mg  ->  amlodipine + rosuvastatin + valsartan
+         1  exforge« tab 5/160mg, crestor« tab 10mg  ->  amlodipine + rosuvastatin + valsartan
+
+  intervention_name / components / exact / fda_brand+synonym: 3 agents
+         2  buserelin and pregnyl  ->  buserelin + chorionic gonadotrophin
+         1  follistim plus ganirelix  ->  follitropin + ganirelix
+
+  intervention_name / components / no_dose_or_form+no_parentheticals / ob_trade+synonym: 3 agents
+         1  kadian capsule + alcohol (under fasting conditions)  ->  ethanol + morphine
+         1  kadian capsule + alcohol (under fed conditions)  ->  ethanol + morphine
+         1  oros« hydromorphone hcl; oros« dilaudid; dilaudid sr (slow release); naltrexone (an opioid antagonist)  ->  hydromorphone + naltrexone
+
+  other_name / comma_components / compact+exact / ob_trade+synonym: 3 agents
+         1  differin«, epsolay, clindamycin  ->  adapalene + benzoyl peroxide + clindamycin
+         1  irinotecan, camptosar«  ->  irinotecan
+         1  tivicay«, efavirenz, atripla«  ->  dolutegravir + efavirenz + emtricitabine + tenofovir disoproxil
+
+  other_name / comma_components / compact+no_dose_or_form / ob_trade+synonym: 3 agents
+         1  albuterol dpi, proair« respiclick  ->  salbutamol
+         1  onureg«, oral azacitidine  ->  azacitidine
+         1  zentel« and stromectol«, ivermectin tablet 3mg  ->  ivermectin
+
+  other_name / components / compact / ob_trade+synonym: 3 agents
+         2  zyflo« + sprycel«  ->  dasatinib + zileuton
+         1  truvada«/prezista«/norvir«  ->  darunavir + emtricitabine + ritonavir + tenofovir disoproxil
+
+  other_name / components / dictionary_no_salt / drugcentral_salt_stripped: 3 agents
+         2  fludarabine + cyclophosphamide, conditioning regimen  ->  fludarabine phosphate
+         1  folate (vitamin b-9) and tubulysin b hydrazide small molecule conjugate  ->  folic acid
+
+  other_name / components / exact / fda_brand+synonym: 3 agents
+         1  goserelin/ pregnyl/ urofollitropin for injection  ->  chorionic gonadotrophin + goserelin
+         1  methylnaphthidate + riabni/rituxan/ruxience/truxima  ->  rituximab
+         1  ruxience or rituxan  ->  rituximab
+
+  other_name / components / exact+no_biosimilar_suffix / synonym: 3 agents
+         1  daratumumab and hyaluronidase-fihj  ->  daratumumab + hyaluronidase
+         1  efgartigimod alfa and hyaluronidase-qvfc  ->  efgartigimod alfa + hyaluronidase
+         1  pertuzumab plus trastuzumab plus hyaluronidase-zzxf  ->  hyaluronidase + pertuzumab + trastuzumab
+
+  other_name / whole_name / compact / fda_ingredient: 3 agents
+         1  insulin degludec / liraglutide  ->  insulin degludec + liraglutide
+         1  insulin degludec/liraglutide  ->  insulin degludec + liraglutide
+         1  zosyn (piperacillin/tazobactam); ciprofloxacin; metronidazole  ->  piperacillin + tazobactam
+
+  intervention_name / comma_components / compact+no_dose_or_form / synonym: 2 agents
+         1  doxercalciferol capsules, hectorol«  ->  doxercalciferol
+         1  interferon beta 1a, oral doxycycline  ->  doxycycline + interferon beta-1a
+
+  intervention_name / comma_components / compact+no_parentheticals / synonym: 2 agents
+         1  chop (cyclophosphamide, hydroxydaunorubicin [doxorubicin], oncovin [vincristine], prednisone)  ->  doxorubicin + prednisone + vincristine
+         1  seroquel«, quetiapine fumarate (atypical antipsychotic)  ->  quetiapine
+
+  intervention_name / comma_components / exact / fda_brand: 2 agents
+         1  gonal-f, fostimon  ->  follitropin
+         1  radiesse, xeomin, belotero  ->  botulinum toxin type A
+
+  intervention_name / comma_components / exact / fda_brand+synonym: 2 agents
+         1  arvekap, pregnyl  ->  chorionic gonadotrophin + triptorelin
+         1  beta-lactam antibiotic (cefazolin, cefuroxime, cefotaxime, ceftazidime, ceftriaxone, cefepime, pre-pen, penicillin g, ampicillin, and histamine) double-blind skin testing  ->  ampicillin + benzylpenicillin + benzylpenicilloyl polylysine + cefepime + cefotaxime + ceftazidime + ceftriaxone + cefuroxime
+
+  intervention_name / comma_components / exact+no_dose_or_form / ob_trade+synonym: 2 agents
+         1  low dose aspirin , vitamin d  ->  acetylsalicylic acid + ergocalciferol
+         1  testim, 1% testosterone gel  ->  testosterone
+
+  intervention_name / comma_components / no_parentheticals / ob_trade: 2 agents
+         1  dextenza (dexamethasone ophthalmic insert) 0.4 mg, for intracanalicular use  ->  dexamethasone
+         1  high-dose calcium (400 mg x 4), vitamin d (19 mikg x 4), and active vitamin d supplementation (2 mikg x 2)  ->  ergocalciferol
+
+  intervention_name / comma_components / no_salt / synonym: 2 agents
+         1  creatine monohydrate, conjugated linoleic acid  ->  creatine
+         1  neutral salts of dextroamphetamine sulfate, usp, amphetamine sulphate, usp, d-amphetamine saccharate, d, l-amphetamine aspartate monohydrate  ->  amfetamine + levamfetamine
+
+  intervention_name / components / compact / fda_brand: 2 agents
+         1  norgestimate-ethinyl estradiol, with or without folic acid  ->  ethinylestradiol + norgestimate
+         1  norgestimate-ethinyl estradiol; cyproterone acetate-ethinyl estradiol  ->  ethinylestradiol + norgestimate
+
+  intervention_name / components / compact+exact+no_dose_or_form / synonym: 2 agents
+         1  2nd line art (tenofovir df 300mg qd + lamividine 300mg qd or emtricitabine 200mg qd + lopinavir/ritonavir 400/100mg bid + raltegravir 400mg bid )  ->  emtricitabine + lopinavir + raltegravir + ritonavir
+         1  low-dose pembrolizumab plus chemotherapy (paclitaxel plus carboplatin or cisplatin)  ->  carboplatin + cisplatin + pembrolizumab
+
+  intervention_name / components / compact+no_parentheticals / ob_ingredient+synonym: 2 agents
+         1  20 mg/120 mg artemether-lumefantrine (al) + 20 mg ruxolitinib phosphate (rux)  ->  artemether + lumefantrine + ruxolitinib
+         1  artemether-lumefantrine plus tafenoquine (450 mg adult dose)  ->  artemether + lumefantrine + tafenoquine
+
+  intervention_name / components / dictionary_no_salt+no_parentheticals / drugcentral_salt_stripped+synonym: 2 agents
+         1  chondroitin/glucosamine (droglican)  ->  chondroitin sulfate + glucosamine
+         1  folate (400mcg) and vitamin b12 (100 mcg)  ->  cyanocobalamin + folic acid
+
+  intervention_name / components / no_dose_or_form / ob_trade+synonym: 2 agents
+         1  1 tablet ezetrol(r) + 1 capsules prograf(r)  ->  ezetimibe + tacrolimus
+         1  exforge tab 5/160mg, crestor tab 10mg  ->  amlodipine + rosuvastatin + valsartan
+
+  intervention_name / components / no_parentheticals / ob_trade: 2 agents
+         1  combination of (a) pegylated interferon alfa-2b and (b) rebetol  ->  ribavirin
+         1  ovulation induction with hcg and lupron (gnrh agonist)  ->  leuprorelin
+
+  intervention_name / whole_name / no_biosimilar_suffix / synonym: 2 agents
+         1  emapalumab-izsg  ->  emapalumab
+         1  onasemnogene abeparvovec-brve  ->  onasemnogene abeparvovec
+
+  other_name / comma_components / compact / ob_trade+synonym: 2 agents
+         1  a combination of a lipophilic statin (atorvastatin, lipitor), a npc1l1 inhibitor (ezetimibe, ezetrol) and a pcsk9 inhibitor (evolocumab, repatha) with chemotherapy in pancreatic cancer  ->  atorvastatin + evolocumab + ezetimibe
+         1  tomudex «, eloxatin «  ->  oxaliplatin + raltitrexed
+
+  other_name / comma_components / compact+exact / fda_brand+synonym: 2 agents
+         1  insulin, novolin-r  ->  insulin human
+         1  saizen«, somatropin  ->  somatropin
+
+  other_name / components / no_dose_or_form / ob_trade: 2 agents
+         1  atacand tab. 32mg/norvasc tab. 10mg  ->  amlodipine + candesartan cilexetil
+         1  norvasc tab. 10mg/atacand tab. 32mg  ->  amlodipine + candesartan cilexetil
+
+  other_name / components / no_salt / synonym: 2 agents
+         1  deuterated (d6)-dextropmethorphan/quindine sulfate  ->  quinidine
+         1  gentamicin sulphate 2.0 mg/cm2  ->  gentamicin
+
+  intervention_name / comma_components / compact / fda_brand: 1 agents
+         1  microdose flare-up protocol (lucrin; abbott + gonal f, serono)  ->  follitropin
+
+  intervention_name / comma_components / compact+exact+no_dose_or_form / fda_brand+ob_trade: 1 agents
+         1  norditropin, menostar 14mcg patch, vivelle dot 25mcg patch  ->  estradiol + somatropin
+
+  intervention_name / comma_components / compact+exact+no_dose_or_form / synonym: 1 agents
+         1  ferric carboxymaltose , \u03b1 erythropoietin, vitamin b12, oral folic acid  ->  cyanocobalamin + epoetin alfa + ferric carboxymaltose + folic acid
+
+  intervention_name / comma_components / dictionary_no_salt+exact / drugcentral_salt_stripped+ob_trade+synonym: 1 agents
+         1  busulfan, fludarabine, cytoxan  ->  busulfan + cyclophosphamide + fludarabine phosphate
+
+  intervention_name / comma_components / dictionary_no_salt+exact+no_parentheticals / drugcentral_salt_stripped+synonym: 1 agents
+         1  fludarabine, cytarabine, busulfan, antithymocyte globulin (atg), melphalan, cyclophosphamide (ctx)  ->  busulfan + cyclophosphamide + cytarabine + fludarabine phosphate + melphalan
+
+  intervention_name / comma_components / exact / fda_ingredient: 1 agents
+         1  leuprolide mesylate, subcutaneous injection of 42 mg leuprolide  ->  leuprorelin
+
+  intervention_name / comma_components / exact+no_parentheticals / ob_trade+synonym: 1 agents
+         1  calcium carbonate (tums), vitamin d  ->  calcium carbonate + ergocalciferol
+
+  intervention_name / comma_components / no_dose_or_form / ob_trade: 1 agents
+         1  epiduo- once daily, simple instruction for application  ->  adapalene + benzoyl peroxide
+
+  intervention_name / comma_components / no_parentheticals / ob_trade+synonym: 1 agents
+         1  inderal (drug), acetylsalicylic acid (drug)  ->  acetylsalicylic acid + propranolol
+
+  intervention_name / components / compact+dictionary_no_salt / drugcentral_salt_stripped+synonym: 1 agents
+         1  beclomethasone/formoterol (100/6\u03bcg) pmdi  ->  beclometasone dipropionate + formoterol
+
+  intervention_name / components / compact+exact / fda_ingredient+synonym: 1 agents
+         1  piperacillin-tazobactam and amikacin  ->  amikacin + piperacillin + tazobactam
+
+  intervention_name / components / compact+exact / ob_ingredient+ob_trade: 1 agents
+         1  drospirenone, ethinylestradiol/ yasmin  ->  drospirenone + ethinylestradiol
+
+  intervention_name / components / compact+exact+no_parentheticals / synonym: 1 agents
+         1  s-1 (tegafur+gimeracil+oteracil) /cisplatin (investigational arm)  ->  cisplatin + gimeracil + oteracil
+
+  intervention_name / components / compact+no_dose_or_form / ob_trade: 1 agents
+         1  factive« tab / factive iv  ->  gemifloxacin
+
+  intervention_name / components / exact / fda_brand+ob_trade: 1 agents
+         1  vitamin d + calcium + exercise program + humatrope  ->  ergocalciferol + somatropin
+
+  intervention_name / components / exact / fda_ingredient+synonym: 1 agents
+         1  therapeutic endoscopy with metronidazole and fosfomycin disodium  ->  fosfomycin + metronidazole
+
+  intervention_name / components / exact+no_dose_or_form / ob_trade: 1 agents
+         1  depacon iv and depakote er  ->  valproic acid
+
+  intervention_name / components / exact+no_dose_or_form+no_parentheticals / ob_trade+synonym: 1 agents
+         1  hydromorphone hcl 16mg; dilaudid sr 16mg; naltrexone (opioid antagonist) 50mg  ->  hydromorphone + naltrexone
+
+  intervention_name / components / exact+no_dose_or_form+no_parentheticals / synonym: 1 agents
+         1  verapamil sr/trandolapril/hydrochlorothiazide (hctz)  ->  hydrochlorothiazide + trandolapril + verapamil
+
+  intervention_name / components / no_biosimilar_suffix / synonym: 1 agents
+         1  pertuzumab, trastuzumab, and hyaluronidase-zzxf  ->  hyaluronidase
+
+  intervention_name / components / no_dose_or_form+no_salt / synonym: 1 agents
+         1  glucosamine sulfate /chondroitin sulfate - capsules  ->  chondroitin sulfate + glucosamine
+
+  intervention_name / components / no_parentheticals / fda_ingredient: 1 agents
+         1  tebipenem pivoxil hydrobromide (tbpm-pi-hbr) + placebo  ->  tebipenem pivoxil
+
+  intervention_name / whole_name / no_salt / ob_trade: 1 agents
+         1  sacubitril and valsartan sodium tablets 24 mg/26 mg  ->  sacubitril + valsartan
+
+  other_name / comma_components / compact+exact / ob_trade: 1 agents
+         1  lopressor, toprol xl  ->  metoprolol
+
+  other_name / comma_components / dictionary_no_salt+exact+no_dose_or_form / drugcentral_salt_stripped+synonym: 1 agents
+         1  fludarabine,cytarabine,busulfan,cyclophosphamide,mmf,tacrolimus capsules  ->  busulfan + cyclophosphamide + cytarabine + fludarabine phosphate + tacrolimus
+
+  other_name / comma_components / dictionary_no_salt+exact+no_parentheticals / drugcentral_salt_stripped+synonym: 1 agents
+         1  fludarabine, thiotepa ,cyclophosphamide (ftc)  ->  cyclophosphamide + fludarabine phosphate + thiotepa
+
+  other_name / comma_components / exact / fda_brand+ob_trade+synonym: 1 agents
+         1  advil, children's ibuprofen, advil migraine, motrin ib, neoprofen, caldolor, wal-profen, i-prin  ->  ibuprofen
+
+  other_name / comma_components / exact / fda_brand+synonym: 1 agents
+         1  omnitrope, zomacton  ->  somatropin
+
+  other_name / comma_components / exact+no_dose_or_form / ob_trade: 1 agents
+         1  dolophine, methadose, methadose oral  ->  methadone
+
+  other_name / comma_components / exact+no_parentheticals / ob_trade: 1 agents
+         1  otrexup (pf), xatmep, trexall  ->  methotrexate
+
+  other_name / comma_components / exact+no_parentheticals / ob_trade+synonym: 1 agents
+         1  horse antithymocyte globulin (hatg), cyclosporine (csa), promacta, eltrombopag (epag)  ->  ciclosporin + eltrombopag
+
+  other_name / components / compact+no_parentheticals / synonym: 1 agents
+         1  ethinyl estradiol [ee] and norgestimate [ngm])  ->  ethinylestradiol + norgestimate
+
+  other_name / components / compact+no_salt / synonym: 1 agents
+         1  cefaliv« (dihydroergotamine mesylate+ dipyrone sodium + caffeine) & placebo  ->  caffeine + metamizole
+
+  other_name / components / exact+no_dose_or_form / ob_trade+synonym: 1 agents
+         1  darunavir 800mg plus stribild tablet once daily  ->  cobicistat + darunavir + elvitegravir + emtricitabine + tenofovir disoproxil
+
+  other_name / components / exact+no_parentheticals / ob_trade+synonym: 1 agents
+         1  risperdal (oral) & risperdal consta  ->  risperidone
+
+  other_name / components / no_biosimilar_suffix / synonym: 1 agents
+         1  pertuzumab, trastuzumab, and hyaluronidase-zzxf  ->  hyaluronidase
+
+  other_name / components / no_dose_or_form / ob_trade+synonym: 1 agents
+         1  twynsta tab.+crestor tab  ->  amlodipine + rosuvastatin + telmisartan
+
+  other_name / components / no_dose_or_form+no_parentheticals / synonym: 1 agents
+         1  oral decitabine (sd) + cedazuridine (e7727)  ->  cedazuridine + decitabine
+
+  other_name / components / no_parentheticals / ob_trade: 1 agents
+         1  camptosar (pfizer) or campto (yakult honsha)  ->  irinotecan
+
+  other_name / components / no_parentheticals / ob_trade+synonym: 1 agents
+         1  pegasys (atc code: l03ab11) and copegus (atc code: j05ab04)  ->  peginterferon alfa-2a + ribavirin
+
+  other_name / whole_name / no_biosimilar_suffix / synonym: 1 agents
+         1  follitropin-alfa  ->  follitropin
+
+  other_name / whole_name / no_parentheticals / fda_ingredient: 1 agents
+         1  incobotulinumtoxina (xeomin)  ->  botulinum toxin type A
+
+==============================================================================
+FORM REVIEW: top 12 name -> drug pairs where the stated form was stripped or a salt inferred
+==============================================================================
+
+  stated_form_stripped: 7381 agents
+        99  liposomal bupivacaine  [matched 'bupivacaine']  ->  bupivacaine
+        75  nicotine patch  [matched 'nicotine']  ->  nicotine
+        41  paliperidone er  [matched 'paliperidone']  ->  paliperidone
+        32  oral azacitidine  [matched 'azacitidine']  ->  azacitidine
+        31  iv acetaminophen  [matched 'acetaminophen']  ->  paracetamol
+        31  oxytocin nasal spray  [matched 'oxytocin']  ->  oxytocin
+        26  buprenorphine transdermal patch  [matched 'buprenorphine']  ->  buprenorphine
+        26  liposomal irinotecan  [matched 'irinotecan']  ->  irinotecan
+        26  ruxolitinib cream  [matched 'ruxolitinib']  ->  ruxolitinib
+        22  oral insulin  [matched 'insulin']  ->  insulin human
+        21  testosterone gel  [matched 'testosterone']  ->  testosterone
+        20  lidocaine iv  [matched 'lidocaine']  ->  lidocaine
+
+  salt_inferred: 1362 agents
+       973  fludarabine  [matched 'fludarabine']  ->  fludarabine phosphate
+        57  abiraterone  [matched 'abiraterone']  ->  abiraterone acetate
+        22  valproate  [matched 'valproate']  ->  valproic acid
+        16  fludrocortisone  [matched 'fludrocortisone']  ->  fludrocortisone acetate
+        12  beclomethasone  [matched 'beclomethasone']  ->  beclometasone dipropionate
+        12  pregnenolone  [matched 'pregnenolone']  ->  pregnenolone succinate
+        10  fludarabine (flu)  [matched 'fludarabine']  ->  fludarabine phosphate
+         8  eravacycline  [matched 'eravacycline']  ->  eravacycline dihydrochloride
+         7  clobetasol  [matched 'clobetasol']  ->  clobetasol propionate
+         7  folate  [matched 'folate']  ->  folic acid
+         7  mometasone  [matched 'mometasone']  ->  mometasone furoate
+         7  tedizolid  [matched 'tedizolid']  ->  tedizolid phosphate
+
+==============================================================================
+MOST FREQUENT UNMATCHED AGENT NAMES (top 25, for debugging)
+==============================================================================
+  unresolved: 75480 distinct names
+       250  chemotherapy
+       248  sintilimab
+       167  camrelizumab
+       162  anlotinib
+       143  anti-thymocyte globulin
+       127  psilocybin
+       108  s-1
+       100  adebrelimab
+        97  recombinant interferon alfa
+        89  interleukin-2
+        87  nimotuzumab
+        82  blood sample
+        77  veliparib
+        69  g-csf
+        69  tipifarnib
+        67  pyrotinib
+        65  cadonilimab
+        64  entinostat
+        64  therapeutic allogeneic lymphocytes
+        63  mesenchymal stem cells
+        58  pegylated liposomal doxorubicin hydrochloride
+        57  ivonescimab
+        56  alisertib
+        55  alvocidib
+        55  tiragolumab
+  ambiguous: 47 distinct names
+        13  fluticasone
+         5  tocopherol
+         4  amino acids
+         3  pseudoephedrine, chlorpheniramine (chlor-trimeton), atropine
+         2  fluticasone/formoterol bai
+         2  intravenous amino acids
+         2  medrol,ndc0009-0056-02
+         2  zegerid
+         1  akynzeo
+         1  akynzeo solution
+         1  aldomet
+         1  ams2434 (amino acids)
+         1  antibiotic treatment (augmentin or cleocin)
+         1  antibiotic treatment (unasyn or cleocin)
+         1  atezolizumab combined with bevacizumab combined with \u03b2- alanine
+         1  celestone
+         1  celestone + placebo
+         1  cortef
+         1  dimenformon
+         1  fluocinolone
+         1  fluticasone / long-acting beta-2 agonist combination
+         1  fluticasone 25, 50, 100, 200 mcg
+         1  fluticasone 500 mcg
+         1  fluticasone nasal 50 mcg/inh nasal spray, azelastine nasal 140 mcg/inh nasal spray
+         1  fluticasone or placebo
+
+==============================================================================
+WRITTEN
+==============================================================================
+  data\labels\trial_drug_agents.csv
+  data\labels\trial_drug_resolution.csv
+  data\labels\trial_drug_resolution.manifest.json

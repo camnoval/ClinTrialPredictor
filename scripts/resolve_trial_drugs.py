@@ -34,10 +34,12 @@ from trial_pos.services.aact_fields import MESH_LIST  # noqa: E402
 from trial_pos.services.aact_rows import MANIFEST_FILE as ROWS_MANIFEST, file_name  # noqa: E402
 from trial_pos.services.drug_dictionary import build_dictionary  # noqa: E402
 from trial_pos.services.drug_resolution import (  # noqa: E402
-    AGENT_AMBIGUOUS, AGENT_COLUMNS, AGENT_STATUSES, AGENT_UNRESOLVED, TRIAL_COLUMNS,
+    AGENT_AMBIGUOUS, AGENT_COLUMNS, AGENT_STATUSES, AGENT_UNRESOLVED, FORM_HANDLING_DOC,
+    FORM_HANDLINGS, FORM_INFERRED, FORM_STRIPPED, HOW_WHOLE, MATCH_CLASSES, MATCH_FULL,
+    MATCH_NONE, MATCH_PARTIAL_ONLY, MATCH_UNDETERMINABLE, MATCHING_STATUSES, TRIAL_COLUMNS,
     agent_rows, resolve_trial, tally, trial_row,
 )
-from trial_pos.services.drug_names import key  # noqa: E402
+from trial_pos.services.drug_names import STEP_EXACT, key  # noqa: E402
 from trial_pos.services.drugsatfda import decode, parse_tab, require_columns  # noqa: E402
 from trial_pos.services.eligibility import phase_class  # noqa: E402
 from trial_pos.services.population import tribool  # noqa: E402
@@ -50,6 +52,7 @@ DEFAULT_DC_DIR = Path("data") / "drugcentral"
 DEFAULT_FDA_DIR = Path("data") / "drugsatfda"
 DEFAULT_OUT_DIR = Path("data") / "labels"
 DEFAULT_SHOW = 25
+DEFAULT_SHOW_PER_ROUTE = 12
 LABELS_FILE = "trial_labels.csv"
 DC_MANIFEST = "drugcentral.manifest.json"
 FDA_PRODUCTS = "Products.txt"
@@ -142,6 +145,8 @@ def main() -> int:
     ap.add_argument("--fda-dir", type=Path, default=DEFAULT_FDA_DIR)
     ap.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     ap.add_argument("--show", type=int, default=DEFAULT_SHOW)
+    ap.add_argument("--show-per-route", type=int, default=DEFAULT_SHOW_PER_ROUTE,
+                    help="name -> drug pairs printed for every route but plain exact")
     ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args()
     outs = {k: args.out_dir / k for k in (OUT_AGENTS, OUT_TRIALS, OUT_MANIFEST)}
@@ -152,7 +157,8 @@ def main() -> int:
 
     _rule("SETTINGS")
     print(f"  aact {args.aact_dir} | drugcentral {args.dc_dir} | drugs@fda {args.fda_dir} | "
-          f"out {args.out_dir} | show {args.show} | mesh token {MESH_LIST!r}")
+          f"out {args.out_dir} | show {args.show} | per route {args.show_per_route} | "
+          f"mesh token {MESH_LIST!r}")
 
     _rule("INPUTS")
     drug, phase = set(), {}
@@ -249,13 +255,32 @@ def main() -> int:
     for src, n in sorted(counts["sources"].items(), key=lambda kv: (-kv[1], kv[0])):
         print(f"    {src:40s} {n:8d}")
 
+    _rule("FORM (D-12 to D-15): how each match treated the form its name states")
+    n_match = sum(counts["form_handling"].values())
+    for h in FORM_HANDLINGS:
+        print(f"  {h:24s} {counts['form_handling'][h]:8d}  {_pct(counts['form_handling'][h], n_match)}"
+              f"   {FORM_HANDLING_DOC[h]}")
+    print(f"\n  agents stating more than one salt across their names: {counts['salt_conflicts']}")
+    print("  formulation/route classes stated (agents; an agent may state several):")
+    for c, n in sorted(counts["form_classes"].items(), key=lambda kv: (-kv[1], kv[0])):
+        print(f"    {c:24s} {n:8d}")
+    c = counts["tested_moiety_in_comparator"]
+    print(f"\n  trials whose tested moiety is also a comparator moiety: {c[True]}; not {c[False]}; "
+          f"cannot tell {c[None]}")
+    by_phase_cmp = Counter(phase[t.nct_id] for t in results if t.tested_moiety_in_comparator)
+    print(f"    by phase class: {dict(sorted(by_phase_cmp.items()))}")
+
     _rule("POPULATION-LEVEL RATE: trials with at least one tested agent resolved")
+    print("  matched = at least one tested agent FULLY resolved (D-24). Partial-only trials")
+    print("  are neither matched nor unmatched: excluded from the market label.")
     def rate(members, label):
         m = [t for t in members]
-        det = [t for t in m if t.matched is not None]
-        hit = sum(1 for t in det if t.matched)
-        print(f"  {label:40s} matched {hit:7d} of determinable {len(det):7d} "
-              f"({_pct(hit, len(det))}); of all {len(m):7d} ({_pct(hit, len(m))})")
+        c = Counter(t.match_class for t in m)
+        det = len(m) - c[MATCH_UNDETERMINABLE]
+        hit = c[MATCH_FULL]
+        print(f"  {label:40s} full {hit:7d} of determinable {det:7d} ({_pct(hit, det)}); "
+              f"partial-only {c[MATCH_PARTIAL_ONLY]:6d} ({_pct(c[MATCH_PARTIAL_ONLY], det)}); "
+              f"none {c[MATCH_NONE]:7d}; of all {len(m):7d}")
     rate(results, "all drug trials")
     rate([t for t in results if phase[t.nct_id] == PIVOTAL], "pivotal drug trials")
     for route in ROUTES:
@@ -269,6 +294,39 @@ def main() -> int:
           "DrugCentral):")
     for label, value in LITERATURE:
         print(f"    {label:66s} {100.0 * value:.1f}%")
+
+    _rule(f"ROUTE REVIEW: top {args.show_per_route} name -> drug pairs per route "
+          "(plain exact whole-name matches omitted)")
+    # Drugs are parent ids already; name each by its OWN structure row, never a salt's.
+    name_of = {int(r["id"]): r["name"] for r in dc["structures"]}
+    pairs = defaultdict(Counter)
+    for t in results:
+        for a in t.agents:
+            if a.status in MATCHING_STATUSES:
+                route = (a.name_kind, a.how, a.step, a.source)
+                if a.how == HOW_WHOLE and a.step == STEP_EXACT:
+                    continue
+                drug = " + ".join(sorted(name_of.get(x, str(x)) for x in a.drugs))
+                pairs[route][(key(a.name_used), drug)] += 1
+    for route in sorted(pairs, key=lambda r: (-sum(pairs[r].values()), r)):
+        print(f"\n  {' / '.join(route)}: {sum(pairs[route].values())} agents")
+        for (name, drug), n in sorted(pairs[route].items(),
+                                      key=lambda kv: (-kv[1], kv[0]))[:args.show_per_route]:
+            print(f"    {n:6d}  {name}  ->  {drug}")
+
+    _rule(f"FORM REVIEW: top {args.show_per_route} name -> drug pairs where the stated form "
+          "was stripped or a salt inferred")
+    form_pairs = defaultdict(Counter)
+    for t in results:
+        for a in t.agents:
+            if a.form_handling in (FORM_STRIPPED, FORM_INFERRED):
+                drug = " + ".join(sorted(name_of.get(x, str(x)) for x in a.drugs))
+                form_pairs[a.form_handling][(key(a.name_used), a.matched_key, drug)] += 1
+    for h in (FORM_STRIPPED, FORM_INFERRED):
+        print(f"\n  {h}: {sum(form_pairs[h].values())} agents")
+        for (name, mk, drug), n in sorted(form_pairs[h].items(),
+                                          key=lambda kv: (-kv[1], kv[0]))[:args.show_per_route]:
+            print(f"    {n:6d}  {name}  [matched '{mk}']  ->  {drug}")
 
     _rule(f"MOST FREQUENT UNMATCHED AGENT NAMES (top {args.show}, for debugging)")
     for status in (AGENT_UNRESOLVED, AGENT_AMBIGUOUS):
@@ -299,6 +357,7 @@ def main() -> int:
             "inputs_sha256": inputs, "drug_trials": len(results),
             "selection": dict(counts["outcomes"]), "agent_status": dict(counts["statuses"]),
             "matched": {str(k): v for k, v in counts["matched"].items()},
+            "match_classes": {k: counts["match_classes"][k] for k in MATCH_CLASSES},
             "outputs": {k: {"rows": None} for k in (OUT_AGENTS, OUT_TRIALS)},
         }
         for k in (OUT_AGENTS, OUT_TRIALS):

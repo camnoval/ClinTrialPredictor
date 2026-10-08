@@ -98,9 +98,10 @@ def main() -> int:
                          dc["ob_product"], dc["struct2obprod"],
                          load_fda(args.fda_dir, FDA_PRODUCTS),
                          load_fda(args.fda_dir, FDA_APPLICATIONS))
-    name_of = {d.canonical(parse_struct_id(r["id"])): r["name"] for r in dc["structures"]}
+    # Drugs are parent ids already; name each by its OWN structure row, never a salt's.
+    name_of = {parse_struct_id(r["id"]): r["name"] for r in dc["structures"]}
     agencies = Counter((r.get("type") or "").strip() for r in approval)
-    fda = {d.canonical(parse_struct_id(r["struct_id"])) for r in approval
+    fda = {parse_struct_id(r["struct_id"]) for r in approval
            if (r.get("type") or "").strip() == FDA_AGENCY and parse_struct_id(r["struct_id"])}
     print(f"approval.type vocabulary: {dict(sorted(agencies.items()))}")
     print(f"drugs with an FDA approval row (parent-mapped): {len(fda)}")

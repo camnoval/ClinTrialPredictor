@@ -63,6 +63,21 @@ def components(raw) -> list:
     return _parts(raw, MIN_COMPONENT_LENGTH)
 
 
+# Commas, LAST RESORT and registry names only (never Drugs@FDA ingredient strings). A comma
+# between two digits is a chemical locant ('2,4-dinitrophenol') and is never split.
+COMMA_SPLIT = re.compile(r"(?<!\d),|,(?!\d)")
+
+
+def comma_components(raw) -> list:
+    """Active components after splitting on commas as well as the agent separators."""
+    if is_placebo(raw):
+        return []
+    out = []
+    for piece in COMMA_SPLIT.split(key(raw)):
+        out.extend(c for c in components(piece) if not is_placebo(c))
+    return out
+
+
 def is_placebo(raw) -> bool:
     """True when the name IS a placebo-type control, not when it merely mentions one."""
     return bool(PLACEBO_PATTERN.search(key(raw)))
@@ -96,7 +111,8 @@ DOSE_UNITS = ("mg/kg", "mg/m2", "mg/m\u00b2", "mcg/kg", "ug/kg", "\u00b5g/kg", "
 # A number is a dose only when it stands alone: never a digit run inside a code such as
 # 'mk-3475', 'covid-19' or 'alfa-2b'.
 _NUM_BEFORE = r"(?<![a-z0-9\-.,])"
-_NUM_AFTER = r"(?![a-z0-9\-])"
+# ...and never the front of a locant or decimal ('2,4-dinitrophenol', '1,25-dihydroxy').
+_NUM_AFTER = r"(?![a-z0-9\-]|[.,]\d)"
 _DOSE = re.compile(
     _NUM_BEFORE + r"\d+(?:[.,]\d+)?\s*(?:" + "|".join(re.escape(u) for u in DOSE_UNITS)
     + r")(?![a-z0-9])|" + _NUM_BEFORE + r"\d+(?:[.,]\d+)?" + _NUM_AFTER)
@@ -109,7 +125,18 @@ FORM_WORDS = frozenset({
     "film", "coated", "extended", "release", "extended-release", "delayed-release",
     "modified-release", "er", "xr", "sr", "xl", "cr", "dr", "dose", "doses", "daily",
     "once", "twice", "bid", "tid", "qd", "qid", "q3w", "q2w", "q4w", "weekly",
+    # Added 2026-10-07 from audit/probe_unresolved.py section 2: formulation qualifiers on
+    # the same DrugCentral drug ('liposomal bupivacaine', 'unfractionated heparin',
+    # 'buprenorphine transdermal patch'). 'pegylated' is deliberately absent: pegfilgrastim
+    # and filgrastim are different drugs.
+    "liposomal", "unfractionated", "transdermal", "low-dose", "high-dose",
+    # Inhaler devices, added with D-20 ('albuterol dpi 25 mcg/inh').
+    "dpi", "mdi", "pmdi",
 })
+
+# Two-word qualifiers, removed as PHRASES so 'low' alone is never stripped ('low molecular
+# weight heparin' must stay whole).
+QUALIFIER_PHRASES = re.compile(r"\b(?:low|high)[\s\-]dose\b")
 
 SALT_WORDS = frozenset({
     "hydrochloride", "hcl", "dihydrochloride", "hydrobromide", "sodium", "potassium",
@@ -119,15 +146,78 @@ SALT_WORDS = frozenset({
     "monohydrate", "dihydrate", "trihydrate", "hydrate", "anhydrous", "dipropionate",
     "propionate", "valerate", "free", "base", "disodium", "meglumine", "trometamol",
     "tromethamine",
+    # Esters and further counter-ions, added 2026-10-07. Sibling forms must strip to the
+    # SAME root so the dictionary-side salt step sees them collide and calls the root
+    # ambiguous: without 'furoate', 'fluticasone' reached the propionate alone. Words that
+    # ARE the drug ('chloride', 'carbonate', 'oxide') and 'mofetil' stay out.
+    "furoate", "acetonide", "hexacetonide", "butyrate", "pivalate", "palmitate",
+    "decanoate", "enanthate", "cypionate", "undecanoate", "benzoate", "pamoate", "embonate",
+    "nitrate", "oxalate", "hyclate", "xinafoate", "stearate", "ethylsuccinate", "aspartate",
+    "napsylate", "esylate", "edisylate", "camsylate", "hemifumarate", "hemitartrate",
 })
 
+# Dictionary-side salt stripping (drug_dictionary.REVERSE_SALT) never matches a bare
+# element: 'copper' or 'barium' would otherwise reach whichever copper or barium compound
+# the dictionary happens to hold (audit/probe_unresolved.py: copper -> copper sulfate).
+ELEMENT_ROOTS = frozenset({
+    "aluminium", "aluminum", "barium", "bismuth", "calcium", "chromium", "cobalt", "copper",
+    "gallium", "gold", "iron", "lithium", "magnesium", "manganese", "platinum", "potassium",
+    "selenium", "silver", "sodium", "strontium", "tin", "zinc", "iodine", "fluoride",
+})
+
+
+def has_salt_word(k: str) -> bool:
+    return any(w.strip(_EDGE) in SALT_WORDS for w in k.split())
+
+
 # FDA's four-letter biosimilar suffix: adalimumab-aacf. Applied only to a final hyphenated
-# run of exactly four letters, so 'interferon alfa-2b' is untouched.
+# run of exactly four letters, so 'interferon alfa-2b' is untouched, and only when what is
+# left is a biologic (BIOLOGIC_STEMS, or an insulin): 'latanoprost-ppds', 'tace-haic',
+# 'ibrutinib-rice' are not biosimilars (resolve_trial_drugs route review, 2026-10-07).
 BIOSIMILAR_SUFFIX = re.compile(r"-[a-z]{4}$")
+BIOLOGIC_STEMS = ("mab", "cept", "ase", "kin", "stim", "poetin", "vec", "cel", "vedotin",
+                  "tecan", "tansine", "tropin", "cog", "ermin", "gene")
+BIOLOGIC_WORDS = frozenset({"insulin"})
+
+# Abbreviations ('inh', 'bal', 'dv', 'ats', 'tace') collide with DrugCentral synonyms of
+# unrelated drugs ('albuterol ... mcg/inh' -> isoniazid, 'adcc & tace' -> chlorotrianisene).
+# A key whose compact form is this short and letters-only may match only as an exact WHOLE
+# intervention name (D-20). Digits keep codes usable ('5-fu', 's-1'). Up to
+# MAX_ABBREVIATION_LENGTH letters is always an abbreviation; one letter longer only when the
+# trial wrote it in capitals ('TACE'), so lowercase drug words ('iron', 'zinc') still match.
+MAX_ABBREVIATION_LENGTH = 3
+CAPITALISED_ABBREVIATION_LENGTH = 4
+
+
+def is_abbreviation(k, original: str = "") -> bool:
+    """`k` is a candidate key; `original` the name as the registry wrote it."""
+    c = compact(k)
+    if not c.isalpha() or not c:
+        return False
+    if len(c) <= MAX_ABBREVIATION_LENGTH:
+        return True
+    if len(c) == CAPITALISED_ABBREVIATION_LENGTH and original:
+        return re.search(rf"(?<![A-Za-z]){re.escape(c.upper())}(?![A-Za-z])",
+                         str(original)) is not None
+    return False
+
+
+def is_biologic_root(k: str) -> bool:
+    return any(w in BIOLOGIC_WORDS or w.endswith(BIOLOGIC_STEMS) for w in k.split())
+
+
+# A bracket holding only an isotope ('[18f]', '[68ga]', '[99mtc]', '(177lu)') is part of a
+# radiotracer's identity: removing it turned '[18f]t4' into levothyroxine (D-23).
+ISOTOPE = re.compile(r"^\s*\d{1,3}\s*m?\s*[a-z]{1,2}\s*$")
+
+
+def _drop_unless_isotope(m) -> str:
+    inner = m.group(0)[1:-1]
+    return m.group(0) if ISOTOPE.match(inner) else " "
 
 
 def drop_parentheticals(k: str) -> str:
-    return " ".join(_PARENS.sub(" ", k).split())
+    return " ".join(_PARENS.sub(_drop_unless_isotope, k).split())
 
 
 def parenthetical_contents(k: str) -> list:
@@ -135,7 +225,7 @@ def parenthetical_contents(k: str) -> list:
 
 
 def drop_dose_and_form(k: str) -> str:
-    s = _DOSE.sub(" ", k)
+    s = QUALIFIER_PHRASES.sub(" ", _DOSE.sub(" ", k))
     return " ".join(w for w in s.split() if w.strip(_EDGE) not in FORM_WORDS).strip(_EDGE)
 
 
@@ -147,7 +237,111 @@ def drop_salt(k: str) -> str:
 
 
 def drop_biosimilar_suffix(k: str) -> str:
-    return BIOSIMILAR_SUFFIX.sub("", k)
+    root = BIOSIMILAR_SUFFIX.sub("", k)
+    return root if root != k and is_biologic_root(root) else k
+
+
+# ---- the stated form (D-12 to D-15, docs/Handoff_rev11.md) ---------------------------------
+# A trial's tested FORM is the salt and the formulation/route its intervention name and other
+# names state (never the description, D-15). Recorded beside the moiety, never instead of it:
+# salts and formulations are different products with different approvals (D-12).
+
+# Salt-list words that do not distinguish a product.
+NON_DISTINGUISHING_SALT_WORDS = frozenset({"free", "base", "anhydrous"})
+
+# One spelling per salt, as Drugs@FDA ingredient strings write it ('METOPROLOL SUCCINATE',
+# 'IMATINIB MESYLATE'), so the market label can compare a stated salt with an ingredient.
+SALT_CANONICAL = {"hcl": "hydrochloride", "mesilate": "mesylate", "besilate": "besylate",
+                  "sulphate": "sulfate", "embonate": "pamoate"}
+
+# Known gap: a brand whose name contains a form word reads as that form ('Acthar Gel' is an
+# injection, read as topical). Not special-cased; the route review shows such cases.
+
+# Formulation and route words -> a FORM CLASS. Classes, not words, are what the market label
+# will map onto Drugs@FDA Products.Form (dosage form ; route). Hyphenated entries also match
+# the two-word spelling ('extended release'). Short tokens ('iv', 'sc', 'er') are matched as
+# whole words only.
+FORM_CLASS_WORDS = {
+    "extended_release": ("extended-release", "er", "xr", "xl", "sr", "cr", "long-acting",
+                         "prolonged-release", "sustained-release", "controlled-release",
+                         "depot"),
+    "delayed_release": ("delayed-release", "dr", "enteric-coated", "gastro-resistant"),
+    "modified_release": ("modified-release",),
+    "orally_disintegrating": ("odt", "orally-disintegrating"),
+    "liposomal": ("liposomal", "liposome"),
+    "lipid_complex": ("lipid-complex",),
+    "intravenous": ("iv", "i.v", "intravenous", "intravenously", "infusion"),
+    "subcutaneous": ("sc", "sq", "s.c", "subcutaneous", "subcutaneously"),
+    "intramuscular": ("im", "i.m", "intramuscular", "intramuscularly"),
+    "oral": ("oral", "orally", "po"),
+    "topical": ("topical", "cream", "gel", "ointment", "lotion", "foam"),
+    "transdermal": ("transdermal", "patch"),
+    "nasal": ("nasal", "intranasal"),
+    "inhalation": ("inhalation", "inhaled", "inhaler", "nebulised", "nebulized", "dpi",
+                   "mdi", "pmdi"),
+    "ophthalmic": ("ophthalmic", "eye-drops"),
+    "intrathecal": ("intrathecal",),
+    "intravitreal": ("intravitreal",),
+    "vaginal": ("vaginal", "intravaginal"),
+    "rectal": ("rectal", "suppository"),
+    "sublingual": ("sublingual",),
+    "buccal": ("buccal",),
+    "implant": ("implant", "implantable"),
+}
+FORM_CLASSES = tuple(sorted(FORM_CLASS_WORDS))
+_FORM_WORD_CLASS = {w: c for c, ws in FORM_CLASS_WORDS.items() for w in ws}
+_TOKEN = re.compile(r"[a-z0-9]+(?:[.\-][a-z0-9]+)*")
+
+
+class StatedForm(NamedTuple):
+    salts: tuple          # salt words stated, sorted
+    classes: tuple        # FORM_CLASSES stated, sorted
+    words: tuple          # the formulation/route words found, sorted
+
+    @property
+    def stated(self) -> bool:
+        return bool(self.salts or self.classes)
+
+
+NO_FORM = None  # set below, after StatedForm exists
+
+
+def tokens(k: str) -> list:
+    toks = _TOKEN.findall(k)
+    return toks + [f"{a}-{b}" for a, b in zip(toks, toks[1:])]
+
+
+def stated_salts(raw) -> tuple:
+    """Salt words a name states: the TRAILING salt words drop_salt removes once brackets,
+    doses and forms are gone. 'sodium chloride' states none ('chloride' is the drug); a
+    leading counter-ion ('sodium valproate') is not read, a known gap."""
+    out = set()
+    k = key(raw)
+    for base in [drop_parentheticals(k)] + parenthetical_contents(k):
+        stripped = drop_dose_and_form(base)
+        kept = drop_salt(stripped).split()
+        out.update(w.strip(_EDGE) for w in stripped.split()[len(kept):])
+    return tuple(sorted({SALT_CANONICAL.get(w, w) for w in out
+                         if w and w not in NON_DISTINGUISHING_SALT_WORDS}))
+
+
+def stated_form(names) -> StatedForm:
+    """The form stated across one intervention's names (its name and other names)."""
+    salts, classes, words = set(), set(), set()
+    for raw in names:
+        k = key(raw)
+        if not k:
+            continue
+        salts.update(stated_salts(k))
+        for t in tokens(k):
+            c = _FORM_WORD_CLASS.get(t)
+            if c:
+                classes.add(c)
+                words.add(t)
+    return StatedForm(tuple(sorted(salts)), tuple(sorted(classes)), tuple(sorted(words)))
+
+
+NO_FORM = StatedForm((), (), ())
 
 
 # ---- ordered variants -------------------------------------------------------------------------

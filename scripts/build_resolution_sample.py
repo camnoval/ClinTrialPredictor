@@ -31,10 +31,9 @@ from trial_pos.services.eligibility import (  # noqa: E402
     DEFAULT_MARKET_WINDOW_YEARS, ELIGIBLE, REGISTRATION_SUBMITTED_FIELD,
     eligible_for_market, merge_registration_timing,
 )
-from trial_pos.services.population import tribool  # noqa: E402
 from trial_pos.services.resolution_sample import (  # noqa: E402
-    ANSWERS, CONFIDENCE, DEFAULT_SALT, KEY_COLUMNS, NOT_IN_DRUGCENTRAL, PRECISION_GATE,
-    RECALL_GATE, SHEET_COLUMNS, STRATA, TARGET_HALF_WIDTH, key_row, n_for_half_width,
+    ANSWERS, CONFIDENCE, DEFAULT_SALT, KEY_COLUMNS, NO_FORM_STATED, NOT_IN_DRUGCENTRAL,
+    PRECISION_GATE, RECALL_GATE, RESOLUTION_COLUMNS, SHEET_COLUMNS, STRATA, TARGET_HALF_WIDTH, key_row, n_for_half_width,
     ordered_strata, presentation, sheet_row, strata, tranche,
 )
 
@@ -55,12 +54,19 @@ One row per trial. Open the `url` (ClinicalTrials.gov) and read the arms and int
 - **tested_agents**: the drug or drugs this trial TESTS, separated by `;`. Not placebo, not
   the comparator, not background therapy every arm receives. A combination tested together
   is listed as its parts.
+- **tested_form**: for each tested agent, in the same order and separated by `;`, the salt
+  and formulation or route the trial tests, as the registry describes it anywhere on the
+  page (name, description, arms): e.g. `succinate, extended release`, `subcutaneous`,
+  `liposomal`. Write `{NO_FORM_STATED}` when the registry does not say.
 - **drugcentral_ids**: for each tested agent, in the same order and separated by `;`, its
   DrugCentral id (search drugcentral.org; the id is the number in the drug page's URL).
   Write `{NOT_IN_DRUGCENTRAL}` for an agent DrugCentral does not have.
-- **any_fda_approved**: `{ANSWERS[0]}` if at least one tested agent has ever been approved by
-  the FDA, for any indication, as of 2026-10-06 (CDER or CBER); `{ANSWERS[1]}` if none;
-  `{ANSWERS[2]}` if you cannot tell. Unclear is counted separately, never read as no.
+- **any_fda_approved**: `{ANSWERS[0]}` if at least one tested agent has been approved by the
+  FDA **in the form recorded in tested_form**, for any indication, as of 2026-10-06 (CDER or
+  CBER). Approval of a different salt or formulation does not count: metoprolol succinate
+  extended release is Toprol-XL, not Lopressor. Where the form is `{NO_FORM_STATED}`, any
+  approved form of the drug counts. `{ANSWERS[1]}` if none; `{ANSWERS[2]}` if you cannot
+  tell. Unclear is counted separately, never read as no.
 - **approval_cber_only**: `{ANSWERS[0]}` if every approval you found is a CBER (biologics
   centre: vaccines, blood products, cell and gene therapy) approval; otherwise
   `{ANSWERS[1]}`. Blank when any_fda_approved is not `{ANSWERS[0]}`.
@@ -131,10 +137,8 @@ def main() -> int:
     labels = list(read_rows(args.labels, ("nct_id", "is_drug_trial", "phase")))
     frame = [r["nct_id"] for r in merge_registration_timing(labels, submitted)
              if eligible_for_market(r, snapshot, args.market_window)["verdict"] == ELIGIBLE]
-    matched = {r["nct_id"]: tribool(r["matched"])
-               for r in read_rows(args.resolution, ("nct_id", "matched", "selection_outcome",
-                                                    "drugs"))}
-    resolution = {r["nct_id"]: r for r in read_rows(args.resolution, ("nct_id",))}
+    resolution = {r["nct_id"]: r for r in read_rows(args.resolution, RESOLUTION_COLUMNS)}
+    matched = {n: r["match_class"] for n, r in resolution.items()}
     members = strata(matched, frame)
     ordered = ordered_strata(members, args.salt)
     chosen = tranche(ordered, args.start, args.per_stratum)

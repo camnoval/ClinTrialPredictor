@@ -3,8 +3,10 @@
 Decided 2026-10-07 (rev 10 section 12.30, gate ratified 2026-10-06):
 
   frame      market-eligible pivotal drug trials at the headline window
-  strata     the resolver MATCHED the trial, or did not (unmatched includes trials whose
-             tested agent was undeterminable: an approved drug there is a miss all the same)
+  strata     the resolver's match class (D-24): MATCHED (a tested agent fully resolved),
+             PARTIAL (only partly resolved agents; excluded from the market label, sampled
+             to measure how often the resolved part is the tested drug), UNMATCHED (none,
+             and undeterminable: an approved drug there is a miss all the same)
   order      each stratum's members in salted-hash order, fixed at draw time. Tranche 1 is
              the first `n` of each; tranche 2 continues down the SAME order, so the second
              draw is a function of the first, never a re-draw
@@ -26,9 +28,16 @@ from typing import Iterable, Optional
 
 from trial_pos.services.sampling import ordered_by_hash, stable_hash
 
+from trial_pos.services.drug_resolution import (  # noqa: E402
+    MATCH_CLASSES, MATCH_FULL, MATCH_NONE, MATCH_PARTIAL_ONLY, MATCH_UNDETERMINABLE,
+)
+
 STRATUM_MATCHED = "matched"
+STRATUM_PARTIAL = "partial_only"
 STRATUM_UNMATCHED = "unmatched"
-STRATA = (STRATUM_MATCHED, STRATUM_UNMATCHED)
+STRATA = (STRATUM_MATCHED, STRATUM_PARTIAL, STRATUM_UNMATCHED)
+STRATUM_OF_CLASS = {MATCH_FULL: STRATUM_MATCHED, MATCH_PARTIAL_ONLY: STRATUM_PARTIAL,
+                    MATCH_NONE: STRATUM_UNMATCHED, MATCH_UNDETERMINABLE: STRATUM_UNMATCHED}
 
 RECALL_GATE = 0.90          # ratified 2026-10-06
 PRECISION_GATE = 0.95       # ratified 2026-10-06
@@ -47,11 +56,16 @@ ANSWER_UNCLEAR = "unclear"
 ANSWERS = (ANSWER_YES, ANSWER_NO, ANSWER_UNCLEAR)
 NOT_IN_DRUGCENTRAL = "none"
 
-SHEET_COLUMNS = ("sample_id", "nct_id", "url", "tested_agents", "drugcentral_ids",
-                 "any_fda_approved", "approval_cber_only", "notes")
+NO_FORM_STATED = "none stated"
+
+SHEET_COLUMNS = ("sample_id", "nct_id", "url", "tested_agents", "tested_form",
+                 "drugcentral_ids", "any_fda_approved", "approval_cber_only", "notes")
 LABEL_COLUMNS = SHEET_COLUMNS[3:]
 KEY_COLUMNS = ("sample_id", "nct_id", "stratum", "stratum_rank", "tranche",
-               "selection_outcome", "matched", "drugs")
+               "selection_outcome", "match_class", "matched", "drugs", "partial_drugs",
+               "any_form_stated", "tested_moiety_in_comparator")
+RESOLUTION_COLUMNS = ("nct_id", "selection_outcome", "match_class", "matched", "drugs",
+                      "partial_drugs", "any_form_stated", "tested_moiety_in_comparator")
 
 
 def z_value(confidence: float = CONFIDENCE) -> float:
@@ -91,11 +105,15 @@ def n_for_half_width(p: float, half_width: float = TARGET_HALF_WIDTH,
     return n
 
 
-def stratum_of(matched: Optional[bool]) -> str:
-    return STRATUM_MATCHED if matched is True else STRATUM_UNMATCHED
+def stratum_of(match_class: str) -> str:
+    """A resolver match class -> its stratum. An unknown class raises."""
+    if match_class not in STRATUM_OF_CLASS:
+        raise ValueError(f"match class {match_class!r} is not one of {MATCH_CLASSES}")
+    return STRATUM_OF_CLASS[match_class]
 
 
 def strata(matched_by_nct: dict, frame: Iterable[str]) -> dict:
+    """`matched_by_nct`: {nct: match class}."""
     """{stratum: sorted members}. A frame trial absent from the resolution raises: it means
     the resolver was not run on the population the sample is drawn from."""
     out = {s: [] for s in STRATA}
@@ -134,7 +152,14 @@ def sheet_row(sample_id: str, nct: str) -> dict:
 
 
 def key_row(sample_id: str, stratum: str, rank: int, tranche_no: int, resolution: dict) -> dict:
+    missing = [c for c in RESOLUTION_COLUMNS if c not in resolution]
+    if missing:
+        raise KeyError(f"resolution row lacks {missing}: rerun resolve_trial_drugs.py")
     return {"sample_id": sample_id, "nct_id": resolution["nct_id"], "stratum": stratum,
             "stratum_rank": rank, "tranche": tranche_no,
             "selection_outcome": resolution["selection_outcome"],
-            "matched": resolution["matched"], "drugs": resolution["drugs"]}
+            "match_class": resolution["match_class"],
+            "matched": resolution["matched"], "drugs": resolution["drugs"],
+            "partial_drugs": resolution["partial_drugs"],
+            "any_form_stated": resolution["any_form_stated"],
+            "tested_moiety_in_comparator": resolution["tested_moiety_in_comparator"]}

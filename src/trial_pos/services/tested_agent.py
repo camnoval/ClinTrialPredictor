@@ -51,6 +51,9 @@ class Selection(NamedTuple):
     outcome: str              # a ROUTE when agents were found, else an UNDETERMINABLE reason
     agents: tuple             # intervention ids, ascending
     dropped_placebo: tuple    # candidate intervention ids dropped as pure placebo
+    # Drug interventions in a comparator arm that are not tested agents and not placebo,
+    # ascending. Only under the arm rule: with no arms there is no comparator to name.
+    comparators: tuple = ()
 
     @property
     def determined(self) -> bool:
@@ -77,12 +80,14 @@ def _is_placebo_intervention(name) -> bool:
     return bool(key(name)) and is_pure_placebo(name)
 
 
-def _finish(candidates: list, names: dict, route: str) -> Selection:
+def _finish(candidates: list, names: dict, route: str, comparators=()) -> Selection:
     kept = sorted(i for i in candidates if not _is_placebo_intervention(names[i]))
     dropped = sorted(i for i in candidates if _is_placebo_intervention(names[i]))
     if not kept:
         return Selection(UNDET_ONLY_PLACEBO, (), tuple(dropped))
-    return Selection(route, tuple(kept), tuple(dropped))
+    comps = sorted(i for i in comparators
+                   if i not in kept and not _is_placebo_intervention(names[i]))
+    return Selection(route, tuple(kept), tuple(dropped), tuple(comps))
 
 
 def select_tested_agents(interventions: Iterable, groups: dict, links: Iterable) -> Selection:
@@ -110,7 +115,8 @@ def select_tested_agents(interventions: Iterable, groups: dict, links: Iterable)
     in_exp = [i for i in drugs if GROUP_EXPERIMENTAL in kinds[i]]
     candidates = [i for i in in_exp if not (kinds[i] & GROUP_COMPARATOR)]
     if candidates:
-        return _finish(candidates, names, ROUTE_ARM_RULE)
+        in_comp = [i for i in drugs if kinds[i] & GROUP_COMPARATOR]
+        return _finish(candidates, names, ROUTE_ARM_RULE, in_comp)
     if GROUP_EXPERIMENTAL not in arms.values():
         if None in arms.values():
             return Selection(UNDET_ARMS_UNTYPED, (), ())

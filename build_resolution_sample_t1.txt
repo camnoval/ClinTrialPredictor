@@ -1,0 +1,24 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  resolution data\labels\trial_drug_resolution.csv | labels data\aact\trial_labels.csv | fields data\aact\trial_registration_fields.csv
+  snapshot 2026-10-01 | market window 3y | salt 'trial-drug-resolution-v1' | tranche 1 | start 0 | per stratum 83
+  gates: recall 0.9, precision 0.95 | target half-width 0.05 at 0.95
+  smallest n meeting the half-width: recall stratum 141 truly-approved trials, precision 83 matched trials
+
+==============================================================================
+FRAME AND DRAW
+==============================================================================
+  market-eligible trials: 22314
+  matched      frame   11483  drawn    83  ranks 0..82
+  partial_only frame     606  drawn    83  ranks 0..82
+  unmatched    frame   10225  drawn    83  ranks 0..82
+
+==============================================================================
+WRITTEN
+==============================================================================
+  data\labels\resolution_sample_t1.csv
+  data\labels\resolution_sample_t1.key.csv
+  data\labels\resolution_sample_instructions.md
+  Fill the sheet only. Do not open the key until every row is labelled.

@@ -75,3 +75,15 @@ def test_arm_vocabulary_matches_the_fields_pull_and_spellings_normalise():
     assert GROUP_TYPES == set(FIELDS_GROUP_TYPES)
     assert normalize_group_type("Active Comparator") == ACT
     assert normalize_group_type("  ") is None
+
+
+# ---- comparators, D-12 -----------------------------------------------------------------------
+def test_comparator_drugs_are_returned_under_the_arm_rule_without_placebo():
+    s = select_tested_agents([(1, "DRUG", "Metoprolol succinate ER"),
+                              (2, "DRUG", "Metoprolol tartrate"), (3, "DRUG", "Placebo")],
+                             {10: EXP, 11: ACT, 12: PBO}, [(10, 1), (11, 2), (12, 3)])
+    assert s.agents == (1,) and s.comparators == (2,)
+
+
+def test_no_arms_means_no_comparators():
+    assert select_tested_agents(*CASES[ROUTE_NO_ARMS_FALLBACK]).comparators == ()
