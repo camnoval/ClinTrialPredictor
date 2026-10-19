@@ -41,10 +41,49 @@ def test_ambiguity_is_final_and_unknown_is_unresolved():
 
 def test_other_names_are_tried_in_byte_order_after_the_name():
     d = _d()
-    a = resolve_agent(d, 7, "code-123", ["beta", "Alpha"])
-    assert a.status == AGENT_RESOLVED and a.name_kind == NAME_OTHER and a.name_used == "Alpha"
+    a = resolve_agent(d, 7, "code-123", ["alpha", "Alpha 10 mg"])
+    assert a.status == AGENT_RESOLVED and a.name_kind == NAME_OTHER
+    assert a.name_used == "Alpha 10 mg"                     # byte order: capitals first
     a = resolve_agent(d, 7, "alpha", ["beta"])
     assert a.name_kind == NAME_PRIMARY and a.drugs == {A}
+
+
+# ---- D-44: an other name counts only as an alias ---------------------------------------------
+def _dd():
+    names = [("alpha", A), ("beta", B), ("propranolol", 9), ("apatinib", 10)]
+    return build_dictionary(synonyms=[{"id": str(i), "lname": n} for n, i in names],
+                            structures=[], struct2parent=[], ob_product=[], struct2obprod=[],
+                            fda_products=[], fda_applications=[])
+
+
+def test_other_names_naming_several_drugs_are_not_an_alias():
+    from collections import Counter
+    from trial_pos.services.drug_resolution import ALIAS_OTHERS_DISAGREE
+    audit = Counter()
+    a = resolve_agent(_dd(), 7, "code-123", ["beta", "Alpha"], audit)
+    assert a.status == AGENT_UNRESOLVED and audit[ALIAS_OTHERS_DISAGREE] == 2
+    full = resolve_agent(_dd(), 7, "code-123", ["alpha", "beta", "alpha + beta"])
+    assert full.status == AGENT_RESOLVED and full.drugs == {A, B}   # the set holding all
+
+
+def test_an_other_name_never_drops_what_the_own_name_resolved():
+    from collections import Counter
+    from trial_pos.services.drug_resolution import ALIAS_OWN_NAME_DRUGS
+    audit = Counter()
+    a = resolve_agent(_dd(), 7, "alpha + unknownium", ["beta"], audit)
+    assert a.status == AGENT_PARTIAL and a.drugs == {A} and audit[ALIAS_OWN_NAME_DRUGS] == 1
+
+
+def test_a_drug_shaped_own_name_is_not_an_alias_of_another_drug_but_a_misspelling_is():
+    from collections import Counter
+    from trial_pos.services.drug_resolution import ALIAS_DIFFERENT_DRUG
+    audit = Counter()
+    wrong = resolve_agent(_dd(), 7, "camrelizumab", ["apatinib"], audit)
+    assert wrong.status == AGENT_UNRESOLVED and audit[ALIAS_DIFFERENT_DRUG] == 1
+    spelt = resolve_agent(_dd(), 7, "propanolol", ["propranolol"])
+    assert spelt.status == AGENT_RESOLVED and spelt.drugs == {9}
+    code = resolve_agent(_dd(), 7, "ABT-123", ["apatinib"])        # a code is an alias
+    assert code.status == AGENT_RESOLVED
 
 
 def test_the_best_status_wins_when_nothing_fully_resolves():

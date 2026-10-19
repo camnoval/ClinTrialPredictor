@@ -14,6 +14,8 @@ What it adds to Drugs@FDA (D-41):
 """
 from __future__ import annotations
 
+import hashlib
+import re
 from collections import Counter
 from datetime import date, datetime
 from typing import Iterable, NamedTuple, Optional
@@ -86,3 +88,33 @@ def read_purplebook(rows: Iterable[dict]) -> tuple:
     if not out:
         raise ValueError("Purple Book export is empty")
     return out, audit
+
+
+# ---- identity for products DrugCentral cannot name (D-46) -------------------------------
+# INN spells the Greek letter 'alfa'; the Purple Book sometimes writes 'alpha'
+# ('darbepoetin alpha', 49 rows, matcher run 2026-10-13). Normalised before any lookup.
+_ALPHA = re.compile(r"\balpha\b")
+PB_ID_DIGITS = 12                 # hex digits of SHA-256: 48 bits, collisions checked
+
+
+def inn_spelling(name: str) -> str:
+    return _ALPHA.sub("alfa", (name or "").lower())
+
+
+def purple_book_id(proper_key: str) -> int:
+    """A stable NEGATIVE id for a Purple Book proper name, apart from DrugCentral's positive
+    structure ids (D-19 stays: those are never remapped). The same key always gives the same
+    id, run to run and machine to machine."""
+    if not proper_key:
+        raise ValueError("a Purple Book identity needs a proper name")
+    return -int(hashlib.sha256(proper_key.encode("utf-8")).hexdigest()[:PB_ID_DIGITS], 16)
+
+
+def purple_book_identity_key(proper: str) -> str:
+    """The identity a Purple Book proper name stands for: INN spelling, dose and form words
+    removed, so 'immune globulin intravenous (human)' and 'immune globulin subcutaneous
+    (human)' are ONE identity whose products carry their own routes (D-13, D-26). Before
+    2026-10-13 the route word split them, and an IV trial matched the IM identity."""
+    from trial_pos.services.drug_names import drop_dose_and_form, key
+    full = key(inn_spelling(proper))
+    return drop_dose_and_form(full) or full

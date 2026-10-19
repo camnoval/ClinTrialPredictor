@@ -420,3 +420,42 @@ def variants(raw) -> list:
     for v in list(out):
         add(STEP_COMPACT, compact(v.key), INDEX_COMPACT)
     return out
+
+
+# ---- drug-shaped words (D-44) ----------------------------------------------------------------
+# INN suffixes: a token ending in one is shaped like a drug name. Used by the resolver's
+# alias test: an intervention whose own name is such a word ('camrelizumab') is not an
+# alias of a different drug its other names list ('apatinib').
+INN_STEMS = ("mab", "nib", "parib", "ciclib", "lisib", "rafenib", "degib", "pril", "sartan",
+             "olol", "dipine", "gliptin", "gliflozin", "glutide", "previr", "asvir", "buvir",
+             "navir", "tegravir", "conazole", "floxacin", "cycline", "mycin", "platin",
+             "taxel", "rubicin", "dronate", "lukast", "setron", "prazole", "tidine", "oxetine",
+             "azepam", "caftor", "sentan", "xaban", "gatran", "parin", "fungin", "penem",
+             "cillin", "vastatin", "lutamide", "zomib", "lidomide", "tinib", "afil", "glitazone",
+             "citabine", "cytidine")
+MIN_INN_TOKEN = 7                 # shorter tokens are never treated as drug-shaped
+# A drug-shaped token this close to a resolved drug's name is a misspelling of it
+# ('propanolol' / 'propranolol', 'alectnib' / 'alectinib'), not a different drug.
+MAX_SPELLING_EDITS = 2
+_ALPHA_TOKEN = re.compile(r"[a-z]+")
+
+
+def inn_tokens(k: str) -> list:
+    """Drug-shaped tokens of a key()-normalised name, in order."""
+    return [t for t in _ALPHA_TOKEN.findall(k)
+            if len(t) >= MIN_INN_TOKEN and t.endswith(INN_STEMS)]
+
+
+def within_edits(a: str, b: str, limit: int) -> bool:
+    """Levenshtein distance of a and b is at most `limit` (banded, early exit)."""
+    if abs(len(a) - len(b)) > limit:
+        return False
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb))
+        if min(cur) > limit:
+            return False
+        prev = cur
+    return prev[-1] <= limit

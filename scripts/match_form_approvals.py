@@ -44,7 +44,8 @@ from resolve_trial_drugs import (  # noqa: E402
     load_fda, read_rows, sha256_of,
 )
 from trial_pos.services.drug_dictionary import (  # noqa: E402
-    OB_KEY_DRUGS_DIFFER, OB_KEY_REPEATED, SRC_FDA_BRAND, SRC_OB_TRADE, build_dictionary,
+    OB_KEY_DRUGS_DIFFER, OB_KEY_REPEATED, PB_IDENTITIES_CREATED, SRC_FDA_BRAND, SRC_OB_TRADE,
+    build_dictionary,
     parse_struct_id,
 )
 from trial_pos.services.drug_names import NON_DISTINGUISHING_SALT_WORDS, key  # noqa: E402
@@ -54,11 +55,11 @@ from trial_pos.services.drug_resolution import (  # noqa: E402
 from trial_pos.services.drugsatfda import (  # noqa: E402
     APPL_BLA, decode, norm_appl, parse_tab, require_columns,
 )
-from trial_pos.services.eligibility import phase_class, readout_date  # noqa: E402
+from trial_pos.services.eligibility import phase_class, readout_date, years_after  # noqa: E402
 from trial_pos.services.form_approval import (  # noqa: E402
     APPROVAL_COLUMNS, BEFORE_STATUSES as STATUSES, BRAND_MOIETY, BRAND_PIN, BRAND_RULES,
     CONFIRMED, EXCLUDED, POSSIBLE, SET_CONTAINED, SET_EXACT, SET_RULES, STATUS_BOUNDS,
-    original_dates,
+    approved_before, approved_within, original_dates,
     STATUS_DC_EARLIER, STATUS_DC_UNDATED, STATUS_GAP, STATUS_NOT, STATUS_UNDATED,
     ProductIndex, Query, approval_row, approvals,
     before_status as status, build_products, fda_approval_dates, fda_approved_structures,
@@ -66,7 +67,7 @@ from trial_pos.services.form_approval import (  # noqa: E402
 )
 from trial_pos.services.drug_names import drop_parentheticals  # noqa: E402
 from trial_pos.services.drug_resolution import resolve_one_name  # noqa: E402
-from trial_pos.services.purplebook import read_purplebook  # noqa: E402
+from trial_pos.services.purplebook import inn_spelling, read_purplebook  # noqa: E402
 from trial_pos.services.population import tribool  # noqa: E402
 
 csv.field_size_limit(10 ** 9)
@@ -77,6 +78,7 @@ FDA_AGENCY = "FDA"                        # DrugCentral approval.type token
 SUBMISSIONS = "Submissions.txt"
 OUT_APPROVALS = "trial_drug_form_approvals.csv"
 PURPLEBOOK_FILE = "Advanced_Search.csv"
+MIXED_WINDOW = 5                   # D-36 headline
 _ALNUM = re.compile(r"[a-z0-9]+")
 OUT_MANIFEST = "trial_drug_form_approvals.manifest.json"
 AGENT_NEED = ("nct_id", "intervention_id", "agent_status", "drugs", "name_used", "source",
@@ -151,8 +153,6 @@ def main() -> int:
     submissions = table["rows"]
     print(f"  {SUBMISSIONS:20s} rows {len(submissions):8d}  malformed {table['malformed']}  {enc}")
 
-    d = build_dictionary(dc["synonyms"], dc["structures"], dc["struct2parent"],
-                         dc["ob_product"], dc["struct2obprod"], products_raw, applications)
     if not args.purplebook.exists():
         raise SystemExit(f"!! {args.purplebook} not found: the Purple Book Advanced Search "
                          "export (D-41). Nothing written.")
@@ -160,12 +160,16 @@ def main() -> int:
         pb_rows, pb_audit = read_purplebook(csv.DictReader(f))
     print(f"  Purple Book {args.purplebook.name:13s} rows {len(pb_rows):8d}  "
           f"{dict(sorted(pb_audit.items()))}")
+    d = build_dictionary(dc["synonyms"], dc["structures"], dc["struct2parent"],
+                         dc["ob_product"], dc["struct2obprod"], products_raw, applications,
+                         pb_rows)
     products, build_audit = build_products(d, products_raw, applications, submissions,
                                            dc["ob_product"], dc["struct2obprod"], pb_rows)
     fda_ok = fda_approved_structures(dc["approval"], FDA_AGENCY)
     fda_first, fda_undated = fda_approval_dates(dc["approval"], FDA_AGENCY)
     index = ProductIndex(products, fda_ok, fda_first, fda_undated)
     name_of = {parse_struct_id(r["id"]): r["name"] for r in dc["structures"]}
+    name_of.update(d.pb_names)                       # D-46 identities print by proper name
 
     def names(ids):
         return " + ".join(sorted(name_of.get(x, str(x)) for x in ids)) if ids else "-"
@@ -176,7 +180,7 @@ def main() -> int:
           f"DrugCentral FDA-approved structures {len(fda_ok)}")
     for k, v in sorted(build_audit.items()):
         print(f"  {k:72s} {v:7d}")
-    for k in (OB_KEY_REPEATED, OB_KEY_DRUGS_DIFFER):     # zero printed, never omitted
+    for k in (OB_KEY_REPEATED, OB_KEY_DRUGS_DIFFER, PB_IDENTITIES_CREATED):  # zeros printed
         print(f"  dictionary: {k:60s} {d.audit[k]:7d}")
     alt = Counter()
     for p in products:
@@ -213,7 +217,8 @@ def main() -> int:
         print(f"    {e}")
     unlinked = Counter()
     for r in pb_rows:
-        if resolve_one_name(d, r.proper).status != AGENT_RESOLVED:
+        if d.purple_book_identity(r.proper) is None and \
+                resolve_one_name(d, inn_spelling(r.proper)).status != AGENT_RESOLVED:
             unlinked[(r.center, key(r.proper)[:60])] += 1
     for c in ("CDER", "CBER"):
         top = sorted(((k, n) for k, n in unlinked.items() if k[0] == c),
@@ -228,7 +233,8 @@ def main() -> int:
     # crm197 protein)' and '13-valent pneumococcal conjugate vaccine' share their words.
     pb_words = defaultdict(set)
     for r in pb_rows:
-        if resolve_one_name(d, r.proper).status == AGENT_RESOLVED:
+        if d.purple_book_identity(r.proper) is not None or \
+                resolve_one_name(d, inn_spelling(r.proper)).status == AGENT_RESOLVED:
             continue
         for n in (drop_parentheticals(key(r.proper)), key(r.proprietary)):
             w = frozenset(_ALNUM.findall(n))
@@ -358,6 +364,35 @@ def main() -> int:
             print(f"    {n:6d}  {a}  ->  {b}")
         for (nm, a, b), n in sorted(examples.items(), key=lambda kv: (-kv[1], kv[0]))[:args.show]:
             print(f"      e.g. {n:4d}  {nm:40s} {a} -> {b}")
+
+    _rule(f"5. NEW + OLD COMBINATIONS (open question): pivotal agents mixing moieties "
+          f"approved before the readout with new ones, at W={MIXED_WINDOW}")
+    print("  now: approved = a product containing ALL the agent's moieties ('terlipressin and "
+          "albumin' needs both). Alternative: a product containing all its NEW moieties.")
+    flips, mixed, examples = Counter(), 0, Counter()
+    for i in piv:
+        r, q, _ph, ro = agents[i]
+        if len(q.moieties) < 2 or status(results[i], ro) != STATUS_NOT:
+            continue
+        old = {m for m in q.moieties if approved_before(
+            approvals(index, Query(frozenset({m})), SET_CONTAINED, BRAND_MOIETY), ro) is True}
+        new = q.moieties - old
+        if not old or not new:
+            continue
+        mixed += 1
+        end = years_after(ro, MIXED_WINDOW)
+        now = approved_within(results[i], ro, end)
+        alt = approved_within(approvals(index, Query(frozenset(new), q.salts, q.words),
+                                        args.set_rule, BRAND_MOIETY), ro, end)
+        flips[(now, alt)] += 1
+        if now is not True and alt is True:
+            examples[(key(r["name_used"])[:44], names(new)[:30])] += 1
+    print(f"  mixed agents not approved before readout: {mixed}")
+    for (a1, a2), n in sorted(flips.items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1]))):
+        print(f"    within {MIXED_WINDOW}y now {str(a1):5s} -> alternative {str(a2):5s} {n:6d}")
+    print(f"  would become approved, top {args.show} (name | new moieties):")
+    for (nm, nw), n in sorted(examples.items(), key=lambda kv: (-kv[1], kv[0]))[:args.show]:
+        print(f"    {n:4d}  {nm:44s} {nw}")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     partial = {k: p.with_name(p.name + PARTIAL) for k, p in outs.items()}

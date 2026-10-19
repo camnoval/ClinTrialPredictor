@@ -32,8 +32,13 @@ if str(ROOT / "src") not in sys.path:
 
 from trial_pos.services.aact_fields import MESH_LIST  # noqa: E402
 from trial_pos.services.aact_rows import MANIFEST_FILE as ROWS_MANIFEST, file_name  # noqa: E402
-from trial_pos.services.drug_dictionary import build_dictionary  # noqa: E402
+from trial_pos.services.drug_dictionary import (  # noqa: E402
+    HIT_NONE, SRC_LEARNED_CODE, build_dictionary,
+)
+from trial_pos.services.learned_codes import LEARNED_OUTCOMES, Evidence, learn_codes  # noqa: E402
+from trial_pos.services.purplebook import read_purplebook  # noqa: E402
 from trial_pos.services.drug_resolution import (  # noqa: E402
+    AGENT_RESOLVED, ALIAS_REJECTIONS, DRUG_SEP,
     AGENT_AMBIGUOUS, AGENT_COLUMNS, AGENT_STATUSES, AGENT_UNRESOLVED, FORM_HANDLING_DOC,
     FORM_HANDLINGS, FORM_INFERRED, FORM_STRIPPED, HOW_WHOLE, MATCH_CLASSES, MATCH_FULL,
     MATCH_NONE, MATCH_PARTIAL_ONLY, MATCH_UNDETERMINABLE, MATCHING_STATUSES, TRIAL_COLUMNS,
@@ -58,8 +63,10 @@ DC_MANIFEST = "drugcentral.manifest.json"
 FDA_PRODUCTS = "Products.txt"
 FDA_APPLICATIONS = "Applications.txt"
 OUT_AGENTS = "trial_drug_agents.csv"
+PURPLEBOOK_FILE = "Advanced_Search.csv"
 OUT_TRIALS = "trial_drug_resolution.csv"
 OUT_MANIFEST = "trial_drug_resolution.manifest.json"
+OUT_LEARNED = "learned_codes.csv"
 PARTIAL = ".partial"
 HASH_CHUNK = 1 << 20
 PIVOTAL = "pivotal"
@@ -144,12 +151,16 @@ def main() -> int:
     ap.add_argument("--dc-dir", type=Path, default=DEFAULT_DC_DIR)
     ap.add_argument("--fda-dir", type=Path, default=DEFAULT_FDA_DIR)
     ap.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
+    ap.add_argument("--purplebook", type=Path,
+                    default=Path("data") / "purplebook" / PURPLEBOOK_FILE,
+                    help="the Purple Book Advanced Search export (D-46)")
     ap.add_argument("--show", type=int, default=DEFAULT_SHOW)
     ap.add_argument("--show-per-route", type=int, default=DEFAULT_SHOW_PER_ROUTE,
                     help="name -> drug pairs printed for every route but plain exact")
     ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args()
-    outs = {k: args.out_dir / k for k in (OUT_AGENTS, OUT_TRIALS, OUT_MANIFEST)}
+    outs = {k: args.out_dir / k
+            for k in (OUT_AGENTS, OUT_TRIALS, OUT_MANIFEST, OUT_LEARNED)}
     if any(p.exists() for p in outs.values()) and not args.overwrite:
         raise SystemExit("!! outputs exist; pass --overwrite: "
                          + ", ".join(str(p) for p in outs.values() if p.exists()))
@@ -213,23 +224,57 @@ def main() -> int:
     fda_products = load_fda(args.fda_dir, FDA_PRODUCTS)
     fda_applications = load_fda(args.fda_dir, FDA_APPLICATIONS)
 
+    if not args.purplebook.exists():
+        raise SystemExit(f"!! {args.purplebook} not found: the Purple Book Advanced Search "
+                         "export (D-46). Nothing written.")
+    with args.purplebook.open(encoding="utf-8", newline="") as f:
+        pb_rows, _pb_audit = read_purplebook(csv.DictReader(f))
+    print(f"  Purple Book {args.purplebook.name:13s} rows {len(pb_rows):8d}")
+
     _rule("DICTIONARY")
     d = build_dictionary(dc["synonyms"], dc["structures"], dc["struct2parent"],
                          dc["ob_product"], dc["struct2obprod"], fda_products,
-                         fda_applications)
+                         fda_applications, pb_rows)
     for k, v in sorted(d.audit.items()):
         print(f"  {k:60s} {v:8d}")
 
-    results = []
+    selections = {}
     for nct in sorted(drug, key=lambda s: s.encode("utf-8")):
         try:
-            sel = select_tested_agents(ivs.get(nct, ()), groups.get(nct, {}),
-                                       links.get(nct, ()))
+            selections[nct] = select_tested_agents(ivs.get(nct, ()), groups.get(nct, {}),
+                                                   links.get(nct, ()))
         except ValueError as exc:
             raise SystemExit(f"!! {nct}: {exc}. Nothing written.")
-        results.append(resolve_trial(d, nct, sel, names.get(nct, {}), others.get(nct, {}),
-                                     mesh.get(nct, ())))
+
+    def resolve_all(audit):
+        return [resolve_trial(d, nct, sel, names.get(nct, {}), others.get(nct, {}),
+                              mesh.get(nct, ()), audit) for nct, sel in selections.items()]
+
+    # Pass 1 (guarded, D-44), then codes learned from it (D-47), then pass 2 with them.
+    first = resolve_all(Counter())
+    evidence = [Evidence(t.nct_id, a.name_kind,
+                         names.get(t.nct_id, {}).get(a.intervention_id, ""),
+                         tuple(others.get(t.nct_id, {}).get(a.intervention_id, ())), a.drugs)
+                for t in first for a in t.agents if a.status == AGENT_RESOLVED]
+    learned, learned_trials, learned_audit = learn_codes(
+        evidence, lambda c: d.resolve(c)[0].status != HIT_NONE)
+    for code in sorted(learned):
+        d.add(SRC_LEARNED_CODE, code, learned[code])
+    alias_audit = Counter()
+    results = resolve_all(alias_audit)
     counts = tally(results)
+
+    _rule("LEARNED CODES (D-47): from pass 1's guarded resolutions, applied in pass 2")
+    for k in LEARNED_OUTCOMES:                       # zero printed, never omitted
+        print(f"  {k:66s} {learned_audit[k]:8d}")
+    gained = sum(1 for t in results for a in t.agents
+                 if a.status == AGENT_RESOLVED and SRC_LEARNED_CODE in a.source.split("+"))
+    print(f"  agents resolved through a learned code in pass 2: {gained}; every kept code is "
+          f"written to {OUT_LEARNED}")
+
+    _rule("OTHER-NAME ALIAS GUARD (D-44): resolved other names NOT used")
+    for k in ALIAS_REJECTIONS:                       # zero printed, never omitted
+        print(f"  {k:66s} {alias_audit[k]:8d}")
 
     _rule("TESTED-AGENT SELECTION (drug trials)")
     classes = sorted({phase[t.nct_id] for t in results})
@@ -347,6 +392,12 @@ def main() -> int:
             for t in results:
                 wt.writerow(trial_row(t))
                 wa.writerows(agent_rows(t))
+        with partial[OUT_LEARNED].open("w", newline="", encoding="utf-8") as fl:
+            wl = csv.writer(fl)
+            wl.writerow(("code", "drugs", "trials"))
+            for code in sorted(learned):
+                wl.writerow((code, DRUG_SEP.join(str(x) for x in sorted(learned[code])),
+                             learned_trials[code]))
         inputs = {str(p): sha256_of(p) for p in
                   [args.aact_dir / LABELS_FILE, args.aact_dir / ROWS_MANIFEST, manifest_path,
                    args.fda_dir / FDA_PRODUCTS, args.fda_dir / FDA_APPLICATIONS]
@@ -360,7 +411,8 @@ def main() -> int:
             "match_classes": {k: counts["match_classes"][k] for k in MATCH_CLASSES},
             "outputs": {k: {"rows": None} for k in (OUT_AGENTS, OUT_TRIALS)},
         }
-        for k in (OUT_AGENTS, OUT_TRIALS):
+        manifest["learned_codes"] = {k: learned_audit[k] for k in LEARNED_OUTCOMES}
+        for k in (OUT_AGENTS, OUT_TRIALS, OUT_LEARNED):
             manifest["outputs"][k] = {"bytes": partial[k].stat().st_size,
                                       "sha256": sha256_of(partial[k])}
         partial[OUT_MANIFEST].write_text(json.dumps(manifest, indent=2), encoding="utf-8")

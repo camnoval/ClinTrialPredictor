@@ -65,9 +65,10 @@ from trial_pos.services.drug_dictionary import (
     ALKYL_ROOT, DRUGCENTRAL_NAME_SOURCES, HIT_RESOLVED, DrugDictionary, fda_product_link,
     ob_product_index, parse_struct_id,
 )
+from trial_pos.services.purplebook import inn_spelling
 from trial_pos.services.drug_names import (
-    BIOSIMILAR_SUFFIX, ELEMENT_ROOTS, FORM_CLASS_WORDS, FORM_CLASSES, FORM_WORD_CLASS,
-    drop_parentheticals, drop_salt, key, stated_salts,
+    BIOSIMILAR_SUFFIX, ELEMENT_ROOTS, FORM_CLASSES, FORM_CLASS_WORDS, FORM_WORD_CLASS,
+    comma_components, drop_parentheticals, drop_salt, key, stated_salts,
 )
 from trial_pos.services.drug_resolution import AGENT_RESOLVED, resolve_one_name
 from trial_pos.services.drugsatfda import (
@@ -310,6 +311,15 @@ def resolve_part(d: DrugDictionary, text: str, cache: Optional[dict] = None) -> 
             h3, _v3 = d.resolve_name(root, DRUGCENTRAL_NAME_SOURCES)
             if h3.status == HIT_RESOLVED:
                 direct = h3.drugs
+    if not direct and not stripped:
+        # A comma-joined list inside one part: Trikafta is 'ELEXACAFTOR, IVACAFTOR,
+        # TEZACAFTOR; IVACAFTOR', and DrugCentral's link for it lacks tezacaftor (matcher run
+        # 2026-10-13). Every comma component must resolve, or the part stays unknown.
+        pieces = comma_components(k)
+        if len(pieces) > 1:
+            found = [d.resolve_name(c, DRUGCENTRAL_NAME_SOURCES)[0] for c in pieces]
+            if all(h.status == HIT_RESOLVED for h in found):
+                direct = frozenset().union(*(h.drugs for h in found))
     part = Part(text, stated_salts(text), direct, stripped)
     if cache is not None:
         cache[text] = part
@@ -385,13 +395,37 @@ def product_date(original: Optional[date], ob: Optional[date], audit: Counter) -
     return None, DATE_NONE
 
 
+def clamp_to_original(products: list, originals: dict, audit: Counter) -> list:
+    """An application's original approval approved at least one of its products, so its
+    earliest product can never be dated after the original. Where every product is (an
+    Orange Book date later than the original: Dayvigo is 2020-04-07, approved 2019-12-20;
+    Zaditor's only listed product is 2006, approved 1999), the earliest ones take the
+    original's date. Matcher run 2026-10-13."""
+    earliest = {}
+    for p in products:
+        if p.approved is not None:
+            earliest[p.appl] = min(p.approved, earliest.get(p.appl, p.approved))
+    out = []
+    for p in products:
+        o = originals.get(p.appl)
+        if (o is not None and p.approved is not None and earliest[p.appl] > o
+                and p.approved == earliest[p.appl]):
+            audit["dates: earliest product after its original, clamped to it"] += 1
+            p = p._replace(approved=o, date_source=DATE_ORIGINAL)
+        out.append(p)
+    return out
+
+
 def purplebook_products(d: DrugDictionary, rows: Iterable, audit: Counter) -> list:
     """purplebook.PurpleBookRow -> Products (D-41). Identity is the proper name resolved the
     way a registry name is (drug_resolution.resolve_one_name, which splits 'X and Y');
     a proper name that does not resolve is counted and not used."""
     out = []
     for r in rows:
-        res = resolve_one_name(d, r.proper)
+        pid = d.purple_book_identity(r.proper)
+        res = resolve_one_name(d, inn_spelling(r.proper))
+        if pid is not None:                       # D-46: its own identity, never re-read
+            res = res._replace(status=AGENT_RESOLVED, drugs=frozenset({pid}))
         if res.status != AGENT_RESOLVED or not res.drugs:
             audit[f"purple book: proper name unresolved ({r.center}), not used"] += 1
             continue
@@ -453,6 +487,7 @@ def build_products(d: DrugDictionary, fda_products, fda_applications, submission
         products.append(Product(a, pn, t, str(r.get("Form") or "").upper(), dosage, items,
                                 keys, words, parts, frozenset(link) if link else None, alt,
                                 when, source))
+    products = clamp_to_original(products, originals, audit)
     products.extend(purplebook_products(d, purplebook, audit))
     return products, audit
 

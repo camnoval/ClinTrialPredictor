@@ -46,7 +46,8 @@ from trial_pos.services.drug_dictionary import (
     HIT_AMBIGUOUS, HIT_RESOLVED, STEP_DICTIONARY_NO_SALT, DrugDictionary,
 )
 from trial_pos.services.drug_names import (
-    NO_FORM, SALT_CANONICAL, tokens, active_components, comma_components, key, stated_form,
+    MAX_SPELLING_EDITS, NO_FORM, SALT_CANONICAL, active_components, comma_components,
+    inn_tokens, key, stated_form, tokens, within_edits,
 )
 from trial_pos.services.tested_agent import ROUTE_ARM_RULE, Selection
 
@@ -203,18 +204,56 @@ def form_handling(name_used: str, matched_key: str, step: str, status: str) -> s
     return FORM_KEPT if set(used.salts) | set(used.words) <= present else FORM_STRIPPED
 
 
+# D-44: an other name stands in for the intervention's own name only as an ALIAS. AACT
+# other-names fields also list combination partners and class members
+# (audit/probe_resolver_other_names.py: 1,565 of 9,637 other-name resolutions failed one of
+# these tests; camrelizumab -> apatinib, Opdualag -> relatlimab alone).
+ALIAS_OWN_NAME_DRUGS = "other name rejected: the own name resolves drugs it lacks"
+ALIAS_OTHERS_DISAGREE = "other name rejected: other names name several drug sets"
+ALIAS_DIFFERENT_DRUG = "other name rejected: the own name is a different drug's name"
+ALIAS_REJECTIONS = (ALIAS_OWN_NAME_DRUGS, ALIAS_OTHERS_DISAGREE, ALIAS_DIFFERENT_DRUG)
+
+
+def alias_rejection(d: DrugDictionary, own_name, own: NameResult, other: NameResult,
+                    resolved_sets: set) -> str:
+    """'' when `other` (a RESOLVED other name) may stand in for the agent, else why not.
+      - the own name, partly resolved, names drugs `other` does not cover
+      - the other names resolve to several sets and `other` is not the one holding them all
+      - the own name holds a drug-shaped token no drug of `other` is named (or misspelled)
+        as: 'camrelizumab' is not an alias of apatinib; 'propanolol' is of propranolol."""
+    if own.drugs and not own.drugs <= other.drugs:
+        return ALIAS_OWN_NAME_DRUGS
+    if len(resolved_sets) > 1 and not all(s <= other.drugs for s in resolved_sets):
+        return ALIAS_OTHERS_DISAGREE
+    names = [w for x in other.drugs for n in d.names_of.get(x, ()) for w in n.split()]
+    for t in inn_tokens(key(own_name)):
+        if not any(t in w or w in t or within_edits(t, w, MAX_SPELLING_EDITS) for w in names):
+            return ALIAS_DIFFERENT_DRUG
+    return ""
+
+
 def resolve_agent(d: DrugDictionary, intervention_id: int, name,
-                  other_names: Iterable = ()) -> AgentResult:
+                  other_names: Iterable = (), audit: Optional[Counter] = None) -> AgentResult:
+    """The own name first; then the other names in byte order, a resolved one counting only
+    when alias_rejection allows it (D-44; `audit` counts the rejections)."""
     other_names = list(other_names)
-    tries = [(NAME_PRIMARY, str(name or ""))] + [(NAME_OTHER, o) for o in _byte_order(
-        o for o in other_names if key(o) != key(name))]
-    best = None
-    for kind, candidate in tries:
-        r = resolve_one_name(d, candidate, whole_intervention_name=kind == NAME_PRIMARY)
-        if best is None or _RANK[r.status] < _RANK[best[2].status]:
-            best = (kind, candidate, r)
-        if r.status == AGENT_RESOLVED:
-            break
+    own = resolve_one_name(d, str(name or ""), whole_intervention_name=True)
+    best = (NAME_PRIMARY, str(name or ""), own)
+    if own.status != AGENT_RESOLVED:
+        others = [(o, resolve_one_name(d, o)) for o in _byte_order(
+            o for o in other_names if key(o) != key(name))]
+        resolved_sets = {r.drugs for _o, r in others if r.status == AGENT_RESOLVED}
+        for o, r in others:
+            if r.status == AGENT_RESOLVED:
+                why = alias_rejection(d, name, own, r, resolved_sets)
+                if why:
+                    if audit is not None:
+                        audit[why] += 1
+                    continue
+                best = (NAME_OTHER, o, r)
+                break
+            if _RANK[r.status] < _RANK[best[2].status]:
+                best = (NAME_OTHER, o, r)
     kind, used, r = best
     return AgentResult(intervention_id, r.status, r.drugs, used, kind, r.how, r.step,
                        r.source, r.n_components, r.n_components_resolved, r.matched_key,
@@ -233,14 +272,15 @@ def resolve_mesh(d: DrugDictionary, terms: Iterable) -> frozenset:
 
 
 def resolve_trial(d: DrugDictionary, nct_id: str, selection: Selection, names: dict,
-                  other_names: dict, mesh_terms: Iterable = ()) -> TrialResult:
+                  other_names: dict, mesh_terms: Iterable = (),
+                  audit: Optional[Counter] = None) -> TrialResult:
     """names: {intervention id: name}; other_names: {intervention id: [names]}."""
     terms = [t for t in mesh_terms if key(t)]
     mesh_drugs = resolve_mesh(d, terms)
     if not selection.determined:
         return TrialResult(nct_id, selection, (), None, frozenset(), len(terms), None,
                            frozenset(), match_class=MATCH_UNDETERMINABLE)
-    agents = tuple(resolve_agent(d, iid, names[iid], other_names.get(iid, ()))
+    agents = tuple(resolve_agent(d, iid, names[iid], other_names.get(iid, ()), audit)
                    for iid in selection.agents)
     comps = tuple(resolve_agent(d, iid, names[iid], other_names.get(iid, ()))
                   for iid in selection.comparators)

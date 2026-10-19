@@ -7,7 +7,7 @@ from trial_pos.services.drug_dictionary import (
     HIT_RESOLVED, SOURCES, SRC_FDA_BRAND, SRC_OB_TRADE, SRC_SYNONYM, build_dictionary,
     OB_KEY_DRUGS_DIFFER, OB_KEY_REPEATED, ob_product_index, parent_map, parse_struct_id,
 )
-from trial_pos.services.drug_names import variants
+from trial_pos.services.drug_names import key, variants
 
 
 def _raises(fn, *args, exc=ValueError):
@@ -239,3 +239,86 @@ def test_repeated_orange_book_keys_are_counted_and_the_last_row_still_wins():
     assert by_product[("000001", "001")] == frozenset({8})
     assert by_application["000001"] == {frozenset({7}), frozenset({8})}
     assert [r["id"] for r, _ in rows] == ["1", "2", "3"]
+
+
+# ---- D-46: an identity for Purple Book products DrugCentral cannot name ------------------
+def _pb_rows(*specs):
+    from trial_pos.services.purplebook import read_purplebook
+    rows = [{"BLA Number": f"12{i:04d}", "Product Number": "001", "Proprietary Name": brand,
+             "Proper Name": proper, "Dosage Form": "Injection",
+             "Route of Administration": "Intramuscular", "Licensure": "Licensed",
+             "Approval Date": "February 24, 2010", "Submission Type": "Original",
+             "Center": "CBER"} for i, (proper, brand) in enumerate(specs)]
+    return read_purplebook(rows)[0]
+
+
+def _pbd(*specs):
+    return build_dictionary([{"id": "5", "lname": "darbepoetin alfa"}],
+                            [{"id": "5", "name": "darbepoetin alfa"}], [], [], [], [], [],
+                            purplebook=_pb_rows(*specs))
+
+
+def test_a_purple_book_product_gets_a_stable_negative_identity_by_brand_and_words():
+    from trial_pos.services.drug_dictionary import SRC_PURPLE_BOOK, SRC_PURPLE_BOOK_WORDS
+    from trial_pos.services.purplebook import purple_book_id
+    proper = "Pneumococcal 13-valent Conjugate Vaccine (Diphtheria CRM197 Protein)"
+    d = _pbd((proper, "Prevnar 13"))
+    pid = purple_book_id(key(proper))
+    assert pid < 0 and d.pb_names[pid] == key(proper)
+    hit, _v = d.resolve("Prevnar 13")
+    assert hit.status == HIT_RESOLVED and hit.drugs == {pid} and hit.source == SRC_PURPLE_BOOK
+    hit, _v = d.resolve("13-valent pneumococcal conjugate vaccine")
+    assert hit.status == HIT_RESOLVED and hit.drugs == {pid}
+    assert hit.source == SRC_PURPLE_BOOK_WORDS
+
+
+def test_a_name_another_source_resolves_never_gets_a_purple_book_identity():
+    d = _pbd(("darbepoetin alpha", "Aranesp"))                  # 'alpha' -> 'alfa'
+    assert d.pb_names == {}
+    assert d.audit["purple book: proper name already resolves, no new identity"] == 1
+    hit, _v = d.resolve("darbepoetin alfa")
+    assert hit.drugs == {5}
+
+
+def test_two_identities_sharing_their_words_are_ambiguous_not_guessed():
+    d = _pbd(("anti-thymocyte globulin (rabbit)", "Thymoglobulin"),
+             ("anti-thymocyte globulin (equine)", "Atgam"))
+    assert len(d.pb_names) == 2
+    hit, _v = d.resolve("globulin anti-thymocyte")
+    assert hit.status == HIT_AMBIGUOUS
+    hit, _v = d.resolve("Thymoglobulin")
+    assert hit.status == HIT_RESOLVED
+
+
+def test_without_the_purple_book_nothing_changes():
+    d = build_dictionary([{"id": "5", "lname": "darbepoetin alfa"}], [], [], [], [], [], [])
+    assert d.pb_names == {} and d.pb_word_sets == {}
+    hit, _v = d.resolve("13-valent pneumococcal conjugate vaccine")
+    assert hit.status == HIT_NONE
+
+
+def test_purple_book_identities_do_not_depend_on_row_order():
+    a = _pbd(("anti-thymocyte globulin (rabbit)", "Thymoglobulin"),
+             ("anti-thymocyte globulin (equine)", "Atgam"))
+    b = _pbd(("anti-thymocyte globulin (equine)", "Atgam"),
+             ("anti-thymocyte globulin (rabbit)", "Thymoglobulin"))
+    assert a.pb_names == b.pb_names
+    assert a.resolve("Atgam")[0].drugs != a.resolve("Thymoglobulin")[0].drugs
+
+
+def test_route_words_never_split_a_purple_book_identity():
+    d = _pbd(("immune globulin intravenous (human)", "Gammagard"),
+             ("immune globulin subcutaneous (human)", "Hizentra"),
+             ("immune globulin (human)", "GamaSTAN"))
+    assert len(d.pb_names) == 1
+    ids = {d.resolve(n)[0].drugs for n in ("Gammagard", "Hizentra", "GamaSTAN",
+                                           "immune globulin intravenous (human), 10%")}
+    assert len(ids) == 1
+
+
+def test_a_proper_name_keeps_its_own_identity_even_where_another_alias_collides():
+    d = _pbd(("poliovirus vaccine inactivated", "IPOL"),
+             ("poliovirus vaccine inactivated (monkey kidney cell)", "Poliovax"))
+    a = d.purple_book_identity("poliovirus vaccine inactivated")
+    b = d.purple_book_identity("Poliovirus Vaccine Inactivated (Monkey Kidney Cell)")
+    assert a is not None and b is not None and a != b

@@ -159,3 +159,22 @@ def test_nearest_rank_and_the_d10_decision_line():
     assert decision_line(D10_UPPER_YEARS) == DECISION_W5
     assert decision_line(D10_UPPER_YEARS + 0.1) == DECISION_BEYOND
     assert decision_line(None) == DECISION_NONE
+
+
+
+# ---- D-45 loose regimens -------------------------------------------------------------------
+def test_a_loose_regimen_of_approved_drugs_is_excluded_like_an_approved_agent():
+    from trial_pos.services.market_label import REASON_LOOSE_REGIMEN, is_loose_regimen
+    first = {1: date(1990, 1, 1), 2: date(1995, 1, 1)}
+    regimen = _a()._replace(n_identity=0)
+    assert is_loose_regimen(regimen, [1, 2], R, first)
+    assert not is_loose_regimen(regimen, [1], R, first)                    # one drug
+    assert not is_loose_regimen(regimen, [1, 3], R, first)                 # 3 is new
+    fdc = _a(strict=(years_after(R, 1),))                                   # a product exists
+    assert not is_loose_regimen(fdc, [1, 2], R, first)
+    got = trial_market_label(OK, MATCH_FULL, [regimen], R, W, loose=[True])
+    assert got == {"verdict": INELIGIBLE, "reason": REASON_LOOSE_REGIMEN, "label": None}
+    # a new agent beside the regimen still decides the label
+    assert trial_market_label(OK, MATCH_FULL, [regimen, LATER], R, W,
+                              loose=[True, False])["label"] == LABEL_POSITIVE
+    assert _raises(trial_market_label, OK, MATCH_FULL, [regimen], R, W, [True, False])

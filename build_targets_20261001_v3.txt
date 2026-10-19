@@ -1,0 +1,194 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  snapshot 2026-10-01 | AACT as_of 2026-10-01 | Drugs@FDA latest approval 2026-10-02 | market windows (3, 5, 10) | lag follow-up (10, 5) | show 25
+  approvals file settings: {'set_rule': 'contained', 'brand_rule': 'pin', 'fda_agency': 'FDA'}
+  label rows 461824; trials with a resolution row 222329; trials with resolved agents 96835
+
+==============================================================================
+1. ENDPOINT MET (eligibility.eligible_for_endpoint_met, strict label)
+==============================================================================
+  eligible            13487
+  ineligible         448319
+  undeterminable         18
+    not_a_drug_trial                                       239495
+    no_primary_analysis_posted                             206977
+    label_rests_on_a_non_headline_tier                        941
+    registered_after_primary_completion                       600
+    endpoint_gate_refuses_this_trial                          306
+    registration_timing_unknown                                18
+  eligible labelled: {'met': 8187, 'not_met': 5300}
+
+==============================================================================
+2. READOUT-TO-FIRST-APPROVAL LAG (D-10), new-at-readout identities, pivotal
+==============================================================================
+  D-45 loose regimens left out of the lag: 421 pivotal agent records
+  pivotal agent records with an actual readout 19511; identities 3402
+
+  H=10: decisive identities 864 (readout on or before 2016-10-01)
+    loose   approved within 10y: 534 (61.8%)  p50 2.41y  p75 4.01y  p90 5.81y
+            <= 3y 324 (60.7%)  <= 5y 447 (83.7%)
+            D-10: beyond D-10's decision line (p90 over 5 years): the owner decides
+    strict  approved within 10y: 530 (61.3%)  p50 2.40y  p75 4.01y  p90 5.80y
+            <= 3y 323 (60.9%)  <= 5y 444 (83.8%)
+            D-10: beyond D-10's decision line (p90 over 5 years): the owner decides
+    tail: strict lag over 3y, 240 identities; longest 25 (nct | readout | first loose | first strict | drug [salts|words|brand]):
+      NCT00009620 1995-02-28 2022-11-17 2022-11-17  phenobarbital [||]
+      NCT00212654 2006-04-30 2024-11-22 2024-11-22  landiolol [||]
+      NCT00228982 2005-12-31 2024-04-03 2024-04-03  ceftobiprole medocaril [||]
+      NCT00987844 2000-11-30 2018-12-14 2018-12-14  prucalopride [||]
+      NCT01200251 2007-09-30 2025-09-09 2025-09-09  bimatoprost [|gel|]
+      NCT00046943 2007-06-30 2025-04-02 2025-04-02  atrasentan [hydrochloride||]
+      NCT00406211 2004-12-31 2022-06-03 2022-06-03  -171423784413478 [||]
+      NCT00383227 2000-11-30 2017-11-09 2017-11-09  -154118183456572 [||]
+      NCT00050336 2004-02-29 2020-11-20 2020-11-20  lonafarnib [||]
+      NCT00403702 2006-08-31 2023-05-18 2023-05-18  perfluorohexyloctane [||]
+      NCT00089570 2006-03-31 2022-09-14 2022-09-14  terlipressin [||]
+      NCT00955045 2003-10-31 2019-08-27 2019-08-27  istradefylline [||]
+      NCT00321165 2008-03-31 2023-11-15 2023-11-15  taurolidine [||]
+      NCT00967850 2011-06-30 2017-09-14 2026-07-24  bevacizumab [|intravitreal|]
+      NCT00339768 1996-06-10 2011-02-08 2011-02-08  amoxicillin + omeprazole [||]
+      NCT00032942 2004-10-31 2018-05-16 2018-05-16  lofexidine [||]
+      NCT00170690 2011-12-31 2025-01-21 2025-01-21  treosulfan [||]
+      NCT00411645 2008-11-10 2021-11-23 2021-11-23  maribavir [||]
+      NCT00385697 2010-06-30 2022-11-17 2022-11-17  teplizumab [||]
+      NCT00257205 2010-08-31 2022-10-21 2022-10-21  tremelimumab [||]
+      NCT00146627 2008-06-30 2020-08-06 2020-08-06  nifurtimox [||]
+      NCT00315445 1998-05-31 2010-06-30 2010-06-30  buprenorphine [|patch|transdermal|]
+      NCT00004933 2001-05-31 2012-10-26 2012-10-26  omacetaxine mepesuccinate [||]
+      NCT00840801 2010-05-20 2021-08-13 2021-08-13  -53348050065620 [||]
+      NCT00172081 2003-11-07 2015-01-23 2015-01-23  parathyroid hormone [||]
+    impossible cases (approval before readout, or loose after strict): 0
+
+  H=5: decisive identities 1172 (readout on or before 2021-10-01)
+    loose   approved within 5y: 627 (53.5%)  p50 1.95y  p75 3.10y  p90 4.10y
+            <= 3y 462 (73.7%)  <= 5y 627 (100.0%)
+            D-10: W=5 becomes the headline, W=3 the sensitivity (p90 between 3 and 5 years)
+    strict  approved within 5y: 623 (53.2%)  p50 1.95y  p75 3.10y  p90 4.10y
+            <= 3y 460 (73.8%)  <= 5y 623 (100.0%)
+            D-10: W=5 becomes the headline, W=3 the sensitivity (p90 between 3 and 5 years)
+    tail: strict lag over 3y, 295 identities; longest 25 (nct | readout | first loose | first strict | drug [salts|words|brand]):
+      NCT00009620 1995-02-28 2022-11-17 2022-11-17  phenobarbital [||]
+      NCT00212654 2006-04-30 2024-11-22 2024-11-22  landiolol [||]
+      NCT00228982 2005-12-31 2024-04-03 2024-04-03  ceftobiprole medocaril [||]
+      NCT00987844 2000-11-30 2018-12-14 2018-12-14  prucalopride [||]
+      NCT01200251 2007-09-30 2025-09-09 2025-09-09  bimatoprost [|gel|]
+      NCT00046943 2007-06-30 2025-04-02 2025-04-02  atrasentan [hydrochloride||]
+      NCT00406211 2004-12-31 2022-06-03 2022-06-03  -171423784413478 [||]
+      NCT00383227 2000-11-30 2017-11-09 2017-11-09  -154118183456572 [||]
+      NCT00050336 2004-02-29 2020-11-20 2020-11-20  lonafarnib [||]
+      NCT00403702 2006-08-31 2023-05-18 2023-05-18  perfluorohexyloctane [||]
+      NCT00089570 2006-03-31 2022-09-14 2022-09-14  terlipressin [||]
+      NCT00955045 2003-10-31 2019-08-27 2019-08-27  istradefylline [||]
+      NCT00321165 2008-03-31 2023-11-15 2023-11-15  taurolidine [||]
+      NCT00967850 2011-06-30 2017-09-14 2026-07-24  bevacizumab [|intravitreal|]
+      NCT00339768 1996-06-10 2011-02-08 2011-02-08  amoxicillin + omeprazole [||]
+      NCT00032942 2004-10-31 2018-05-16 2018-05-16  lofexidine [||]
+      NCT00170690 2011-12-31 2025-01-21 2025-01-21  treosulfan [||]
+      NCT00411645 2008-11-10 2021-11-23 2021-11-23  maribavir [||]
+      NCT00385697 2010-06-30 2022-11-17 2022-11-17  teplizumab [||]
+      NCT00257205 2010-08-31 2022-10-21 2022-10-21  tremelimumab [||]
+      NCT00146627 2008-06-30 2020-08-06 2020-08-06  nifurtimox [||]
+      NCT00315445 1998-05-31 2010-06-30 2010-06-30  buprenorphine [|patch|transdermal|]
+      NCT00004933 2001-05-31 2012-10-26 2012-10-26  omacetaxine mepesuccinate [||]
+      NCT00840801 2010-05-20 2021-08-13 2021-08-13  -53348050065620 [||]
+      NCT00172081 2003-11-07 2015-01-23 2015-01-23  parathyroid hormone [||]
+    impossible cases (approval before readout, or loose after strict): 0
+
+==============================================================================
+3. MARKET LABEL (market_fda_any_pivotal_w3, market_fda_any_pivotal_w5, market_fda_any_pivotal_w10)
+==============================================================================
+
+  W=3: eligible 2941  ineligible 409620  undeterminable 49263   labelled 1: 1521  0: 1420  positive rate 51.7%
+    ineligible      not_a_drug_trial                                       239495
+    ineligible      not_a_pivotal_phase                                    124159
+    ineligible      post_approval_phase                                     30954
+    ineligible      every_tested_agent_approved_before_readout               8268
+    ineligible      window_has_not_closed                                    3406
+    ineligible      registered_after_primary_completion                      3060
+    ineligible      tested_agents_approved_or_a_loose_regimen_of_approved_drugs      278
+    undeterminable  phase_absent_or_unrecognised                            24158
+    undeterminable  readout_date_is_planned_or_absent                       14278
+    undeterminable  no_tested_agent_resolved                                 5625
+    undeterminable  tested_agent_undeterminable                              4267
+    undeterminable  tested_agents_only_partly_resolved                        649
+    undeterminable  a_tested_agent_prior_approval_undeterminable              283
+    undeterminable  approval_within_window_undeterminable                       3
+    positive rate by readout band (3-year bands):
+      1998-2000  labelled      4  positive     1  25.0%
+      2001-2003  labelled     31  positive    13  41.9%
+      2004-2006  labelled    244  positive   118  48.4%
+      2007-2009  labelled    571  positive   278  48.7%
+      2010-2012  labelled    565  positive   264  46.7%
+      2013-2015  labelled    479  positive   279  58.2%
+      2016-2018  labelled    463  positive   246  53.1%
+      2019-2021  labelled    400  positive   217  54.2%
+      2022-2024  labelled    184  positive   105  57.1%
+
+  W=5: eligible 2721  ineligible 411220  undeterminable 47883   labelled 1: 1762  0: 959  positive rate 64.8%
+    ineligible      not_a_drug_trial                                       239495
+    ineligible      not_a_pivotal_phase                                    124159
+    ineligible      post_approval_phase                                     30954
+    ineligible      every_tested_agent_approved_before_readout               7372
+    ineligible      window_has_not_closed                                    6135
+    ineligible      registered_after_primary_completion                      2847
+    ineligible      tested_agents_approved_or_a_loose_regimen_of_approved_drugs      258
+    undeterminable  phase_absent_or_unrecognised                            24158
+    undeterminable  readout_date_is_planned_or_absent                       14278
+    undeterminable  no_tested_agent_resolved                                 4808
+    undeterminable  tested_agent_undeterminable                              3797
+    undeterminable  tested_agents_only_partly_resolved                        576
+    undeterminable  a_tested_agent_prior_approval_undeterminable              262
+    undeterminable  approval_within_window_undeterminable                       4
+    positive rate by readout band (3-year bands):
+      1998-2000  labelled      4  positive     3  75.0%
+      2001-2003  labelled     31  positive    15  48.4%
+      2004-2006  labelled    244  positive   157  64.3%
+      2007-2009  labelled    570  positive   354  62.1%
+      2010-2012  labelled    566  positive   363  64.1%
+      2013-2015  labelled    479  positive   319  66.6%
+      2016-2018  labelled    463  positive   296  63.9%
+      2019-2021  labelled    364  positive   255  70.1%
+
+  W=10: eligible 1988  ineligible 415128  undeterminable 44708   labelled 1: 1433  0: 555  positive rate 72.1%
+    ineligible      not_a_drug_trial                                       239495
+    ineligible      not_a_pivotal_phase                                    124159
+    ineligible      post_approval_phase                                     30954
+    ineligible      window_has_not_closed                                   12889
+    ineligible      every_tested_agent_approved_before_readout               5024
+    ineligible      registered_after_primary_completion                      2420
+    ineligible      tested_agents_approved_or_a_loose_regimen_of_approved_drugs      187
+    undeterminable  phase_absent_or_unrecognised                            24158
+    undeterminable  readout_date_is_planned_or_absent                       14278
+    undeterminable  no_tested_agent_resolved                                 3105
+    undeterminable  tested_agent_undeterminable                              2563
+    undeterminable  tested_agents_only_partly_resolved                        420
+    undeterminable  a_tested_agent_prior_approval_undeterminable              179
+    undeterminable  approval_within_window_undeterminable                       5
+    positive rate by readout band (3-year bands):
+      1998-2000  labelled      4  positive     3  75.0%
+      2001-2003  labelled     31  positive    16  51.6%
+      2004-2006  labelled    244  positive   167  68.4%
+      2007-2009  labelled    570  positive   403  70.7%
+      2010-2012  labelled    564  positive   410  72.7%
+      2013-2015  labelled    479  positive   362  75.6%
+      2016-2018  labelled     96  positive    72  75.0%
+
+==============================================================================
+3b. D-40/D-45 at W=5: labelled trials holding a combination of drugs each already FDA-approved (loose regimens are now excluded, D-45)
+==============================================================================
+  a combination product exists                     label 0:     21 agents
+  a combination product exists                     label 1:     74 agents
+  no combination product ever (a loose regimen)    label 1:      5 agents
+
+==============================================================================
+4. ADVANCEMENT
+==============================================================================
+  NOT BUILT: the linkage key is undecided (rev 7 section 1.3 item 1). No column.
+
+==============================================================================
+WRITTEN
+==============================================================================
+  data\labels\trial_targets.csv
+  data\labels\trial_targets.manifest.json

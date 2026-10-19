@@ -41,6 +41,18 @@ rev 10 figure that §3 does not list as verified.
 
 ## 1. State
 
+- **2026-10-13 (labels delivery, `labels_all.zip`):** gate **1049 passed**. Then, in order:
+  1. `resolve_trial_drugs.py --overwrite` (v10: learned codes on, D-50; Purple Book
+     identity key changed, D-49);
+  2. `match_form_approvals.py --overwrite`;
+  3. `build_targets.py --snapshot 2026-10-01 --overwrite`, now with ADVANCEMENT (D-51).
+  All three targets are then in `trial_targets.csv`.
+- **2026-10-13 (market-fix delivery 2, `market_fix2.zip`):** gate **1036 passed**. Then, in
+  order:
+  1. `resolve_trial_drugs.py --overwrite` (v9: D-44 and D-46 change resolution);
+  2. `match_form_approvals.py --overwrite`;
+  3. `build_targets.py --snapshot 2026-10-01 --overwrite`;
+  4. `audit\probe_learned_codes.py` (D-47 review; changes nothing).
 - **2026-10-13 (market-fix delivery 1, `market_fix1.zip`):** gate **1024 passed**. Then, in
   order: `resolve_trial_drugs.py --overwrite` (v8: D-43 changes resolution);
   `audit\probe_resolver_other_names.py` on v8; `match_form_approvals.py --overwrite` (now
@@ -390,6 +402,100 @@ D-32 statement; supersedes rev 7 §1.2's `market_fda_indication` as the target t
 - Computed for W = 3, 5 and 10 in one file; D-10's lag picks the headline.
 - The snapshot is a required flag and may not be later than either source's currency.
 
+**D-49 (2026-10-13; amends D-46) A Purple Book identity ignores form words; a product
+keeps its own identity.**
+- The identity key is the proper name in INN spelling with dose and form words removed
+  (`purplebook.purple_book_identity_key`). IV, SC and IM immune globulin are ONE identity,
+  and each product carries its route (D-26).
+- Matcher run 4 found the bug: 'immune globulin intravenous (human), 10%' lost
+  'intravenous' to the resolver's form stripping and matched the IM identity, so its IV
+  form read as excluded (about 20 agents).
+- The matcher now uses the identity the dictionary created for a proper name
+  (`DrugDictionary.purple_book_identity`), never a re-resolution, which another product's
+  alias can make ambiguous ('poliovirus vaccine inactivated'; alpha-1-proteinase
+  inhibitor).
+
+**D-50 (2026-10-13; switches D-47 on) Learned codes are applied.**
+- The resolver runs twice: pass 1 under the D-44 guard; codes learned from its resolved
+  agents (`services/learned_codes.py`); pass 2 with them as the last dictionary source.
+- Every kept code is written to `data/labels/learned_codes.csv`.
+- Review basis: `probe_learned_codes_20261001.txt` kept 664 codes; all 150 shown were read
+  and are correct (BMS-734016 ipilimumab, ABT-199 venetoclax, LCZ696 Entresto with 35
+  agents, CPX-351 Vyxeos, CTL019 tisagenlecleucel, many biosimilar codes); 42 conflicts
+  refused. Expected effect: about 504 agents, 100 W=5 unresolved market trials.
+
+**D-51 (2026-10-13) The advancement label as built** (`services/advancement_label.py`;
+D-37, D-38; phase 3 out as proposed). `advancement_same_disease_wW_{exact,family}` for
+W = 2, 3, 5.
+- Headline: W=3 with D-37's exact rule (B); family (C) is the sensitivity.
+- Link: a shared name key (compact; without dose and form; without trailing salts; 4+
+  characters), a strictly higher phase rank, the same disease, and a later trial first
+  submitted between this trial's own first submission and readout + W.
+- INELIGIBLE: not an early phase; the D-38 floor, disease by disease.
+- UNDETERMINABLE: no name key, no mesh-list condition, or no registration date.
+
+**D-52 (2026-10-13, OPEN, asked of the owner) A new drug plus a background drug in one
+intervention.** 'terlipressin and albumin' and 'lifileucel plus pembrolizumab' need, under
+D-32's contained rule, a product containing BOTH, though Terlivaz and Amtagvi were approved
+alone. The alternative: judge such an agent on its NEW moieties (those not approved before
+readout by the matcher's own evidence). `match_form_approvals.py` section 5 counts the W=5
+labels that would flip.
+
+**D-44 (2026-10-13) An other name counts only as an alias** (`drug_resolution.resolve_agent`,
+`alias_rejection`). When the own name does not resolve, a resolved other name is used only
+if all three tests pass:
+- the own name's partial result is covered by it;
+- the other names do not resolve to several drug sets, unless this one holds them all;
+- no drug-shaped token of the own name (`drug_names.INN_STEMS`, 7+ letters) is foreign to
+  its drugs' names. A misspelling within 2 edits is the same drug.
+Probe (`probe_resolver_other_names_20261001.txt`, on v8):
+- 9,637 of 150,545 resolved agents came through an other name;
+- 1,565 failed a test (camrelizumab -> apatinib, pyrotinib -> trastuzumab, Opdualag ->
+  relatlimab alone, FOLFOXIRI -> fluorouracil);
+- they touch 21 of 2,962 W=5 labels.
+The resolver prints the rejections by reason.
+
+**D-45 (2026-10-13, DECIDED by the owner; supersedes D-40's rule for loose regimens) A
+loose regimen of drugs each already approved is excluded like an approved agent.**
+- A loose regimen (`market_label.is_loose_regimen`): a multi-moiety agent, not approved
+  before readout, every moiety DrugCentral-FDA-dated before readout, and no product
+  containing them all ever approved.
+- Excluded as `REASON_LOOSE_REGIMEN`, and left out of the lag.
+- Targets v2: 304 such agents were labelled 0 at W=5, a quarter of the 1,210 negatives.
+  Fixed-dose combinations keep the D-40 rule (77 positives, 21 negatives).
+
+**D-46 (2026-10-13, DECIDED by the owner; extends D-19) A Purple Book identity for
+licensed products DrugCentral cannot name.**
+- Each Purple Book proper name that no DrugCentral or Drugs@FDA name resolves gets a
+  stable NEGATIVE id (`purplebook.purple_book_id`, 48 bits of SHA-256; collisions raise).
+  DrugCentral's positive ids are untouched.
+- Names: the proper name, it without brackets, the brand. They are the lowest-priority
+  dictionary source, so DrugCentral and Drugs@FDA names always win.
+- A word-order-free lookup applies to these identities only ('13-valent pneumococcal
+  conjugate vaccine' = 'Pneumococcal 13-valent Conjugate Vaccine (Diphtheria CRM197
+  Protein)'). Shared words across identities are ambiguous, never guessed (rabbit vs
+  equine anti-thymocyte globulin).
+- 'alpha' is read as 'alfa' first (darbepoetin).
+- Matcher run 3: 1,206 unresolved agents named an unlinked CBER product and 175 an
+  unlinked CDER one.
+- Identities are decided from the other sources only, so they do not depend on row order.
+
+**D-47 (2026-10-13, DECIDED by the owner: "whatever makes it more generalizable and
+robust") Learned development codes: report first, switched on only after review.**
+Recovering codes of approved drugs (LCZ696, QVA149) is what makes "unresolved = not
+approved" true enough to label unresolved trials 0 with a measured error: the fix for
+market's selection bias. `audit/probe_learned_codes.py` learns from the GUARDED (D-44)
+output only, keeps a whole-name code only when 2+ trials agree and none disagrees, and
+prints every kept mapping. Nothing is applied until the owner has read it.
+
+**D-48 (2026-10-13) Matcher corrections from its third run.**
+- (a) An application's earliest product is never dated after its original approval:
+  Dayvigo's Orange Book 2020-04-07 vs approval 2019-12-20; Zaditor's only listed product
+  2006 vs 1999. Fixes the lemborexant and ketotifen D-42a cases.
+- (b) A comma-joined ingredient part resolves when every comma component does: Trikafta
+  'ELEXACAFTOR, IVACAFTOR, TEZACAFTOR', whose DrugCentral link lacks tezacaftor.
+- (c) Purple Book proper names are read in INN spelling (D-46).
+
 **D-41 (2026-10-13) The Purple Book is approval evidence beside Drugs@FDA**
 (`services/purplebook.py`; the owner's Advanced Search export, 2,251 product rows, 864 BLAs:
 480 CDER, 384 CBER).
@@ -554,7 +660,51 @@ Refuted or corrected:
 
 ## 4. Measured on the owner's machine
 
-Market-fix delivery 1, `market_fix1.zip`, 2026-10-13, not yet run on the owner's data:
+Labels delivery, `labels_all.zip`, 2026-10-13, not yet run on the owner's data:
+- `services/advancement_label.py` (new, D-51).
+- `services/learned_codes.py` (new, D-50).
+- `purplebook.py`: `purple_book_identity_key` (D-49).
+- `drug_dictionary.py`: identity key, `purple_book_identity`, the learned-code source.
+- `form_approval.py`: the created identity is used (D-49).
+- `resolve_trial_drugs.py`: two passes and `learned_codes.csv` (D-50).
+- `match_form_approvals.py`: section 5 (D-52 measurement).
+- `build_targets.py`: advancement columns and section 4; Purple Book names in the lag tail.
+- Tests: 13 added (1036 -> 1049).
+
+Market-fix delivery 2 runs (2026-10-13; resolver v9, matcher run 4, targets v3, learned
+codes report):
+- Resolver v9: resolved 151,367 (+822), partial 10,241 (+699: the guard turns incomplete
+  combinations partial). Guard rejections (per other name): own name's drugs lacking 811,
+  other names disagreeing 3,406, a different drug's name 153. Purple Book identities 301;
+  agents decided by a Purple Book source about 2,650. Full trials 96,835 (+532). MeSH
+  corroboration 94.7% -> 93.8%, expected: Purple Book identities have no DrugCentral MeSH.
+- Matcher run 4: products 14,393 (BLA 3,093); 197 clamped to their original (D-48a);
+  D-42a down to gemtuzumab ozogamicin alone. Pivotal 19,932: approved 15,007 (75.3%), not
+  4,527 (22.7%), undeterminable 398 (2.0%).
+- Targets v3: endpoint unchanged; loose regimens out of the lag (421 records). H=10 lag:
+  864 identities, 61.8% approved within 10 years, p90 5.81y / 5.80y. W=5 market 2,721
+  labelled, 1,762 / 959 (64.8%); 258 excluded as loose regimens. The tail now holds long
+  real vaccine lags (Priorix 2004 -> 2022, Heplisav 2000 -> 2017).
+- Learned codes report: 2,199 codes with evidence, 714 already resolve, 42 conflict, 779
+  under 2 trials, 664 kept.
+
+Market-fix delivery 2, `market_fix2.zip`, 2026-10-13, RUN:
+- `drug_names.py`: `INN_STEMS`, `inn_tokens`, `within_edits`.
+- `drug_dictionary.py`: Purple Book identity source, word-set lookup, `names_of`.
+- `drug_resolution.py`: the D-44 guard, with audited reasons.
+- `purplebook.py`: `inn_spelling`, `purple_book_id`.
+- `form_approval.py`: D-48 a, b, c.
+- `market_label.py`: D-45.
+- `resolve_trial_drugs.py`: `--purplebook`, and the alias-guard section.
+- `match_form_approvals.py`: the Purple Book feeds the dictionary; identities are printed.
+- `build_targets.py`: D-45 in the label and the lag.
+- `audit/probe_learned_codes.py` (new).
+- Tests: 12 added (1024 -> 1036).
+- Smoke: a vaccine trial named '13-valent pneumococcal conjugate vaccine' resolves to its
+  Purple Book identity and is labelled 1 from Prevnar 13's 2010 licence.
+
+Market-fix delivery 1, `market_fix1.zip`, 2026-10-13, RUN (resolver v8, matcher run 3,
+targets v2):
 - `services/purplebook.py` (new, D-41).
 - `services/form_approval.py`:
   - the Purple Book's products and route vocabulary;
@@ -581,6 +731,25 @@ other name by partner-risk signal:
 It reports counts overall, pivotal and W=5 labelled, with examples. It decides whether the
 resolver's other-name fallback needs a guard before market or advancement is trusted, and
 informs the learned-codes decision.
+
+Market-fix delivery 1 runs (2026-10-13):
+- **Resolver v8:** resolved 150,545 (+166 from the micro sign; probe said 162); full trials
+  96,303 (+77). Nothing else moved.
+- **Matcher run 3:**
+  - NDA/BLA products 13,220 (BLA 1,920 with the Purple Book's 1,076 linked rows).
+  - Purple Book key check: 463 of its 480 CDER BLAs are in Drugs@FDA; first-approval dates
+    agree on 461 and the Purple Book is earlier on 2. The 17 Purple-Book-only are
+    withdrawn licences (Zenapax).
+  - Confirmed products for stated routes rose: intravitreal 18 -> 57, subcutaneous
+    114 -> 212, intravenous 539 -> 653.
+  - Pivotal 19,537: approved 14,655 (75.0%), not 4,473 (22.9%), undeterminable 409
+    (2.1%), including D-42a 12 and D-42c 44.
+- **Targets v2:**
+  - Endpoint unchanged (13,487).
+  - W=5 market 2,936 labelled, 58.8% positive.
+  - Lag H=10 p90 6.06y / 6.00y.
+  - D-40 report: loose regimens 304 x 0, 5 x 1; fixed-dose combinations 21 x 0, 77 x 1 —
+    the evidence for D-45.
 
 Market-fixes probe (`probe_market_fixes_20261001.txt`, 2026-10-13, W=5):
 - **Micro sign:** 1,088 not-resolved agents carry a mu; 162 resolve once 'µg' is a unit,
@@ -938,8 +1107,10 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
    - RUN 2026-10-13 (§4). W decided (D-36: W=5). Still open: the market selection
      problem (probe run: unresolved cannot be labelled 0; what to do with the market
      target asked 2026-10-13), the three tail-artefact guards.
-4a. Advancement label: decided (D-37, D-38; phase 3 proposed out). Built AFTER the market
-    fixes (D-39), into `trial_targets.csv`.
+4a. Advancement label: BUILT 2026-10-13 (D-51), in `trial_targets.csv`.
+4b. Open before training: D-52 (new plus background drug), from matcher section 5's numbers.
+    Then the D-25 sample, which measures resolver precision and recall: the condition for
+    labelling unresolved market trials 0 (the selection-bias fix).
    - Then the lag script, on `trial_drug_form_approvals.csv`.
 4b. Then the resolution sample per D-25.
 5. Rev 10 §14 items 3–9.

@@ -1,0 +1,202 @@
+﻿min trials 2 | code: whole name, letter prefix <= 5 then 2+ digits | window 5
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+
+  codes with evidence 2199; already resolve 714; conflicting 42; fewer than 2 trials 779; KEPT 664
+  not-resolved agents a kept code would resolve: 504; W=5 unresolved market trials touched: 100
+
+  KEPT MAPPINGS FOR REVIEW, top 150 by trials (code | drugs | trials | agents it would resolve):
+    bms734016        ipilimumab                                          197     0
+    mln341           bortezomib                                          137     0
+    chx3311          cytarabine                                          134     0
+    u19920           cytarabine                                          134     0
+    wr28453          cytarabine                                          130     0
+    rtxm83           rituximab                                           124     1
+    idec102          rituximab                                           123     0
+    pf05280586       rituximab                                           123     2
+    bi695500         rituximab                                           122     5
+    rg7601           venetoclax                                          120     0
+    abt0199          venetoclax                                          116     0
+    abp798           rituximab                                           115     1
+    cmab819          nivolumab                                           111     1
+    ro5541267        atezolizumab                                        103     0
+    cdc501           lenalidomide                                         97     1
+    ly188011         gemcitabine                                          96     0
+    l001079038       vorinostat                                           89     0
+    cb3025           melphalan                                            84     0
+    wr138719         cyclophosphamide                                     82     0
+    b518             cyclophosphamide                                     80     0
+    abp206           nivolumab                                            78     2
+    bcd263           nivolumab                                            77     0
+    u101440e         irinotecan                                           75     0
+    wr19039          methotrexate                                         73     0
+    cl14377          methotrexate                                         72     0
+    fi106            doxorubicin                                          71     0
+    ku0059436        olaparib                                             67     0
+    bcd201           pembrolizumab                                        66     0
+    wr19813          melphalan                                            64     0
+    ly3009806        ramucirumab                                          62     0
+    ccrg81045        temozolomide                                         61     0
+    rp46161          temozolomide                                         61     0
+    hd204            bevacizumab                                          59     0
+    sct501           bevacizumab                                          58     0
+    bp102            bevacizumab                                          55     5
+    sr96669          oxaliplatin                                          55     0
+    cc4047           pomalidomide                                         54     3
+    jm83             oxaliplatin                                          54     0
+    rp54780          oxaliplatin                                          54     0
+    gme751           pembrolizumab                                        53     2
+    su11248          sunitinib                                            53     0
+    ql2107           pembrolizumab                                        52     6
+    jnj54767414      daratumumab                                          46     0
+    rph075           pembrolizumab                                        45     0
+    msk390           vorinostat                                           43     0
+    ly248686         duloxetine                                           42     0
+    abp215           bevacizumab                                          41     2
+    amn107           nilotinib                                            41     3
+    myl1402o         bevacizumab                                          40     0
+    sb27             pembrolizumab                                        39     2
+    mk7902           lenvatinib                                           38     0
+    sibp04           bevacizumab                                          38     2
+    bms907351        cabozantinib                                         37     0
+    cb2041           busulfan                                             36     0
+    jtp74057         trametinib                                           36     0
+    vp16213          etoposide                                            36     0
+    wr19508          busulfan                                             36     0
+    gt41             busulfan                                             35     0
+    z4942            ifosfamide                                           35     0
+    asp9785          enzalutamide                                         34     0
+    ql1101           bevacizumab                                          33     3
+    ro0452317        trastuzumab                                          33     0
+    rp13057          daunorubicin                                         33     0
+    cl232315         mitoxantrone                                         32     0
+    bat1706          bevacizumab                                          31     2
+    mjf9325          ifosfamide                                           31     0
+    r7159            obinutuzumab                                         30     0
+    sdx105           bendamustine                                         30     1
+    sila9268a        sirolimus                                            30     0
+    abp980           trastuzumab                                          29     1
+    amg103           blinatumomab                                         29     0
+    cc486            azacitidine                                          29     4
+    cdp870           certolizumab pegol                                   28     4
+    cp675            tremelimumab                                         28     0
+    drg0012          sargramostim                                         28     0
+    fe200486         degarelix                                            28     0
+    pf05280014       trastuzumab                                          28     4
+    wy090217         sirolimus                                            28     0
+    ctp16            bevacizumab                                          27     0
+    fkb238           bevacizumab                                          26     0
+    mb02             bevacizumab                                          26     1
+    bg00012          dimethyl fumarate                                    25     3
+    fi6339           daunorubicin                                         25     0
+    pd332991         palbociclib                                          25     0
+    pf06439535       bevacizumab                                          25     1
+    ctp10            rituximab                                            24     0
+    er086526         eribulin                                             24     0
+    gp2013           rituximab                                            24     3
+    gs6034           filgotinib                                           24     0
+    nsc102816        azacitidine                                          24     0
+    ro7082859        glofitamab                                           24     0
+    sd01             pegfilgrastim                                        24     0
+    incb18424        ruxolitinib                                          23     0
+    sc58635          celecoxib                                            23     0
+    gsk572016        lapatinib                                            22     0
+    gw2016           lapatinib                                            22     0
+    hsp130           pegfilgrastim                                        22     1
+    ly450190         tadalafil                                            22     0
+    u4748            mercaptopurine                                       22     0
+    wr2785           mercaptopurine                                       22     0
+    cpx351           cytarabine + daunorubicin                            21    17
+    fda0345          carmustine                                           21     0
+    gs0132           sacituzumab govitecan                                21     0
+    inc424           ruxolitinib                                          21     3
+    rwj26251         cladribine                                           21     0
+    wr45312          thiotepa                                             21     0
+    zd1033           anastrozole                                          21     0
+    ibi305           bevacizumab                                          20     3
+    pd991            palbociclib                                          20     0
+    ro4368451        pertuzumab                                           20     0
+    alt02            trastuzumab                                          19     1
+    icl670           deferasirox                                          19     3
+    mk8616           sugammadex                                           19     0
+    sk27702          carmustine                                           19     0
+    sri1720          carmustine                                           19     0
+    wr139021         carmustine                                           19     0
+    gs7977           sofosbuvir                                           18     0
+    ly333334         teriparatide                                         18     1
+    atg010           selinexor                                            17     1
+    cdp771           gemtuzumab ozogamicin                                17     0
+    cma676           gemtuzumab ozogamicin                                17     0
+    e7438            tazemetostat                                         17     0
+    ly3650150        lebrikizumab                                         17     2
+    at1001           migalastat                                           15     0
+    bg00002          natalizumab                                          15     0
+    ds8201           trastuzumab deruxtecan                               15     0
+    ff10832          gemcitabine                                          15     1
+    lgx818           encorafenib                                          15    10
+    ly3012211        necitumumab                                          15     0
+    mk0683           vorinostat                                           15     0
+    nsc716051        imatinib                                             15     0
+    pf2341066        crizotinib                                           15     0
+    ro5304020        trastuzumab emtansine                                15     0
+    biib058          nusinersen                                           14     0
+    cd14152          nemolizumab                                          14     0
+    dcds4501a        polatuzumab vedotin                                  14     0
+    gsk2118436a      dabrafenib                                           14     0
+    jnj80202135      nipocalimab                                          14     0
+    lcz696           sacubitril + valsartan                               14    35
+    ly3012207        olaratumab                                           14     0
+    tmt212           trametinib                                           14     0
+    zol446           zoledronic acid                                      14     0
+    bpi2009          icotinib                                             13     0
+    ctl019           tisagenlecleucel                                     13     5
+    ly900018         glucagon                                             13     0
+    sch32088         mometasone furoate                                   13     0
+    who10516         trastuzumab deruxtecan                               13     0
+    ym177            celecoxib                                            13     0
+    aa4500           collagenase                                          12     1
+    cep18083         bendamustine                                         12     0
+
+  CONFLICTS, top 50 by evidence (code | drug sets x trials):
+    cc5013           lenalidomide x194; azacitidine x1; ibrutinib + lenalidomide + r x1
+    cpt11            irinotecan x155; fluorouracil + irinotecan +  x1; docetaxel + irinotecan x1
+    gw572016         lapatinib x37; capecitabine + lapatinib x1; docetaxel + lapatinib + tras x1
+    tas102           tipiracil + trifluridine x35; tipiracil x1
+    syr322           alogliptin x19; alogliptin + pioglitazone x2; alogliptin + voglibose x2
+    ad4833           pioglitazone x13; metformin + pioglitazone x3; alogliptin + pioglitazone x2
+    sch215596        infliximab x16; infliximab + methotrexate x2
+    xm02             filgrastim x16; tbo-filgrastim x1
+    jnj28431754      canagliflozin x15; canagliflozin + metformin x1
+    jnj54135419      esketamine x13; ketamine x1
+    bms200475        entecavir x12; entecavir + tenofovir x1
+    syr110322        alogliptin x6; alogliptin + pioglitazone x2; alogliptin + glibenclamide x1
+    ac2993           exenatide x8; ethinylestradiol + exenatide x1; exenatide + insulin glargine x1
+    pcv13            pneumococcal 13-valent conju x6; pneumococcal 7-valent conjug x4
+    ib1001           levacetylleucine x5; coagulation factor ix (recom x2
+    bms986213        nivolumab + relatlimab x5; relatlimab x1
+    nsc67574         vincristine x5; etoposide x1
+    st1571           imatinib x5; imatinib + panitumumab x1
+    bms337039        aripiprazole x4; aripiprazole + lamotrigine x1
+    dhp107           paclitaxel x4; paclitaxel + pertuzumab + tr x1
+    qmf149           indacaterol + mometasone fur x4; mometasone furoate x1
+    bms564717        cetuximab x2; ixabepilone x1; cetuximab + ixabepilone x1
+    gw876008         alprazolam x1; lorazepam x1; midazolam x1
+    lbh589b          panobinostat x3; bortezomib + panobinostat x1
+    ln144            lifileucel x3; lifileucel + pembrolizumab x1
+    mp513            teneligliptin x3; canagliflozin + teneliglipti x1
+    azd7442          cilgavimab + tixagevimab x2; tixagevimab x1
+    ik007            grapiprant + pembrolizumab x2; grapiprant x1
+    mk1439a          doravirine + lamivudine + te x2; doravirine + lamivudine + te x1
+    rhuph20          hyaluronidase human x1; immune globulin infusion (hu x1; hyaluronidase x1
+    sch029851        loratadine x2; betamethasone x1
+    arys007          grapiprant + pembrolizumab x1; grapiprant x1
+    blm240           desflurane x1; desflurane + nitrous oxide x1
+    bms561525        didanosine + efavirenz + emt x1; efavirenz x1
+    cc779            capecitabine + temsirolimus x1; temsirolimus x1
+    gsk256066        azelastine x1; fluticasone propionate x1
+    gw873140         lamivudine + zidovudine x1; lopinavir + ritonavir x1
+    lilly68618       mycophenolate mofetil x1; mycophenolic acid x1
+    ql1706           lenvatinib x1; bevacizumab x1
+    sb773812         ketoconazole x1; olanzapine x1
+    sch465981        ezetimibe x1; ezetimibe + nicotinic acid + x1
+    spa100           aliskiren x1; aliskiren + amlodipine x1

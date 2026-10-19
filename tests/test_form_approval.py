@@ -541,3 +541,36 @@ def test_fda_approval_dates_keep_the_earliest_and_the_undated():
             {"struct_id": "3", "type": "EMA", "approval": "1990-01-01"}]
     first, undated = fda_approval_dates(rows, "FDA")
     assert first == {1: date(2000, 5, 17)} and undated == frozenset({2})
+
+
+
+# ---- matcher fixes from its third run, 2026-10-13 -----------------------------------------
+def test_no_application_is_dated_after_its_original_approval():
+    from trial_pos.services.form_approval import clamp_to_original
+    from collections import Counter
+    later = _product("TABLET;ORAL")._replace(appl="212028", approved=date(2020, 4, 7),
+                                             date_source=DATE_OB_PRODUCT)
+    twin = later._replace(prod="002")
+    audit = Counter()
+    out = clamp_to_original([later, twin], {"212028": date(2019, 12, 20)}, audit)
+    assert all(p.approved == date(2019, 12, 20) and p.date_source == DATE_ORIGINAL for p in out)
+    assert audit["dates: earliest product after its original, clamped to it"] == 2
+    # a later strength beside an original-dated product keeps its own date
+    first = later._replace(approved=date(2019, 12, 20))
+    out = clamp_to_original([first, twin], {"212028": date(2019, 12, 20)}, Counter())
+    assert out[1].approved == date(2020, 4, 7)
+
+
+def test_a_comma_joined_part_resolves_only_when_every_piece_does():
+    d = build_dictionary([{"id": "1", "lname": "elexacaftor"}, {"id": "2", "lname": "ivacaftor"},
+                          {"id": "3", "lname": "tezacaftor"}], [], [], [], [], [], [])
+    part = resolve_part(d, "ELEXACAFTOR, IVACAFTOR, TEZACAFTOR")
+    assert part.direct == frozenset({1, 2, 3})
+    assert resolve_part(d, "ELEXACAFTOR, UNKNOWNIUM").direct == frozenset()
+
+
+def test_a_purple_book_proper_name_is_read_in_inn_spelling():
+    d = build_dictionary([{"id": "5", "lname": "darbepoetin alfa"}], [], [], [], [], [], [])
+    pb, _a2 = read_purplebook([_pb(bla="103951", proper="darbepoetin alpha", brand="Aranesp")])
+    prods, audit = build_products(d, [], [], [], [], [], purplebook=pb)
+    assert len(prods) == 1 and prods[0].link == frozenset({5})

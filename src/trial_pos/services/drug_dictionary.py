@@ -52,10 +52,15 @@ from typing import Iterable, NamedTuple, Optional
 
 from trial_pos.services.drug_names import (
     ELEMENT_ROOTS, INDEX_COMPACT, INDEX_EXACT, STEP_EXACT, STEP_NO_DOSE_FORM,
-    STEP_NO_PARENTHETICALS, STEP_PARENTHETICAL, Variant, compact, drop_salt, has_salt_word,
-    is_abbreviation, key, variants,
+    STEP_NO_PARENTHETICALS, STEP_PARENTHETICAL, Variant, compact, drop_dose_and_form,
+    drop_parentheticals, drop_salt, has_salt_word, is_abbreviation, key, variants,
 )
 from trial_pos.services.drugsatfda import INGREDIENT_SEPARATORS, norm_appl, norm_product
+from trial_pos.services.purplebook import (
+    inn_spelling, purple_book_id, purple_book_identity_key,
+)
+
+_WORD = re.compile(r"[a-z0-9]+")
 
 SRC_SYNONYM = "synonym"
 SRC_STRUCTURE = "structure"
@@ -63,8 +68,18 @@ SRC_OB_TRADE = "ob_trade"
 SRC_OB_INGREDIENT = "ob_ingredient"
 SRC_FDA_BRAND = "fda_brand"
 SRC_FDA_INGREDIENT = "fda_ingredient"
+# D-46: last, so a DrugCentral or Drugs@FDA name always wins over a Purple Book identity.
+SRC_PURPLE_BOOK = "purple_book"
+# D-47: development codes learned from guarded registry resolutions; the very last source.
+SRC_LEARNED_CODE = "learned_code"
 SOURCES = (SRC_SYNONYM, SRC_STRUCTURE, SRC_OB_TRADE, SRC_OB_INGREDIENT, SRC_FDA_BRAND,
-           SRC_FDA_INGREDIENT)
+           SRC_FDA_INGREDIENT, SRC_PURPLE_BOOK, SRC_LEARNED_CODE)
+# D-46: the word-order-free lookup, Purple Book identities only ('13-valent pneumococcal
+# conjugate vaccine' is 'Pneumococcal 13-valent Conjugate Vaccine (Diphtheria CRM197...)').
+SRC_PURPLE_BOOK_WORDS = "purple_book_words"
+STEP_WORD_SET = "word_set"
+PB_IDENTITIES_CREATED = "purple book: identities created"
+MIN_WORD_SET = 2                  # one word is an exact key already
 DRUGCENTRAL_NAME_SOURCES = (SRC_SYNONYM, SRC_STRUCTURE)
 SRC_DRUGCENTRAL_SALT_STRIPPED = "drugcentral_salt_stripped"
 STEP_DICTIONARY_NO_SALT = "dictionary_no_salt"
@@ -165,6 +180,10 @@ class DrugDictionary:
         self.audit = Counter()
         self.salt_stripped = defaultdict(set)
         self.source_errors = []        # [(compiled pattern, wrong structure id, SourceError)]
+        self.names_of = defaultdict(set)   # drug id -> every name key indexed for it (D-44)
+        self.pb_word_sets = defaultdict(set)   # D-46: frozenset of words -> {Purple Book id}
+        self.pb_names = {}                 # D-46: Purple Book id -> identity key
+        self.pb_identity_of = {}           # D-46: key(proper, INN spelling) -> Purple Book id
 
     def set_source_errors(self, errors: Iterable[SourceError], structure_ids: dict) -> None:
         """`structure_ids`: {structure name key: id}. An entry whose drug is not in
@@ -198,6 +217,8 @@ class DrugDictionary:
             self.audit[f"{source}: skipped, blank name or no drug"] += 1
             return
         self.index[source][INDEX_EXACT][k].add(ds)
+        for x in ds:
+            self.names_of[x].add(k)
         c = compact(name)
         if c:
             self.index[source][INDEX_COMPACT][c].add(ds)
@@ -274,11 +295,75 @@ class DrugDictionary:
         return NO_HIT, None
 
     def resolve(self, name, allow_short: bool = False, original: str = ""):
-        """Every forward step, then the dictionary-side salt step."""
+        """Every forward step, the dictionary-side salt step, then (D-46) the Purple Book
+        word-set step."""
         hit, v = self.resolve_name(name, allow_short=allow_short, original=original)
         if hit.status != HIT_NONE:
             return hit, v
-        return self.resolve_salt_stripped(name, original=original)
+        hit, v = self.resolve_salt_stripped(name, original=original)
+        if hit.status != HIT_NONE:
+            return hit, v
+        return self.resolve_word_set(name)
+
+    def resolve_word_set(self, name):
+        """D-46: the name's words, in any order, as those of one Purple Book identity."""
+        k = drop_parentheticals(key(name))
+        for candidate in (k, drop_dose_and_form(k)):
+            words = frozenset(_WORD.findall(candidate))
+            if len(words) < MIN_WORD_SET:
+                continue
+            found = self.pb_word_sets.get(words)
+            if not found:
+                continue
+            v = Variant(STEP_WORD_SET, " ".join(sorted(words)), INDEX_EXACT)
+            if len(found) == 1:
+                return Hit(HIT_RESOLVED, frozenset(found), (), SRC_PURPLE_BOOK_WORDS), v
+            ordered = tuple(frozenset({x}) for x in sorted(found))
+            return Hit(HIT_AMBIGUOUS, frozenset(), ordered, SRC_PURPLE_BOOK_WORDS), v
+        return NO_HIT, None
+
+    def purple_book_identity(self, proper: str) -> Optional[int]:
+        """The D-46 identity created for this exact proper name, or None. The matcher uses
+        it instead of re-resolving: another product's alias can share the name
+        ('poliovirus vaccine inactivated'), which re-resolution reads as ambiguous."""
+        return self.pb_identity_of.get(key(inn_spelling(proper)))
+
+    def add_purple_book(self, rows: Iterable) -> None:
+        """D-46: an identity for each Purple Book proper name no other source resolves.
+        Proper names that resolve (DrugCentral, Drugs@FDA) are left to that identity."""
+        seen = {}
+        others = tuple(src for src in SOURCES
+                       if src not in (SRC_PURPLE_BOOK, SRC_LEARNED_CODE))
+        for r in rows:
+            proper = inn_spelling(r.proper)
+            # Only DrugCentral and Drugs@FDA names decide: never another Purple Book entry,
+            # so 'anti-thymocyte globulin (equine)' is not absorbed by '(rabbit)' and the
+            # result does not depend on row order.
+            hit, _v = self.resolve_name(proper, sources=others)
+            if hit.status == HIT_NONE:
+                hit, _v = self.resolve_salt_stripped(proper)
+            if hit.status == HIT_RESOLVED:
+                self.audit["purple book: proper name already resolves, no new identity"] += 1
+                continue
+            if hit.status == HIT_AMBIGUOUS:
+                self.audit["purple book: proper name ambiguous, no identity"] += 1
+                continue
+            pk = key(proper)
+            ik = purple_book_identity_key(r.proper)
+            pid = purple_book_id(ik)
+            if seen.setdefault(pid, ik) != ik:
+                raise ValueError(f"Purple Book id collision: {seen[pid]!r} and {ik!r}")
+            if pid not in self.pb_names:
+                self.audit[PB_IDENTITIES_CREATED] += 1
+            self.pb_names[pid] = ik
+            self.pb_identity_of[pk] = pid
+            names = {pk, drop_parentheticals(pk), ik, drop_parentheticals(ik),
+                     key(r.proprietary)}
+            for n in sorted(x for x in names if x):
+                self.add(SRC_PURPLE_BOOK, n, {pid})
+            words = frozenset(_WORD.findall(drop_parentheticals(ik)))
+            if len(words) >= MIN_WORD_SET:
+                self.pb_word_sets[words].add(pid)
 
 
 def _ingredient_parts(value: str) -> list:
@@ -289,8 +374,9 @@ def _ingredient_parts(value: str) -> list:
 
 
 def build_dictionary(synonyms, structures, struct2parent, ob_product, struct2obprod,
-                     fda_products, fda_applications) -> DrugDictionary:
-    """Every argument is an iterable of dict rows as read from the CSV / tab files."""
+                     fda_products, fda_applications, purplebook: Iterable = ()) -> DrugDictionary:
+    """Every argument is an iterable of dict rows as read from the CSV / tab files, except
+    `purplebook`: purplebook.PurpleBookRow tuples (D-46), added after everything else."""
     d = DrugDictionary(parent_map(struct2parent))
     structures = list(structures)
     d.set_source_errors(KNOWN_SOURCE_ERRORS,
@@ -324,6 +410,7 @@ def build_dictionary(synonyms, structures, struct2parent, ob_product, struct2obp
             d.add(SRC_FDA_BRAND, r.get("DrugName"), drugs)
             d.add(SRC_FDA_INGREDIENT, r.get("ActiveIngredient"), drugs)
     d.index_salt_stripped()
+    d.add_purple_book(purplebook)
     return d
 
 
