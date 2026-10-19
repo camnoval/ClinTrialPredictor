@@ -105,9 +105,14 @@ def is_pure_placebo(raw) -> bool:
 _PARENS = re.compile(r"\([^()]*\)|\[[^\[\]]*\]")
 _PAREN_CONTENT = re.compile(r"\(([^()]*)\)|\[([^\[\]]*)\]")
 
-DOSE_UNITS = ("mg/kg", "mg/m2", "mg/m\u00b2", "mcg/kg", "ug/kg", "\u00b5g/kg", "nmol/kg",
-              "mg/ml", "miu", "mg", "mcg", "\u00b5g", "ug", "ng", "g", "kg", "ml", "l", "iu", "u",
-              "units", "unit", "mmol", "meq", "%")
+_DOSE_UNITS_WRITTEN = ("mg/kg", "mg/m2", "mg/m\u00b2", "mcg/kg", "ug/kg", "\u00b5g/kg",
+                       "nmol/kg", "mg/ml", "miu", "mg", "mcg", "\u00b5g", "ug", "ng", "g", "kg",
+                       "ml", "l", "iu", "u", "units", "unit", "mmol", "meq", "%")
+# Units are matched against key()-normalised text, so they are normalised the same way.
+# Before 2026-10-13 they were not: NFKC turns the micro sign (U+00B5) into Greek mu
+# (U+03BC), so 'µg' was never a dose and 'indacaterol 150 µg' did not resolve
+# (audit/probe_market_fixes.py: 162 agents recovered). Order kept, duplicates dropped.
+DOSE_UNITS = tuple(dict.fromkeys(key(u) for u in _DOSE_UNITS_WRITTEN))
 # A number is a dose only when it stands alone: never a digit run inside a code such as
 # 'mk-3475', 'covid-19' or 'alfa-2b'.
 _NUM_BEFORE = r"(?<![a-z0-9\-.,])"
@@ -246,8 +251,12 @@ def drop_biosimilar_suffix(k: str) -> str:
 # names state (never the description, D-15). Recorded beside the moiety, never instead of it:
 # salts and formulations are different products with different approvals (D-12).
 
-# Salt-list words that do not distinguish a product.
-NON_DISTINGUISHING_SALT_WORDS = frozenset({"free", "base", "anhydrous"})
+# Salt-list words that do not distinguish a product. Hydrates added 2026-10-13 (D-28):
+# Drugs@FDA names the anhydrous moiety ('CYCLOPHOSPHAMIDE', 'AMOXICILLIN') for products
+# trials call the monohydrate or trihydrate; audit/probe_form_lineup.py section 3 found
+# 0 confirmed against 412 excluded agents over the four hydrate words.
+HYDRATE_WORDS = frozenset(w for w in SALT_WORDS if w.endswith("hydrate"))
+NON_DISTINGUISHING_SALT_WORDS = frozenset({"free", "base", "anhydrous"}) | HYDRATE_WORDS
 
 # One spelling per salt, as Drugs@FDA ingredient strings write it ('METOPROLOL SUCCINATE',
 # 'IMATINIB MESYLATE'), so the market label can compare a stated salt with an ingredient.
@@ -290,6 +299,25 @@ FORM_CLASS_WORDS = {
 }
 FORM_CLASSES = tuple(sorted(FORM_CLASS_WORDS))
 _FORM_WORD_CLASS = {w: c for c, ws in FORM_CLASS_WORDS.items() for w in ws}
+FORM_WORD_CLASS = dict(_FORM_WORD_CLASS)    # public, read by form_approval
+
+# A release abbreviation followed by a bare number is a development code, not a form:
+# 'XL 184' (cabozantinib), 'XL 518' (cobimetinib), 'SR 141716' (D-28, probe_form_lineup
+# section 2). A number followed by a dose unit is a dose: 'metformin XR 500 mg' keeps XR.
+# The two-letter release words ('er', 'xr', 'xl', 'sr', 'cr', 'dr'); longer ones are words.
+RELEASE_ABBREVIATION_LENGTH = 2
+RELEASE_ABBREVIATIONS = tuple(sorted(
+    w for c in ("extended_release", "delayed_release") for w in FORM_CLASS_WORDS[c]
+    if w.isalpha() and len(w) == RELEASE_ABBREVIATION_LENGTH))
+_UNIT_AHEAD = "|".join(re.escape(u) for u in sorted(DOSE_UNITS, key=len, reverse=True))
+CODE_AFTER_RELEASE = re.compile(
+    r"(?<![a-z0-9])(?:" + "|".join(RELEASE_ABBREVIATIONS) + r")[\s\-]+\d+(?:[.,]\d+)?"
+    r"(?![\d.,])(?!\s*(?:" + _UNIT_AHEAD + r")(?![a-z]))")
+
+
+def drop_release_codes(k: str) -> str:
+    """Remove '<release abbreviation> <number>' when the number is not a dose."""
+    return " ".join(CODE_AFTER_RELEASE.sub(" ", k).split())
 _TOKEN = re.compile(r"[a-z0-9]+(?:[.\-][a-z0-9]+)*")
 
 
@@ -333,7 +361,7 @@ def stated_form(names) -> StatedForm:
         if not k:
             continue
         salts.update(stated_salts(k))
-        for t in tokens(k):
+        for t in tokens(drop_release_codes(k)):
             c = _FORM_WORD_CLASS.get(t)
             if c:
                 classes.add(c)

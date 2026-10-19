@@ -23,6 +23,7 @@ INGREDIENT_SEPARATORS = (";", "||")
 ORIGINAL = "ORIG"
 SUPPLEMENT = "SUPPL"
 APPROVED = "AP"
+TENTATIVE = "TA"          # tentative approval: NOT an approval
 APPL_NDA = "NDA"
 APPL_ANDA = "ANDA"
 APPL_BLA = "BLA"

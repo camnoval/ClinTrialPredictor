@@ -308,41 +308,77 @@ def build_dictionary(synonyms, structures, struct2parent, ob_product, struct2obp
             raise ValueError(f"structures row without an id: {r}")
         d.add(SRC_STRUCTURE, r.get("name"), (sid,))
 
-    drugs_of_prod = defaultdict(set)
-    for r in struct2obprod:
-        sid, pid = parse_struct_id(r.get("struct_id")), parse_struct_id(r.get("prod_id"))
-        if sid is None or pid is None:
-            raise ValueError(f"struct2obprod row with a blank id: {r}")
-        drugs_of_prod[pid].add(sid)
-    by_product, by_application = {}, defaultdict(set)
-    for r in ob_product:
-        pid = parse_struct_id(r.get("id"))
-        drugs = frozenset(drugs_of_prod.get(pid, ()))
-        if not drugs:
-            d.audit["ob_product: product with no drug in struct2obprod"] += 1
-            continue
+    by_product, by_application, linked_rows = ob_product_index(ob_product, struct2obprod,
+                                                               d.audit)
+    for r, drugs in linked_rows:
         d.add(SRC_OB_TRADE, r.get("trade_name"), drugs)
         d.add(SRC_OB_INGREDIENT, r.get("ingredient"), drugs)
-        appl = norm_appl(r.get("appl_no"))
-        by_product[(appl, norm_product(r.get("product_no")))] = drugs
-        by_application[appl].add(drugs)
 
     known_appl = {norm_appl(r.get("ApplNo")) for r in fda_applications}
     for r in fda_products:
-        appl, prod = norm_appl(r.get("ApplNo")), norm_product(r.get("ProductNo"))
-        if appl not in known_appl:
+        if norm_appl(r.get("ApplNo")) not in known_appl:
             d.audit["fda_product: application absent from Applications"] += 1
-        drugs, how = by_product.get((appl, prod)), FDA_BY_OB_PRODUCT
-        if drugs is None and len(by_application.get(appl, ())) == 1:
-            drugs, how = next(iter(by_application[appl])), FDA_BY_OB_APPLICATION
-        if drugs is None:
-            drugs, how = _drugs_from_ingredient(d, r.get("ActiveIngredient"))
+        drugs, how = fda_product_link(d, r, by_product, by_application)
         d.audit[f"fda_product linked by: {how}"] += 1
         if drugs:
             d.add(SRC_FDA_BRAND, r.get("DrugName"), drugs)
             d.add(SRC_FDA_INGREDIENT, r.get("ActiveIngredient"), drugs)
     d.index_salt_stripped()
     return d
+
+
+OB_KEY_REPEATED = "ob_product: (appl_no, product_no) on more than one row"
+OB_KEY_DRUGS_DIFFER = "ob_product: ... and those rows name different drugs"
+
+
+def ob_product_index(ob_product, struct2obprod, audit: Optional[Counter] = None) -> tuple:
+    """Orange Book products with their DrugCentral drugs ->
+    (by_product {(appl, product): drugs}, by_application {appl: {drugs}},
+     linked_rows [(row, drugs)] in input order).
+
+    The (appl_no, product_no) pair is NOT unique in ob_product (audit/probe_form_lineup.py
+    section 4: 5,531 keys on more than one row). The last row wins, as it always has;
+    `audit` counts repeats and repeats that name different drugs, so the cost is visible."""
+    audit = audit if audit is not None else Counter()
+    drugs_of_prod = defaultdict(set)
+    for r in struct2obprod:
+        sid, pid = parse_struct_id(r.get("struct_id")), parse_struct_id(r.get("prod_id"))
+        if sid is None or pid is None:
+            raise ValueError(f"struct2obprod row with a blank id: {r}")
+        drugs_of_prod[pid].add(sid)
+    by_product, by_application, linked_rows, seen = {}, defaultdict(set), [], {}
+    for r in ob_product:
+        pid = parse_struct_id(r.get("id"))
+        drugs = frozenset(drugs_of_prod.get(pid, ()))
+        if not drugs:
+            audit["ob_product: product with no drug in struct2obprod"] += 1
+            continue
+        linked_rows.append((r, drugs))
+        appl = norm_appl(r.get("appl_no"))
+        k = (appl, norm_product(r.get("product_no")))
+        if k in seen:
+            audit[OB_KEY_REPEATED] += 1
+            if seen[k] != drugs:
+                audit[OB_KEY_DRUGS_DIFFER] += 1
+        seen[k] = drugs
+        by_product[k] = drugs
+        by_application[appl].add(drugs)
+    return by_product, by_application, linked_rows
+
+
+def fda_product_link(d: DrugDictionary, row: dict, by_product: dict,
+                     by_application: dict) -> tuple:
+    """One Drugs@FDA Products row -> (drugs or None, FDA_LINKS entry): its (application,
+    product) in ob_product; else its application, when every Orange Book product of it
+    names the same drugs; else its ingredient string (each part unique among DrugCentral
+    names)."""
+    appl, prod = norm_appl(row.get("ApplNo")), norm_product(row.get("ProductNo"))
+    drugs = by_product.get((appl, prod))
+    if drugs is not None:
+        return drugs, FDA_BY_OB_PRODUCT
+    if len(by_application.get(appl, ())) == 1:
+        return next(iter(by_application[appl])), FDA_BY_OB_APPLICATION
+    return _drugs_from_ingredient(d, row.get("ActiveIngredient"))
 
 
 def _drugs_from_ingredient(d: DrugDictionary, value):

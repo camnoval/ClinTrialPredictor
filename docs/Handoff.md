@@ -41,8 +41,25 @@ rev 10 figure that §3 does not list as verified.
 
 ## 1. State
 
-- Gate: **967 passed** expected once `partial.zip` (2026-10-07) is installed on top of
-  `cleanup.zip`; 964 with cleanup alone. Report any other count first.
+- **2026-10-13 (market-fix delivery 1, `market_fix1.zip`):** gate **1024 passed**. Then, in
+  order: `resolve_trial_drugs.py --overwrite` (v8: D-43 changes resolution);
+  `audit\probe_resolver_other_names.py` on v8; `match_form_approvals.py --overwrite` (now
+  needs `data\purplebook\Advanced_Search.csv`); `build_targets.py --snapshot 2026-10-01
+  --overwrite`.
+- **2026-10-13 (third delivery):** gate **1016 passed** expected once `targets.zip` is
+  installed on top of `form_matcher_fix.zip`. Then run `scripts\build_targets.py
+  --snapshot 2026-10-01` (§5).
+- **2026-10-13 (second delivery):** gate **1005 passed** expected once
+  `form_matcher_fix.zip` is installed on top of `form_matcher.zip` (997 with
+  `form_matcher.zip` alone, 967 before it). Report any other count first.
+- Resolver v7 has been run (`resolve_trial_drugs_20261001_v7.txt`). Rerun only
+  `match_form_approvals.py` after `form_matcher_fix.zip`; the resolver need not run again.
+- **2026-10-13:** `data/labels/trial_drug_agents.csv` must be regenerated (v7) after
+  `form_matcher.zip`: hydrate words are no longer salts and release codes are no longer
+  forms (D-28). Drug ids, agent statuses and match classes cannot change; only the form
+  columns do. `match_form_approvals.py` refuses a v6 file.
+- Gate history: 967 passed once `partial.zip` (2026-10-07) is installed on top of
+  `cleanup.zip`; 964 with cleanup alone.
 - **Every `data/labels/trial_drug_*` file written before `idfix.zip` is WRONG for drugs whose
   DrugCentral structure is a salt child (D-19). Regenerate before any use.**
 - The pinned AACT tier (rev 10) is unchanged and was re-verified (§3).
@@ -250,6 +267,263 @@ needed by the market label anyway), and is then redesigned as follows (amends D-
   73 rows with no error *(arithmetic, Wilson bound)*, so early stopping cannot shorten a pass).
 Until then the market label's error rate is unmeasured; endpoint-met does not depend on it.
 
+Entries D-26 onwards rest on `probe_form_lineup_20261001.txt` (owner's machine, 2026-10-13),
+cited below as "the probe".
+
+**D-26 (2026-10-13) The form line-up with Products.Form (implements D-13; amends D-18's
+"classes, not words").** Requirements are built from the stated WORDS.
+- Route words are tested on the route half of `Products.Form`, or on the dosage half when
+  the route half says nothing. The probe's 'VIAL', 'SYRINGE' and 'INJECTION;SOLUTION'
+  (halves swapped) had been read as silent for every route.
+- Dosage-form words (gel, cream, ointment, lotion, foam, patch, suppository) are tested on
+  the DOSAGE half, never as a route. Evidence: 'testosterone gel' (31 agents) is
+  'GEL;TRANSDERMAL'; 'lidocaine patch', Qutenza and Synera are 'PATCH;TOPICAL'.
+- Modifiers are searched in the whole Form. When absent they exclude, except
+  extended/modified release and liposomal on a PARENTERAL product, which are then
+  'possible'. Evidence: leuprolide, lanreotide and octreotide depots carry no 'EXTENDED
+  RELEASE'; Vyxeos (liposomal, 23 agents) is 'POWDER;INTRAVENOUS'.
+- A stated word that is a whole word of the product's brand name confirms it ('LUPRON
+  DEPOT', 'ACTHAR GEL', 'TOPROL-XL').
+- Other evidence-driven entries:
+  - ophthalmic is confirmed by intravitreal, intraocular and intracameral routes
+    ('aflibercept ophthalmic', 'brolucizumab ophthalmic solution' are intravitreal);
+  - 'oral' beside an inhalation word means oral inhalation;
+  - 'INHALANT' confirms inhalation (Nicotrol Inhaler is 'INHALANT;ORAL');
+  - 'IMPLANTATION' is possible for subcutaneous (Zoladex).
+- Several values of one kind (two routes, two salts) mean an ambiguous name: confirmed
+  only if the product has all of them, possible if any.
+- `form_approval.check_lineup` fails closed at import on an inconsistent table.
+
+**D-27 (2026-10-13) Two bounds, never a guess.** Every product is confirmed, possible or
+excluded for an agent. STRICT = all requirements confirmed; LOOSE = none excluded.
+- An agent's question (approved before readout? within W?) is answered only when both sets
+  agree; otherwise it is undeterminable.
+- Evidence: 2,608 NDA/BLA products are 'INJECTABLE;INJECTION'. Eylea (approved
+  intravitreal) and Avastin (not) both appear as 'INJECTION', so neither reading is right
+  by itself. Generic route alone moved 96 of 19,498 pivotal agents (probe §5, C -> D), and
+  in its top examples confirmed-only was wrong more often than right.
+- Applies the standing tri-state and fail-closed rules.
+
+**D-28 (2026-10-13) Hydrates are not salts; a release abbreviation before a bare number is
+a code.**
+- `drug_names.NON_DISTINGUISHING_SALT_WORDS` gains the four hydrate words. Probe §3:
+  monohydrate 0 confirmed / 331 excluded, trihydrate 0 / 64, hydrate 0 / 14, dihydrate
+  0 / 3. Drugs@FDA writes 'CYCLOPHOSPHAMIDE' and 'AMOXICILLIN'.
+- 'XL 184', 'SR 141716', 'CR 845' are not forms; 'XR 500 mg' still is. Probe §2:
+  cabozantinib [xl] 23, cobimetinib [xl] 3.
+- Changes only the form columns of the resolver's output.
+
+**D-29 (2026-10-13) A product belongs to a moiety by its link OR by its salt-stripped
+ingredient name.**
+- Each Drugs@FDA ingredient part is also resolved with its trailing salt words removed
+  (never to a bare element or an alkyl fragment, the D-11/D-23 guards).
+- So 'DEXAMETHASONE SODIUM PHOSPHATE' is a dexamethasone product even where DrugCentral
+  files that salt as its own structure. Evidence: 'intravenous dexamethasone',
+  'dexamethasone (iv)' and others (25+ agents) and 'iv methylprednisolone' found no
+  injectable; 'testosterone [enanthate]', 'etoposide [phosphate]' found no product of
+  that salt.
+- Under D-14 an unstated salt accepts every such product. A stated salt still requires
+  its own.
+- The link is the resolver's own code: `drug_dictionary.fda_product_link`, refactored out
+  of `build_dictionary` unchanged.
+- **To be verified** on the owner's run: `match_form_approvals.py` §1 lists every
+  ingredient whose salt-stripped identity differs from its link.
+
+**D-30 (2026-10-13) Product dating.**
+- The application's first approved original is used (on or after 1939-01-01) unless every
+  Orange Book row of that (appl_no, product_no) gives one date, not earlier than the
+  original; that Orange Book date is used then.
+- Evidence (probe §4): the key join is sound. 10,481 of 10,494 ingredients and 10,488
+  dosage forms agree; struct2obprod -> ob_product holds for 42,236 of 42,236.
+- 1,573 NDA products are dated later than their original. Of those, 50 are a form not
+  among the original's products, and for 484 it cannot be told.
+- The choice moved 22 of 19,498 pivotal agents (C -> C'). BLAs have no product dates;
+  32 approved supplements added a route (NDA 21, BLA 11).
+
+**D-31 (2026-10-13) A moiety FDA-approved in DrugCentral but absent from Drugs@FDA NDA/BLA
+products is undeterminable, never new.** CBER products, pre-1938 drugs and ANDA-only
+listings would otherwise read as new molecules never approved. Fail closed. DrugCentral
+`approval` has one FDA row per drug (2,675 drugs, `probe_drugcentral_20261001.txt` §2).
+
+**D-34 (2026-10-13) Matcher corrections from its first run on the owner's data**
+(`match_form_approvals_20261001.txt`, exact/pin). Amends D-26, D-29 and D-30.
+- (a) Applications whose only originals are TENTATIVE approvals (`SubmissionStatus` TA)
+  are not approvals; their products are dropped and counted. The "undated product" list
+  (empagliflozin as 'bi 10773' 23, apixaban, dolutegravir, edaravone, daptomycin) had the
+  signature of TA-only 505(b)(2) or generic NDAs. **Assistant's bug in D-30.**
+- (b) The brand pin covers a brand family: the brand, or the brand followed by a word.
+  'zofran (odt)' was pinned away from 'ZOFRAN ODT'; 'marcaine' from 'MARCAINE
+  HYDROCHLORIDE'. **Assistant's bug in the D-33 implementation.**
+- (c) Injection-type specific routes are parenteral for the unlabelled-modifier rule
+  (epidural, intra-articular, …). DepoDur 'INJECTABLE, LIPOSOMAL;EPIDURAL' had its
+  extended release excluded (5 agents).
+- (d) Salts.
+  - 'dihydrochloride' matches 'hydrochloride' (Novantrone, Orserdu: 16 + 6 agents).
+  - A product part naming NO salt is POSSIBLE for a stated salt, not excluded:
+    'cytarabine hydrochloride' (42 agents) is a US product listed as the base, and
+    excluding it made cytarabine read as a new molecule.
+  - Moieties whose every product names a salt are unaffected (metoprolol succinate vs
+    tartrate still excludes).
+- (e) In Drugs@FDA ingredient strings the four-letter FDA suffix comes off whatever the
+  stem ('SOMATROGON-GHLA' never resolved, so somatrogon read as absent from Drugs@FDA).
+  D-21's guard stays for registry names.
+- (f) Topical and transdermal routes are possible for each other ('topical testosterone'
+  is AndroGel 'GEL;TRANSDERMAL').
+- The script now prints the "rows name different drugs" count even when it is 0.
+
+**D-35 (2026-10-13) The market target as built: `market_fda_any_pivotal_wW`** (owner's
+D-32 statement; supersedes rev 7 §1.2's `market_fda_indication` as the target to build).
+- Rev 7's indication-specific target is NOT built. Rev 10 measured its crosswalk at 36.8%
+  of DrugCentral indication concepts, and Drugs@FDA cannot say which indication a
+  supplement added.
+- Construction (`services/market_label.py`), each step a countable reason:
+  1. `eligibility.eligible_for_market` unchanged: pivotal phase, actual readout, window
+     closed, prospective registration.
+  2. Only `full` trials carry a label. Partial-only, unmatched and undeterminable
+     selections are UNDETERMINABLE, never 0 (D-24).
+  3. The floor (rev 7 §1.2.3): a trial whose every tested agent was approved before its
+     readout is INELIGIBLE.
+  4. The label is 1 when a tested agent not approved before the readout is approved on or
+     after it and within W years, proved by a strict product (D-27). It is 0 when no such
+     agent can be, and no agent's prior status or window answer is unknown. Otherwise it
+     is undeterminable.
+- Computed for W = 3, 5 and 10 in one file; D-10's lag picks the headline.
+- The snapshot is a required flag and may not be later than either source's currency.
+
+**D-41 (2026-10-13) The Purple Book is approval evidence beside Drugs@FDA**
+(`services/purplebook.py`; the owner's Advanced Search export, 2,251 product rows, 864 BLAs:
+480 CDER, 384 CBER).
+- Every row becomes a BLA product with its OWN route and approval date, supplements
+  included. Revoked licences count: they were approvals.
+- Identity: the proper name resolved as a registry name is (`resolve_one_name`, which
+  splits 'X and Y'). A proper name with no DrugCentral identity is counted and not used.
+- Purple Book products are keyed apart from Drugs@FDA's (product prefix 'PB'): extra
+  evidence, never a replacement. The minimum over products still dates the form.
+- Fixes, checked on the export:
+  - Orencia SC dated 2011-07-29 by supplement (Drugs@FDA: IV only);
+  - Eylea intravitreal 2011 vs Avastin IV only (the D-27 counter-example pair, now
+    distinguishable);
+  - Entyvio SC 2023; Zenapax 1997 (revoked).
+- Not fixed: Mylotarg's 2000 approval is absent (only 761060, 2017): D-42a. CBER products
+  with no DrugCentral identity (vaccines, albumin, immune globulins, allergenics) are not
+  linked. The matcher prints how many unresolved trial agents name one, for a later
+  identity decision.
+- Key check printed by the matcher: CDER BLA numbers in Drugs@FDA, and first-approval dates
+  compared.
+- Format: dates "Month D, YYYY"; 15 CDER rows undated (undated products, fail closed).
+
+**D-42 (2026-10-13) DrugCentral's FDA dates guard "not approved before readout"**
+(`form_approval.approved_before`). Both guards can only turn False into undeterminable,
+never into True.
+- (a) For a single moiety with no stated form and no brand pin: if DrugCentral dates an
+  FDA approval before the readout and the products say none, the answer is
+  undeterminable. Probe: 26 agents, 15 W=5 labels (gemtuzumab ozogamicin, belantamab,
+  daclizumab).
+- (c) Any moiety with an UNDATED DrugCentral FDA row: undeterminable. Probe: 44 agents,
+  32 labels (pre-1938 drugs, medical gases).
+- Guard b is not built (D-40).
+
+**D-43 (2026-10-13) Dose units are normalised exactly as names are.**
+- `DOSE_UNITS = key(u) for u in _DOSE_UNITS_WRITTEN`. NFKC had turned the micro sign into
+  Greek mu, so 'µg' was never a dose. Assistant's bug, earlier session.
+- Probe: 162 agents recovered, 34 in W=5 unresolved market trials.
+- Changes resolution: the resolver reruns (v8).
+
+**D-40 (2026-10-13, DECIDED by the owner) Combinations of drugs each already approved
+keep the current rule:** the agent counts as approved when a product containing all its
+moieties is approved (D-32). Guard b is not built.
+- Recorded consequence: a loose regimen never coformulated (cisplatin + gemcitabine,
+  carboplatin + paclitaxel) can never have a combination product approved, so it is
+  labelled 0 whenever eligible. Guard b touched 566 pivotal agents and 350 of 2,962 W=5
+  labels.
+- The market build prints how many W=5 labels rest on such agents, split by whether a
+  combination product ever existed, so the owner can revisit with the numbers.
+
+**D-37 (2026-10-13, DECIDED by the owner) Advancement links within the SAME DISEASE.**
+- Owner's principle: "psoriatic for psoriatic". A later higher-phase trial of the same
+  drug counts only in the disease the focal trial studied. Advancement in another
+  indication does not count.
+- Linkage key: the registry's own tested-agent names and codes, never the DrugCentral
+  moiety (probe: the moiety key has no key for 53% of early trials and an 81% link rate
+  where it does — it keeps the later-approved).
+- Disease match: B (an exact shared MeSH mesh-list term) is the owner's choice. C (exact,
+  or one trial's own mesh-list term an ancestor of the other's) also keeps siblings apart
+  (rheumatoid vs psoriatic arthritis are siblings under Arthritis) but removes coding-depth
+  false negatives ('Carcinoma, Non-Small-Cell Lung' vs 'Lung Neoplasms'). The build prints
+  both, B as decided and C beside it, and the owner may switch.
+- Advancement does not use Drugs@FDA; it links registry to registry.
+
+**D-38 (2026-10-13, DECIDED by the owner) The advancement floor is excluded, disease by
+disease.** A focal trial is excluded when a higher-phase trial of the same drug IN THE SAME
+DISEASE (D-37's match) was registered before it. Its label would be known in advance (a
+model learns "established programme", not the question). Probe at any-condition: 43.9% of
+focal trials. Disease-specific, the floor keeps new-indication trials of established
+drugs, e.g. pembrolizumab's phase 2 in a cancer where it has no phase 3 yet.
+
+**Proposed by the assistant 2026-10-13, owner did not object, to be confirmed: phase 3 is
+not in the advancement population.** Its next step, approval, is the market label;
+counting a later phase 3 would mostly measure repeat pivotal trials.
+
+**D-39 (2026-10-13, DECIDED by the owner) Order of work: market fixes first, then the
+advancement label, then training (all three targets together).** Owner: "we should fix
+everything to maximize the usefulness of this tool".
+- Market fixes, each probed then built:
+  1. the micro-sign resolver bug;
+  2. registry-learned code names;
+  3. CBER products dated from the Purple Book (which covers CBER vaccine, blood, cell and
+     gene products), if its download carries licence dates;
+  4. the three tail guards;
+  5. then the unresolved labelled 0, with the error measured by the D-25 sample.
+
+**D-36 (2026-10-13, DECIDED by the owner) Market window: W=5 headline, W=3 sensitivity.**
+Amends D-10's procedure (its line was exceeded: H=10 p90 6.16y loose / 6.06y strict, §4).
+- At W=3, about 39% of the new drugs approved within 10 years of readout would be labelled
+  0; at W=5, about 17%.
+- Cost: 3,206 -> 2,962 labelled trials, and readouts after 2021-10 drop out.
+- The headline trains the served model and sets the user-facing sentence ("approved within
+  5 years of readout"). The sensitivity reruns the same pipeline at W=3, only to show
+  whether conclusions depend on the window. `trial_targets.csv` carries both columns.
+- W=10 stays a diagnostic.
+
+**D-32 (2026-10-13, DECIDED by the owner: CONTAINED) Combination products count.** A
+tested agent counts as approved when any NDA/BLA product CONTAINING its moiety set is
+approved; a combination product approves each of its moieties. Owner's reason: the drug is
+then on the market.
+- **What the output variable means (owner, 2026-10-13):** "approved" is approval anywhere
+  in the US market, for ANY indication. It is NOT indication-specific approval for the
+  condition the trial studied. Drugs@FDA carries no indication. The market label and the
+  lag must be described this way wherever they are reported.
+- The record of the choice before the decision follows.
+- Is a single agent "approved" by a combination product containing it?
+- Probe §5 A -> B: 280 of 19,498 pivotal agents change status, 205 of them from approved
+  before readout to no product. 33 first-approval dates differ by more than a year.
+- `match_form_approvals.py --set-rule` is required until decided.
+- Matcher run (exact/pin): contained would change 248 of 19,498 pivotal agents, 233 of them
+  from not approved before readout to approved. Examples, each a different case:
+  - cholecalciferol 19, lactic acid 30, vitamin E 9, calcium carbonate 4: supplements
+    present only in combination products;
+  - dasabuvir / ABT-333 13 and ABT-450/r/ABT-267 4: the Viekira Pak regimen, split across
+    interventions;
+  - articaine 4: sold only with epinephrine.
+
+**D-33 (2026-10-13, DECIDED by the owner: PIN; amends D-14) A brand name pins the form.**
+An agent matched through a brand name is judged on that brand family's products, falling
+back to the moiety when the family has no NDA/BLA product of it. Owner's reason: IV
+ibuprofen (Caldolor) is a different approval from oral ibuprofen, and peptides sometimes
+fail in oral formulations, so the form a brand names matters. D-14's moiety-level rule
+still applies to unstated forms without a brand.
+- The record of the choice before the decision follows.
+- Probe §6: 547 pivotal agents matched through a brand and stating no form. For 136, the
+  brand's first approval is later than the moiety's.
+- For 22, moiety level says approved before the readout and the brand says not: Caldolor,
+  Exparel, Axiron, AzaSite, Endometrin, Bethkis, Combivent Respimat, Vivitrol, Zilretta,
+  Tlando, Qlosi, …
+- `--brand-rule` is required until decided.
+- Matcher run (exact/pin): moiety level would change 39 of 19,498 pivotal agents, 37 of
+  them from not approved before readout to approved: Lialda 4, Caldolor 3, Exparel 3,
+  Axiron 2, AzaSite 2, Endometrin 2, Acthar, Actiq, Astepro, Bethkis, … Every example is a
+  distinct later product.
+
 ---
 
 ## 3. Rev 10 claims, checked
@@ -279,6 +553,190 @@ Refuted or corrected:
 ---
 
 ## 4. Measured on the owner's machine
+
+Market-fix delivery 1, `market_fix1.zip`, 2026-10-13, not yet run on the owner's data:
+- `services/purplebook.py` (new, D-41).
+- `services/form_approval.py`:
+  - the Purple Book's products and route vocabulary;
+  - guards D-42a/c, with new statuses `STATUS_DC_EARLIER` and `STATUS_DC_UNDATED`;
+  - approvals-file columns `dc_fda_first` and `dc_fda_undated`;
+  - `fda_approval_dates`.
+- `services/drug_names.py` (D-43).
+- `scripts/match_form_approvals.py`: `--purplebook`; section 1b (key check, unlinked
+  names, unresolved agents naming an unlinked product); `--inspect NAME`, repeatable (for
+  lemborexant, ketotifen, Trikafta); the guard statuses in section 3.
+- `scripts/build_targets.py`: section 3b, the D-40 report (W=5 labels resting on
+  combinations of drugs each already approved, split by whether a combination product
+  exists).
+- Tests: 8 added (1016 -> 1024).
+
+Resolver other-name probe, delivered 2026-10-13, NOT YET RUN (run it on v8):
+`audit/probe_resolver_other_names.py`. It classes every agent resolved through an AACT
+other name by partner-risk signal:
+1. its own name resolves to other drugs;
+2. its other names name several drugs;
+3. its own name is an INN-shaped word naming none of the drugs used;
+4. a code (likely alias);
+5. a brand or descriptor (likely alias).
+It reports counts overall, pivotal and W=5 labelled, with examples. It decides whether the
+resolver's other-name fallback needs a guard before market or advancement is trusted, and
+informs the learned-codes decision.
+
+Market-fixes probe (`probe_market_fixes_20261001.txt`, 2026-10-13, W=5):
+- **Micro sign:** 1,088 not-resolved agents carry a mu; 162 resolve once 'µg' is a unit,
+  34 of them in W=5 unresolved market trials. Every example is correct (indacaterol,
+  aclidinium, ipratropium, dexmedetomidine, Symbicort -> budesonide + formoterol).
+  BUILD.
+- **Registry-learned codes: NOT SAFE as designed.**
+  - 135,748 keys learned; 7,877 conflict.
+  - Evidence >= 1: 14,479 agents, 963 of 5,633 trials. Evidence >= 2: 7,769 agents,
+    627 trials.
+  - Top mappings are often partner drugs, not aliases, even at >= 2: shr-1210 and
+    camrelizumab -> apatinib, tqb2450 -> carboplatin, kn046 -> cisplatin + paclitaxel,
+    rhtpo -> aclarubicin, dalteparin -> enoxaparin, probiotic -> inulin.
+  - Cause: AACT other-names fields list combination partners.
+  - **This implicates the resolver's other-name fallback:** an agent whose own name fails
+    can be resolved through a partner's name. Its precision is unmeasured. NEXT: a
+    resolver precision probe before any market or advancement label is trusted.
+- **CBER-type:** of the W=5 unresolved trials, not-resolved agents by AACT type: DRUG 5,259,
+  BIOLOGICAL 1,820. CBER words: vaccine 614, toxoid 34, plasma 31, immunoglobulin 50, …
+  Trials with a biological or CBER-worded agent: 1,383 of 5,633 (24.6%, an upper bound;
+  BIOLOGICAL includes CDER antibodies).
+- **Guard a** (single moiety, no stated form, DrugCentral FDA date before readout): 26
+  agents, 15 W=5 labels — gemtuzumab ozogamicin 9, belantamab mafodotin 7, daclizumab 7
+  (withdrawn and reapproved); lemborexant 2 and ketotifen 1 look like matcher misses, to
+  inspect. BUILD.
+- **Guard b** (every moiety DrugCentral-FDA-dated before readout): 566 agents, **350 of
+  2,962 W=5 labels (12%)**. It mixes fixed-dose combinations (amlodipine + valsartan:
+  Exforge, a real new product) with loose regimens never coformulated (cisplatin +
+  gemcitabine, carboplatin + paclitaxel), which the current rule labels 0 forever.
+  Elexacaftor + ivacaftor + tezacaftor (17) should be approved before such a readout
+  (Trikafta) and is not: a possible matcher miss, to inspect. OWNER DECIDES.
+- **Guard c** (a moiety with an undated DrugCentral FDA row): 44 agents, 32 W=5 labels —
+  prasterone 15, calcium gluconate, morphine, medical gases (oxygen, nitric oxide,
+  helium). BUILD, fail closed.
+
+Purple Book (owner's download, 2026-10-13): the file is the MONTHLY CHANGES report (rows
+N/R/U, September 2026 only), not the catalogue. The full export comes from Advanced Search.
+- Its columns carry what Drugs@FDA lacks: per-product Route of Administration and Approval
+  Date, supplement rows, revoked licences, Center (CDER/CBER).
+- `BLA Number` vs Drugs@FDA `ApplNo` is to be key-checked before use.
+- Date format: "September 27, 2023".
+
+Market-unresolved probe (`probe_market_unresolved_20261001.txt`, 2026-10-13):
+- Unresolved or partly resolved market-eligible trials: 6,564 at W=3, 5,633 at W=5.
+- Their share rises by readout band: 47.9% (2004-06), 62% (2007-12), 69% (2013-18),
+  72.5% (2019-21), 80.0% (2022-24).
+- Windows closing after DrugCentral's last FDA approval (2026-03-26): 246 (W=3).
+- Unresolved names textually matching a Drugs@FDA NDA/BLA name: within W 4 / 5958 (0.1%);
+  before readout 65 (1.1%); after W 12; no hit 5,877 (98.6%). This is a FLOOR, and the
+  top-names list shows it is badly blind:
+  - CDER-approved drugs under code or variant names: lcz696 (Entresto), qva149 (Utibron),
+    ac2993 (exenatide), 'faster-acting insulin aspart', 'indacaterol 150 µg' (the µ sign),
+    'inhaled human insulin';
+  - CBER products Drugs@FDA can never label: 13-valent pneumococcal, v114, 20vpnc,
+    menacwy-crm, zoster vaccine, nonacog beta pegol.
+  - The rest are failures (tanezumab, taspoglutide, bifeprunox, dimebon, dasotraline,
+    rapastinel, tak-875, anacetrapib).
+- **Conclusion: the unresolved set cannot be labelled 0.** Keeping it out (owner's lean)
+  keeps the selection problem of §4's targets entry.
+- Code-like share of unresolved names: 28.8%.
+
+Advancement linkage probe (`probe_advancement_links_20261001.txt`, 2026-10-13, W=3):
+- Focal early-phase trials eligible at 3y: 62,745.
+- NAME key: no key 12.7%; floor 43.9%; linked 10.2% (with a shared mesh-list condition
+  4.6%); not linked 33.2%. Link rate among keyed, not floor: 23.5% (10.7% with a shared
+  condition).
+- MOIETY key: no key 53.2%; floor 42.7%; keyed and not floor only 2,561, link rate 81.1%.
+  That is the selection signature.
+- Name-key link rate by moiety resolvability: resolvable 42.7%, unresolvable 18.2%. The
+  moiety key would drop the non-advancers.
+- Where both keys exist (2,532): they agree on 2,068; name says not linked but moiety
+  linked on 461 (salt and spelling differences); the reverse on 3.
+- Most-shared name keys are real backbone drugs (cyclophosphamide 2,502 trials,
+  pembrolizumab, carboplatin, cisplatin, …), not generic words.
+- Fix needed: the name key keeps salts ('cediranibmaleate').
+
+Targets, first run (`build_targets_20261001.txt`, 2026-10-13, snapshot 2026-10-01,
+approvals contained/pin):
+- **Endpoint met reproduces rev 10 exactly:** 13,487 eligible = 8,187 met / 5,300 not met;
+  18 undeterminable (registration timing).
+- **Lag (D-10), H=10:** 1,048 decisive new-at-readout identities, 519 (49.5%) approved
+  within 10 years at the loose bound and 514 (49.0%) at the strict bound.
+  - Of those approved: p50 2.38y / 2.36y, p75 3.99y / 3.96y, p90 6.16y / 6.06y
+    (loose / strict).
+  - Approved within 3 years: 61.1% / 61.5%. Within 5 years: 83.4% / 83.7%.
+  - **p90 is over 5 years: beyond D-10's decision line, so the owner decides W.**
+  - H=5 (1,435 identities, p90 4.05y) is truncated at 5 years by construction, so it
+    cannot test a 5-year line.
+- **Lag tail (strict lag over 3 years: 230 identities)** mixes real long programmes
+  (landiolol, ceftobiprole, prucalopride, istradefylline, terlipressin) with three
+  artefact classes:
+  - withdrawn-then-reapproved drugs whose first approval Drugs@FDA lacks (gemtuzumab
+    ozogamicin first approved 2000, read as 2017; daclizumab 1997, read as 2016);
+  - pre-1938 unapproved marketed drugs given their first NDA late (phenobarbital: 1995
+    readout, Sezaby 2022);
+  - multi-moiety agents of old drugs that read as new under the contained set
+    (amoxicillin + omeprazole: 1996 readout, first co-pack 2011).
+  - Failed-then-repurposed programmes (atrasentan, lonafarnib, teplizumab, maribavir) are
+    correct under D-32 (any indication), but lengthen the tail.
+- **Market label, labelled trials:**
+  - W=3: 3,206 (1 1,471 / 0 1,735, 45.9%);
+  - W=5: 2,962 (1 1,712 / 0 1,250, 57.8%);
+  - W=10: 2,147 (1 1,394 / 0 753, 64.9%).
+  - The positive rate by 3-year readout band is flat at every window (W=3: 40.6% to 52.4%
+    from 2001 onwards), so no "recent means 0" censoring artefact.
+- **W=3 cascade:** prior approval 7,991; no tested agent resolved 5,958; tested agent
+  undeterminable 4,267; partly resolved 606; prior status unknown 283; window answer
+  unknown 3.
+- **OPEN, found by this run: the labelled market population is conditioned on a future
+  event.** DrugCentral holds drugs approved somewhere, so "the tested agent resolved" is,
+  for a historical trial, largely "this drug was later approved somewhere". The unresolved
+  5,958 (W=3) are where never-approved drugs go. The 45.9% positive rate is that
+  selection's signature. Market is not trainable until this is decided.
+- The same applies to any advancement linkage key built on DrugCentral resolution.
+
+Resolver v7 (`resolve_trial_drugs_20261001_v7.txt`, 2026-10-13, after D-28):
+- Agent statuses (150,379 / 9,531 / 72 / 123,574) and match classes (full 96,226,
+  partial-only 6,832, none 76,762; pivotal full 20,308) equal v6, as D-28 requires.
+- Form handling: no_form_stated 141,301; kept 9,918; stripped 7,329; inferred 1,362.
+- Agents stating more than one salt: 295 (v6 411). extended_release stated by 2,381
+  agents (v6 2,464).
+- `ob_product` repeated rows 7,339, none naming different drugs (the counter for that
+  is absent from the output, so 0): the dictionary's last-row-wins never changed a drug.
+
+Form matcher, first run (`match_form_approvals_20261001.txt`, exact/pin, before D-34):
+- NDA/BLA products 12,288 (NDA 11,444, BLA 844).
+- Dated by application original 3,700, by Orange Book product date 7,929, undated 659
+  (part of that is D-34a); Orange Book earlier than the original 10.
+- Salt-stripped identity differs from the link on 335 products (93 ingredient strings).
+  The 24 shown were all salts or esters of the same moiety (dexamethasone phosphate ->
+  dexamethasone, testosterone enantate -> testosterone, …). The other 69 were not shown.
+- Pivotal resolved agents with an actual readout 19,498:
+  - approved before readout 14,320 (73.4%);
+  - not approved before readout 4,736 (24.3%);
+  - undeterminable 442: bounds disagree 163, undated product 79, absent from
+    Drugs@FDA 200.
+- 'Not approved before readout' is led by real new molecules (vildagliptin, dapagliflozin,
+  insulin degludec, sugammadex, vonoprazan, aliskiren, …). It also holds cholecalciferol
+  (19): supplements read as new under the exact set rule (D-32).
+
+Form line-up probe (`probe_form_lineup_20261001.txt`, 2026-10-13), beyond what D-26 to D-33
+cite:
+- NDA/BLA products 12,288; linked to a moiety 11,808 (ob_product 10,494, ingredient 1,214,
+  ob_application 100, unlinked 480).
+- 818 products have no dated approved original; 11 products' ApplNo is absent from
+  Applications.
+- `ob_product` (appl_no, product_no) is NOT unique: 55,242 rows, 47,903 keys, 5,531 keys on
+  more than one row. `drug_dictionary` keeps the last row (unchanged); whether repeats
+  name different drugs is now counted in the resolver's DICTIONARY section.
+- Resolved agents 150,379, of which 8,580 state a class and 12,442 a salt (319 more than
+  one).
+- Pivotal resolved agents with an actual readout: 19,498 in 14,266 trials; 3,048 state a
+  form; 1,382 have more than one moiety.
+- Line-up errors fell into five mechanisms (D-26, D-28, D-29); the rest of the 'excluded'
+  examples were real unapproved forms (oral insulin, oral vinorelbine, liposomal
+  paclitaxel, intranasal ketamine, inhaled vancomycin).
 
 Row pull (`pull_aact_rows_20261001.txt`, probe output alongside): 23 tables, 461,824
 interventional trials, 19,072,127 trial-table rows, 434 s; probe row counts equal pulled row
@@ -339,6 +797,65 @@ without its salt).
 
 ## 5. Built this session
 
+Market-fixes probe, delivered 2026-10-13, NOT YET RUN: `audit/probe_market_fixes.py`.
+It sizes each D-39 fix:
+- the micro-sign bug (agents recovered);
+- registry-learned codes at evidence 1 and 2 (agents and W=5 market trials recovered,
+  examples, conflicts);
+- CBER-type share of the W=5 unresolved trials;
+- the three tail guards, with the W=5 labels each touches.
+
+**Assistant's bug found 2026-10-13 (earlier session):** `drug_names.key()` applies NFKC,
+which maps the micro sign U+00B5 to Greek mu U+03BC. `DOSE_UNITS` holds only U+00B5, so
+'µg' is never stripped as a dose: 'indacaterol 150 µg' left 'indacaterol μg' and did not
+resolve. Fixed in the market-fix delivery after the probe sizes it; it changes resolution,
+so the resolver reruns (v8).
+
+The owner is to download the Purple Book data (purplebooksearch.fda.gov, "Download Purple
+Book Data") into `data/purplebook/`; its columns are probed before use.
+
+Two probes, delivered 2026-10-13, RUN (§4), at the owner's request before deciding:
+- `audit/probe_market_unresolved.py`: the market trials whose tested agent did not resolve.
+  It shows their share by readout band, DrugCentral's currency, and every unresolved name
+  checked against Drugs@FDA's own NDA/BLA product names and dated against the readout (a
+  FLOOR on what labelling them 0 would get wrong).
+- `audit/probe_advancement_links.py`: registry-name versus DrugCentral-moiety linkage for
+  advancement on one early-phase population. It reports the floor, link rates with and
+  without a shared MeSH condition, the name-key rates split by moiety-resolvable, the two
+  keys' agreement, and name-key collisions.
+
+Targets, delivered 2026-10-13 as `targets.zip`, run once (§4):
+- `services/market_label.py` (new): the market label (D-35) and the D-10 lag.
+- `services/form_approval.py`: `parse_approval_row`, the tested inverse of `approval_row`;
+  `approved_within`.
+- `services/eligibility.py`: `years_after`, the one window-arithmetic implementation, now
+  used by `window_closed` (behaviour unchanged).
+- `scripts/build_targets.py` (new): writes `data/labels/trial_targets.csv`, one row per
+  trial, with the endpoint-met verdict and label (the same eligibility code and loaders as
+  `audit_posting_bias.py`) and the market verdict and label for W = 3, 5, 10. It prints the
+  lag at H=10 and H=5, both bounds, the D-10 line and the tail drugs. Advancement: no column.
+- `tests/test_market_label.py` (new, 11 tests).
+
+Matcher fixes (D-34), delivered 2026-10-13 as `form_matcher_fix.zip`:
+- `services/form_approval.py`; `services/drugsatfda.py` (`TENTATIVE`);
+  `scripts/match_form_approvals.py` (zero counts printed);
+- `tests/test_form_approval.py` (8 tests added, 35 in all).
+- Same day, after the owner's decisions: `--set-rule` defaults to contained and
+  `--brand-rule` to pin (D-32, D-33). No test change.
+
+Form matcher, delivered 2026-10-13 as `form_matcher.zip`, run once (exact/pin):
+- `services/form_approval.py` (new): the form-level approval matcher, D-26 to D-31, with
+  D-32/D-33 as required settings.
+- `services/drug_names.py` (D-28).
+- `services/drug_dictionary.py` (product linking refactored into `ob_product_index` and
+  `fda_product_link`, behaviour unchanged, repeated Orange Book keys counted).
+- `scripts/match_form_approvals.py` (new); `tests/test_form_approval.py` (new, 27 tests);
+  two test files extended (3 tests).
+
+Task 2 probe, delivered 2026-10-13 (the entry first written here said 2026-10-07: wrong,
+corrected), RUN: `audit/probe_form_lineup.py` (scratch), output
+`probe_form_lineup_20261001.txt`.
+
 Delivered and run:
 - `audit/probe_source_files.py`, `audit/probe_restore_inventory.py`,
   `audit/probe_intervention_arms.py` (scratch).
@@ -397,6 +914,15 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
 - **Brand names containing a form word** read as that form ('Acthar Gel' is an injection,
   read as topical).
 - **'infusion' reads as IV**; a name stating two routes records both classes.
+- **(2026-10-13) Forms added to a BLA by supplement are invisible.** BLAs have no product
+  dates, and a route added by supplement may not appear in Products: abatacept SC is only
+  'INJECTABLE; IV (INFUSION)'.
+- **(2026-10-13) OTC monograph drugs have no NDA.** Oxymetazoline nasal or urea cream
+  read as forms never approved; D-31 does not catch them when the moiety has another NDA.
+- **(2026-10-13) Off-label routes are 'never approved' by construction** (rectal or
+  vaginal misoprostol, intravitreal bevacizumab). That is correct for "approval of the
+  stated form", and worth remembering when reading the market label.
+- **(2026-10-13) 'ER' can mean emergency room** ('etomidate … ER'). Not special-cased.
 
 ---
 
@@ -406,8 +932,15 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
 2. ~~Rerun and review~~ done (v6 is current).
 3. ~~Draw tranche 1~~ DEFERRED (D-25).
 4. Task 2: readout-to-first-approval lag (D-9, D-10), at the form level per D-12/D-14.
-   Builds the form-level approval matcher (Drugs@FDA NDA/BLA originals by ingredient
-   string and Products.Form), which the market label and the deferred sample both need.
+   - Matcher BUILT and run once (2026-10-13). Fixes D-34 delivered.
+   - D-32 (contained) and D-33 (pin) decided 2026-10-13; matcher v2 run (contained/pin).
+   - Lag and market label BUILT 2026-10-13 (`build_targets.py`); run it.
+   - RUN 2026-10-13 (§4). W decided (D-36: W=5). Still open: the market selection
+     problem (probe run: unresolved cannot be labelled 0; what to do with the market
+     target asked 2026-10-13), the three tail-artefact guards.
+4a. Advancement label: decided (D-37, D-38; phase 3 proposed out). Built AFTER the market
+    fixes (D-39), into `trial_targets.csv`.
+   - Then the lag script, on `trial_drug_form_approvals.csv`.
 4b. Then the resolution sample per D-25.
 5. Rev 10 §14 items 3–9.
 6. Rename rev 8 and rev 9 handoff files (still `# Handoff — rev N supplement.md`).
@@ -433,6 +966,25 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
   could never catch it. The route review on real data did, within one run.
 - A test fixture that encodes an assumption about a source's schema must say so, and the
   assumption must be checked on the real file (here it was not).
+- (2026-10-13) `Products.Form` is not always "dosage ; route": some rows have one half, and
+  some have the halves swapped. The probe assumed the format, and its own output showed
+  'VIAL' as possible for oral.
+- (2026-10-13) A word can name a dosage form or a route; reading 'gel' as a route was the
+  largest single error in the line-up. Ask what kind of fact a word states before mapping
+  it.
+- (2026-10-13) A key that looks unique must be counted: `ob_product` (appl_no, product_no)
+  repeats 5,531 times and the dictionary had silently kept the last row.
+- (2026-10-13) Date a delivery from the session's own clock, not from the last date in the
+  handoff: §5 carried 2026-10-07 for a 2026-10-13 delivery.
+- (2026-10-13) A status that is not an event is not an event: Drugs@FDA's tentative
+  approvals sat in the product list beside real ones, and the matcher read them as
+  "approved, date unknown".
+- (2026-10-13) Take a file's name from the code that writes it, never from memory:
+  `build_targets.py` first looked for `trial_labels.manifest.json`; the pull writes
+  `trial_labels.csv.manifest.json` (`pull_aact_results.manifest_path`), which the script
+  now calls.
+- (2026-10-13) If a reply says questions follow, ask them in that reply. The owner was
+  left not knowing two decisions existed.
 
 
 ---

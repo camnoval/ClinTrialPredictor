@@ -248,14 +248,18 @@ def window_closed(row: dict, snapshot: date, window_years: int) -> Optional[bool
     readout = readout_date(row)
     if readout is None:
         return None
+    return years_after(readout, window_years) <= snapshot
+
+
+def years_after(start: date, years: int) -> date:
+    """`start` plus whole calendar years. 29 February falls back to 28 February in a
+    non-leap year, the conservative direction: a window closes a day EARLIER, so no trial
+    is admitted short of its full term. The one implementation of window arithmetic; the
+    market label uses it too."""
     try:
-        closes = readout.replace(year=readout.year + window_years)
+        return start.replace(year=start.year + years)
     except ValueError:
-        # 29 February plus N years in a non-leap year. Falls back to 28 February, which is
-        # the conservative direction: the window closes a day EARLIER, so no trial is
-        # admitted that has not had its full term.
-        closes = readout.replace(month=2, day=28, year=readout.year + window_years)
-    return closes <= snapshot
+        return start.replace(month=2, day=28, year=start.year + years)
 
 
 # The registry's first-submitted date. Not in trial_labels.csv: it comes from

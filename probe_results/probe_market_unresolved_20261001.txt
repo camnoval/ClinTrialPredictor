@@ -1,0 +1,133 @@
+﻿
+==============================================================================
+INPUTS
+==============================================================================
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+  targets rows 461824; DrugCentral latest FDA approval 2026-03-26
+  Drugs@FDA innovator name keys indexed 20835
+
+==============================================================================
+W=3
+==============================================================================
+  1. market-eligible trials by readout band (labelled | unresolved | partly resolved | unresolved share of the three)
+    1998-2000       5       2      0  28.6%
+    2001-2003      32      26      6  50.0%
+    2004-2006     256     200     35  47.9%
+    2007-2009     607     896    109  62.3%
+    2010-2012     605     891    101  62.1%
+    2013-2015     531    1073    127  69.3%
+    2016-2018     524    1032     82  68.0%
+    2019-2021     441    1073     89  72.5%
+    2022-2024     205     765     57  80.0%
+
+  2. unresolved or partly resolved trials 6564; window closes after DrugCentral's last FDA approval (2026-03-26): 246
+
+  3. worst Drugs@FDA outcome over each trial's unresolved agents (a FLOOR):
+    no_tested_agent_resolved: 5958
+      Drugs@FDA approval WITHIN W (a false 0 if labelled 0)               4  0.1%
+      Drugs@FDA approval BEFORE readout (floor should have removed it)     65  1.1%
+      Drugs@FDA product, undated                                          0  0.0%
+      Drugs@FDA approval after W (0 is right)                            12  0.2%
+      no Drugs@FDA name hit                                            5877  98.6%
+    tested_agents_only_partly_resolved: 606
+      Drugs@FDA approval WITHIN W (a false 0 if labelled 0)               1  0.2%
+      Drugs@FDA approval BEFORE readout (floor should have removed it)      3  0.5%
+      Drugs@FDA product, undated                                          0  0.0%
+      Drugs@FDA approval after W (0 is right)                             1  0.2%
+      no Drugs@FDA name hit                                             601  99.2%
+
+  4. most frequent unresolved names, top 30 (agents | shape | Drugs@FDA hit)
+       26  13-valent pneumococcal conjugate vaccine           word  
+       22  tanezumab                                          word  
+       18  v114                                               code  
+       16  lcz696                                             code  
+       15  masitinib                                          word  
+       15  tak-875                                            code  
+       15  taspoglutide                                       word  
+       13  qva149                                             code  
+       12  dihydroartemisinin-piperaquine                     word  
+       11  bifeprunox                                         word  
+       11  pd 0332334                                         code  
+       11  vilaprisan (bay1002670)                            code  
+       10  13-valent pneumococcal conjugate vaccine (13vpnc)  word  
+       10  comparator: placebo                                word  
+       10  influenza vaccine                                  word  
+       10  menacwy-crm                                        word  
+        9  dasotraline                                        word  
+        9  dimebon                                            word  
+        9  faster-acting insulin aspart                       word  
+        9  indacaterol 150 \u03bcg                                 word  
+        9  rapastinel                                         word  
+        9  sr58611a                                           word  
+        8  convalescent plasma                                word  
+        8  gsk investigational vaccine gsk2340272a            word  
+        8  herpes zoster vaccine gsk1437173a                  word  
+        8  infanrix hexa                                      word  
+        8  inhaled human insulin                              word  
+        8  meningococcal polysaccharide (serogroups a, c, y,  word  
+        8  nonacog beta pegol                                 word  
+        7  20vpnc                                             word  
+    code-like share of unresolved agent names (letter prefix of up to 5, then 2+ digits; also catches e.g. 'covid 19'): 28.8%
+
+==============================================================================
+W=5
+==============================================================================
+  1. market-eligible trials by readout band (labelled | unresolved | partly resolved | unresolved share of the three)
+    1998-2000       5       2      0  28.6%
+    2001-2003      32      26      6  50.0%
+    2004-2006     256     200     35  47.9%
+    2007-2009     606     896    109  62.4%
+    2010-2012     606     891    101  62.1%
+    2013-2015     531    1073    127  69.3%
+    2016-2018     524    1032     82  68.0%
+    2019-2021     402     976     77  72.4%
+
+  2. unresolved or partly resolved trials 5633; window closes after DrugCentral's last FDA approval (2026-03-26): 234
+
+  3. worst Drugs@FDA outcome over each trial's unresolved agents (a FLOOR):
+    no_tested_agent_resolved: 5096
+      Drugs@FDA approval WITHIN W (a false 0 if labelled 0)               5  0.1%
+      Drugs@FDA approval BEFORE readout (floor should have removed it)     57  1.1%
+      Drugs@FDA product, undated                                          0  0.0%
+      Drugs@FDA approval after W (0 is right)                             7  0.1%
+      no Drugs@FDA name hit                                            5027  98.6%
+    tested_agents_only_partly_resolved: 537
+      Drugs@FDA approval WITHIN W (a false 0 if labelled 0)               2  0.4%
+      Drugs@FDA approval BEFORE readout (floor should have removed it)      3  0.6%
+      Drugs@FDA product, undated                                          0  0.0%
+      Drugs@FDA approval after W (0 is right)                             0  0.0%
+      no Drugs@FDA name hit                                             532  99.1%
+
+  4. most frequent unresolved names, top 30 (agents | shape | Drugs@FDA hit)
+       26  13-valent pneumococcal conjugate vaccine           word  
+       22  tanezumab                                          word  
+       15  masitinib                                          word  
+       15  tak-875                                            code  
+       15  taspoglutide                                       word  
+       13  lcz696                                             code  
+       13  qva149                                             code  
+       13  v114                                               code  
+       12  dihydroartemisinin-piperaquine                     word  
+       11  bifeprunox                                         word  
+       11  pd 0332334                                         code  
+       11  vilaprisan (bay1002670)                            code  
+       10  13-valent pneumococcal conjugate vaccine (13vpnc)  word  
+       10  comparator: placebo                                word  
+       10  influenza vaccine                                  word  
+        9  dasotraline                                        word  
+        9  dimebon                                            word  
+        9  faster-acting insulin aspart                       word  
+        9  indacaterol 150 \u03bcg                                 word  
+        9  rapastinel                                         word  
+        9  sr58611a                                           word  
+        8  convalescent plasma                                word  
+        8  gsk investigational vaccine gsk2340272a            word  
+        8  infanrix hexa                                      word  
+        8  inhaled human insulin                              word  
+        8  menacwy-crm                                        word  
+        7  ac2993                                             code  
+        7  anacetrapib                                        word  
+        7  epratuzumab                                        word  
+        7  gsk1605786a                                        word  
+    code-like share of unresolved agent names (letter prefix of up to 5, then 2+ digits; also catches e.g. 'covid 19'): 27.5%

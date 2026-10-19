@@ -5,7 +5,7 @@ from trial_pos.services.drug_dictionary import (
     FDA_BY_INGREDIENT, FDA_BY_OB_APPLICATION, FDA_BY_OB_PRODUCT, HIT_AMBIGUOUS, HIT_NONE,
     PARENT_GROUP_PREFIX,
     HIT_RESOLVED, SOURCES, SRC_FDA_BRAND, SRC_OB_TRADE, SRC_SYNONYM, build_dictionary,
-    parent_map, parse_struct_id,
+    OB_KEY_DRUGS_DIFFER, OB_KEY_REPEATED, ob_product_index, parent_map, parse_struct_id,
 )
 from trial_pos.services.drug_names import variants
 
@@ -223,3 +223,19 @@ def test_alkyl_fragments_are_never_salt_stripped_keys():
     assert STEP_PARENTHETICAL not in REVERSE_QUERY_STEPS
     long_name = "n-(5-((2-(dimethylamino)ethyl)(methyl)amino)phenyl)acrylamide tosylate"
     assert d.resolve(long_name)[0].status == HIT_NONE
+
+
+def test_repeated_orange_book_keys_are_counted_and_the_last_row_still_wins():
+    ob = [{"id": "1", "appl_no": "1", "product_no": "1"},
+          {"id": "2", "appl_no": "000001", "product_no": "001"},
+          {"id": "3", "appl_no": "000001", "product_no": "001"}]
+    s2o = [{"struct_id": "7", "prod_id": "1"}, {"struct_id": "7", "prod_id": "2"},
+           {"struct_id": "8", "prod_id": "3"}]
+    from collections import Counter
+    audit = Counter()
+    by_product, by_application, rows = ob_product_index(ob, s2o, audit)
+    assert audit[OB_KEY_REPEATED] == len(ob) - 1
+    assert audit[OB_KEY_DRUGS_DIFFER] == 1               # rows 2 -> 3 change the drug
+    assert by_product[("000001", "001")] == frozenset({8})
+    assert by_application["000001"] == {frozenset({7}), frozenset({8})}
+    assert [r["id"] for r, _ in rows] == ["1", "2", "3"]

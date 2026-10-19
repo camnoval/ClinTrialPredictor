@@ -1,0 +1,680 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  set rule contained | brand rule pin | DrugCentral agency 'FDA' | show 12
+
+==============================================================================
+INPUTS
+==============================================================================
+  dc synonyms             rows    23875
+  dc structures           rows     5116
+  dc struct2parent        rows      361
+  dc ob_product           rows    55242
+  dc struct2obprod        rows    77694
+  dc approval             rows     4128
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+  Submissions.txt      rows   194026  malformed 0  cp1252
+
+==============================================================================
+1. BUILD: NDA/BLA products, identity, dates
+==============================================================================
+  NDA/BLA products 12144 (by type {'BLA': 844, 'NDA': 11300}); DrugCentral FDA-approved structures 2675
+  dates: Orange Book date before the original (original used)                   10
+  dates: application_original                                                 3700
+  dates: orange_book_product                                                  7929
+  dates: undated                                                               515
+  ob_product: (appl_no, product_no) on more than one row                      7339
+  products: alternative (salt-stripped) moiety set differs from the link       339
+  products: application absent from Applications (not used)                     11
+  products: linked by ingredient_name                                         1075
+  products: linked by ob_application                                           100
+  products: linked by ob_product                                             10494
+  products: linked by unlinked                                                 475
+  products: tentative approval only (not an approval, not used)                144
+  dictionary: ob_product: (appl_no, product_no) on more than one row          7339
+  dictionary: ob_product: ... and those rows name different drugs                0
+
+  alternative (salt-stripped) identity differs from the link, top 24 of 96 ingredient strings (products | ingredient | link | alternative):
+      23  clindamycin phosphate                        clindamycin phosphate          -> clindamycin
+      22  triamcinolone acetonide                      triamcinolone acetonide        -> triamcinolone
+      18  ethinyl estradiol ; norethindrone acetate    ethinylestradiol + norethindro -> ethinylestradiol + norethister
+      17  paliperidone palmitate                       paliperidone palmitate         -> paliperidone
+      16  betamethasone dipropionate                   betamethasone dipropionate     -> betamethasone
+      16  betamethasone valerate                       betamethasone valerate         -> betamethasone
+      10  dexamethasone sodium phosphate               dexamethasone phosphate        -> dexamethasone
+      10  diatrizoate meglumine                        diatrizoate meglumine          -> diatrizoate
+      10  hydrocortisone acetate                       hydrocortisone acetate         -> hydrocortisone
+       9  testosterone undecanoate                     testosterone undecanoate       -> testosterone
+       8  diatrizoate meglumine ; diatrizoate sodium   diatrizoate + diatrizoate megl -> diatrizoate
+       8  hydrocortisone butyrate                      hydrocortisone butyrate        -> hydrocortisone
+       8  prednisolone acetate                         prednisolone acetate           -> prednisolone
+       7  potassium phosphate, dibasic ; potassium pho potassium phosphate + potassiu -> potassium phosphate, dibasic +
+       6  estradiol ; norethindrone acetate            estradiol + norethindrone acet -> estradiol + norethisterone
+       6  methylprednisolone acetate                   methylprednisolone acetate     -> methylprednisolone
+       6  prednisolone sodium phosphate                prednisolone sodium phosphate  -> prednisolone
+       5  ascorbic acid ; biotin ; cyanocobalamin ; de Vitamin E + ascorbic acid + bi -> Vitamin E + ascorbic acid + bi
+       5  benzoyl peroxide ; clindamycin phosphate     benzoyl peroxide + clindamycin -> benzoyl peroxide + clindamycin
+       5  erythromycin ethylsuccinate                  erythromycin ethyl succinate   -> erythromycin
+       5  estradiol acetate                            estradiol acetate              -> estradiol
+       5  methylprednisolone sodium succinate          methylprednisolone succinate   -> methylprednisolone
+       5  testosterone enanthate                       testosterone enantate          -> testosterone
+       4  betamethasone benzoate                       betamethasone benzoate         -> betamethasone
+
+  resolved agents 150379; matched through a brand 4119
+
+==============================================================================
+2. LINE-UP CHECK: each stated value against the agent's products (all phases)
+==============================================================================
+  best state over the products that are the moiety set; 'no product' = none
+
+  kind      value                   agents  confirmed  possible  excluded  no product
+  dosage    cream                      423        322         0        75          26
+  dosage    foam                        15         11         0         3           1
+  dosage    gel                        528        355         0       112          61
+  dosage    lotion                      13         12         0         1           0
+  dosage    ointment                   187        144         0        32          11
+  dosage    patch                      330        289         0        31          10
+  dosage    suppository                  3          0         0         1           2
+  modifier  delayed_release             81         53         0        19           9
+  modifier  extended_release          1509       1118       206        84         101
+  modifier  implant                     56         54         0         2           0
+  modifier  liposomal                  544        434        72         4          34
+  modifier  modified_release            35         23         5         7           0
+  modifier  orally_disintegrating       22         18         0         4           0
+  route     buccal                      18         12         0         6           0
+  route     inhalation                 348        268         0        59          21
+  route     intramuscular               67         28        20         7          12
+  route     intrathecal                 59          9        38         0          12
+  route     intravenous               1246        577       435       119         115
+  route     intravitreal                62         18        43         1           0
+  route     nasal                      336        249         1        76          10
+  route     ophthalmic                 423        351        13        11          48
+  route     oral                      1848       1554         2       151         141
+  route     rectal                       5          2         0         3           0
+  route     subcutaneous               270        121       126        16           7
+  route     sublingual                  40         32         0         8           0
+  route     topical                    409        247        14       120          28
+  route     transdermal                198        180         1        13           4
+  route     vaginal                     43         27         0        11           5
+  salt      acetate                    841        740        35        12          54
+  salt      acetonide                  118        116         1         0           1
+  salt      aspartate                    3          0         0         3           0
+  salt      benzoate                    21         14         4         0           3
+  salt      besylate                    73         68         1         1           3
+  salt      bitartrate                  41         32         1         0           8
+  salt      bromide                    178        141        15         7          15
+  salt      butyrate                    14          1         7         5           1
+  salt      calcium                    452        433         6         1          12
+  salt      camsylate                    8          8         0         0           0
+  salt      citrate                    369        337         5         3          24
+  salt      cypionate                   31         31         0         0           0
+  salt      decanoate                   17         17         0         0           0
+  salt      dihydrochloride            111         83         2         4          22
+  salt      dipropionate                52         50         1         0           1
+  salt      disodium                   156        138         2         0          16
+  salt      enanthate                   25         24         0         0           1
+  salt      ethylsuccinate               1          1         0         0           0
+  salt      fumarate                   357        319        15         1          22
+  salt      furoate                    123        111         2         0          10
+  salt      gluconate                   87         71         5         0          11
+  salt      hemifumarate                 4          0         0         4           0
+  salt      hyclate                     15         15         0         0           0
+  salt      hydrobromide                52         43         2         0           7
+  salt      hydrochloride             4277       3993        65        17         202
+  salt      lactate                     18         17         1         0           0
+  salt      magnesium                   63         12         7         5          39
+  salt      malate                     150        145         0         1           4
+  salt      maleate                     91         70         6         1          14
+  salt      meglumine                   21         21         0         0           0
+  salt      mesylate                   691        531         1         2         157
+  salt      napsylate                    1          1         0         0           0
+  salt      nitrate                     32          9         3         0          20
+  salt      oxalate                      7          7         0         0           0
+  salt      palmitate                   48         43         0         0           5
+  salt      pamoate                     28         21         0         4           3
+  salt      phosphate                  797        758         7         3          29
+  salt      potassium                   86         77         1         0           8
+  salt      propionate                 115        105         2         5           3
+  salt      sodium                     850        752        20        12          66
+  salt      succinate                  126        114         1         2           9
+  salt      sulfate                   1149       1063        14        12          60
+  salt      tartrate                   206        196         1         2           7
+  salt      tosylate                   162        151         0         3           8
+  salt      trometamol                  14          0         0         0          14
+  salt      tromethamine                51         51         0         0           0
+  salt      undecanoate                 33         31         1         0           1
+  salt      valerate                    21         18         2         0           1
+  salt      xinafoate                   17         15         0         2           0
+
+  EXCLUDED BY EVERY PRODUCT, top 12 per value (agents | name | moiety):
+
+    dosage cream: 75 agents
+          6  pilocarpine ophthalmic topical cream, do pilocarpine
+          5  urea cream                               carbamide
+          4  diltiazem hydrochloride 2% cream         diltiazem
+          3  tacrolimus cream                         tacrolimus
+          3  topical 30% metformin cream              metformin
+          2  baclofen 2%                              baclofen
+          2  capsaicin topical cream                  capsaicin
+          2  topical ibuprofen cream                  ibuprofen
+          1  0.4% retinol cream                       retinol
+          1  0.5% prednisolone acetate cream          prednisolone acetate
+          1  1% sirolimus cream (td201 1%)            sirolimus
+          1  10% nifedipine cream                     nifedipine
+
+    dosage foam: 3 agents
+          1  ciloxan                                  ciprofloxacin
+          1  kenalog-40                               triamcinolone acetonide
+          1  sodium tetradecyl sulfate                sodium tetradecyl sulfate
+
+    dosage gel: 112 agents
+          6  mitomycin c                              mitomycin
+          5  calcipotriol plus betamethasone dipropio betamethasone dipropionate + c
+          5  scopolamine                              scopolamine
+          3  malathion gel 0.5%                       malathion
+          2  1.7% hydrogen peroxide gel               hydrogen peroxide
+          2  cannabidiol transdermal gel              cannabidiol
+          2  clonidine hydrochloride topical gel, 0.1 clonidine
+          2  menthol gel                              levomenthol
+          2  morphine gel                             morphine
+          2  seroquel                                 quetiapine
+          1  0.005% latanoprost gel                   latanoprost
+          1  1% azithromycin gel                      azithromycin
+
+    dosage lotion: 1 agents
+          1  5% minoxidil solution                    minoxidil
+
+    dosage ointment: 32 agents
+          2  povidone-iodine topical ointment         povidone-iodine
+          2  tofacitinib ointment 10 mg/g             tofacitinib
+          2  tofacitinib ointment 20 mg/g             tofacitinib
+          2  vitamin e acetate ointment               alpha-tocopherol acetate
+          1  2%tofacitinib ointment                   tofacitinib
+          1  5% simvastatin ointment                  simvastatin
+          1  artesunate ointment                      artesunate
+          1  artesunate ointment 40%                  artesunate
+          1  cidofovir 1% topical ointment            cidofovir
+          1  cp-690,550 ointment 1                    tofacitinib
+          1  cp-690,550 ointment 2                    tofacitinib
+          1  dexpanthenol 5 % topical ointment        dexpanthenol
+
+    dosage patch: 31 agents
+          6  varenicline free base patch              varenicline
+          3  ketoprofen topical patch 20%             ketoprofen
+          3  vedolizumab                              vedolizumab
+          2  betamethasone dipropionate               betamethasone dipropionate
+          2  doxorubicin                              doxorubicin
+          2  ketamine transdermal patch               ketamine
+          1  bupivacaine tts (bupivacaine patch)      bupivacaine
+          1  champix                                  varenicline
+          1  clobetasol patch                         clobetasol propionate
+          1  ketoprofen                               ketoprofen
+          1  ketoprofen patch                         ketoprofen
+          1  ketoprofen topical patch                 ketoprofen
+
+    dosage suppository: 1 agents
+          1  quetiapine                               quetiapine
+
+    modifier delayed_release: 19 agents
+          2  fluconazole                              fluconazole
+          2  ondansetron hydrochloride                ondansetron
+          2  pitolisant delayed-release               pitolisant
+          2  tacrolimus                               tacrolimus
+          1  deferiprone                              deferiprone
+          1  deferiprone dr tablets 1000 mg (high dos deferiprone
+          1  deferiprone dr tablets 1000 mg (low dosa deferiprone
+          1  delayed-release metronidazole            metronidazole
+          1  glutamine                                glutamine
+          1  leuprolide acetate                       leuprorelin
+          1  metformin dr                             metformin
+          1  oracea                                   doxycycline
+
+    modifier extended_release: 84 agents
+          7  lialda                                   mesalazine
+          5  bimatoprost sr                           bimatoprost
+          4  febuxostat xr                            febuxostat
+          4  rosiglitazone xr                         rosiglitazone
+          3  lisinopril                               lisinopril
+          2  5-fluorocytosine                         flucytosine
+          2  carisoprodol sr                          carisoprodol
+          2  celebrex                                 celecoxib
+          2  cilostazol                               cilostazol
+          2  gabapentin extended release tablets      gabapentin
+          2  gabapentin extended-release (g-er) 1200  gabapentin
+          2  gabapentin extended-release (g-er) 1800  gabapentin
+
+    modifier implant: 2 agents
+          1  desogestrel 75 micrograms pop (cerazette desogestrel
+          1  sirolimus                                sirolimus
+
+    modifier liposomal: 4 agents
+          2  liposomal alendronate                    alendronic acid
+          1  lenvatinib mesilate capsules             lenvatinib
+          1  trientine dihydrochloride                trientine
+
+    modifier modified_release: 7 agents
+          4  pirfenidone modified-release tablets     pirfenidone
+          3  ach-4471                                 danicopan
+
+    modifier orally_disintegrating: 4 agents
+          3  acarbose (glucobay odt, bayg5421)        acarbose
+          1  prasugrel (orally disintegrating tablet  prasugrel
+
+    route buccal: 6 agents
+          4  cytotec                                  misoprostol
+          1  septocaine 4%                            articaine + epinephrine
+          1  versed                                   midazolam
+
+    route inhalation: 59 agents
+          3  esketamine dpi                           esketamine
+          2  cvt-427 (zolmitriptan inhalation powder) zolmitriptan
+          2  dornase alfa inhalation solution [pulmoz dornase alfa
+          2  esketamine dpi - high dose               esketamine
+          2  esketamine dpi - low dose                esketamine
+          2  furosemide                               furosemide
+          2  levofloxacin inhalation solution         levofloxacin
+          2  vancomycin                               vancomycin
+          2  vancomycin inhalation powder             vancomycin
+          2  voriconazole inhalation powder           voriconazole
+          1  120 mg sodium nitrite inhalation solutio sodium nitrite
+          1  15 mg sodium nitrite inhalation solution sodium nitrite
+
+    route intramuscular: 7 agents
+          1  diclofenac sodium                        diclofenac
+          1  estradiol plus progesterone 100 mg im in estradiol + progesterone
+          1  gentamicin 360mg im                      gentamicin
+          1  imatinib mesylate (im)                   imatinib
+          1  piroxicam                                piroxicam
+          1  tafluprost                               tafluprost
+          1  tramadol hydrochloride                   tramadol
+
+    route intravenous: 119 agents
+          5  iv levodopa                              levodopa
+          5  iv methylnaltrexone (mntx)               methylnaltrexone
+          4  esketamine                               esketamine
+          3  intravenous levodopa                     levodopa
+          2  cocaine (iv)                             cocaine
+          2  high-dose esketamine infusion            esketamine
+          2  intravenous esketamine                   esketamine
+          2  iv methylphenidate                       methylphenidate
+          2  iv nicotine                              nicotine
+          2  low-dose esketamine infusion             esketamine
+          2  nicotine infusion                        nicotine
+          2  prednisone                               prednisone
+
+    route intravitreal: 1 agents
+          1  celebrex                                 celecoxib
+
+    route nasal: 76 agents
+          8  nasal carbon dioxide                     carbon dioxide
+          5  dexmedetomidine hydrochloride nasal spra dexmedetomidine
+          5  scopolamine                              scopolamine
+          4  ketamine                                 ketamine
+          4  teriparatide nasal spray                 teriparatide
+          3  dexmedetomidine                          dexmedetomidine
+          3  granisetron nasal spray                  granisetron
+          3  novolin r                                insulin human
+          2  betamethasone dipropionate nasal cream 0 betamethasone dipropionate
+          2  dexmedetomidine nasal spray              dexmedetomidine
+          2  humalog                                  insulin lispro
+          2  insulin                                  insulin human
+
+    route ophthalmic: 11 agents
+          2  mtp-131, bendavia                        elamipretide
+          1  0.05% voclosporin ophthalmic solution (v voclosporin
+          1  amiloride                                amiloride
+          1  elamipretide (mtp-131) 1% topical ophtha elamipretide
+          1  omaveloxolone ophthalmic suspension 0.5% omaveloxolone
+          1  omaveloxolone ophthalmic suspension 1%   omaveloxolone
+          1  omaveloxolone ophthalmic suspension 1.0% omaveloxolone
+          1  regorafenib, ophthalmic oily suspension  regorafenib
+          1  t\u03b24                                      levothyroxine
+          1  voclosporin ophthalmic solution          voclosporin
+
+    route oral: 151 agents
+         22  oral insulin                             insulin human
+          6  oral oxytocin                            oxytocin
+          6  oral vinorelbine                         vinorelbine
+          5  iv arginine                              arginine
+          5  oral ketamine                            ketamine
+          4  budesonide/formoterol                    budesonide + formoterol
+          3  alcohol (oral)                           ethanol
+          3  oral insulin capsules                    insulin human
+          3  oral salmon calcitonin                   calcitonin (salmon synthetic)
+          3  vinorelbine                              vinorelbine
+          2  actiq (oral transmucosal fentanyl citrat fentanyl
+          2  difelikefalin 1 mg oral tablet           difelikefalin
+
+    route rectal: 3 agents
+          1  bisacodyl                                bisacodyl
+          1  cytotec                                  misoprostol
+          1  quetiapine                               quetiapine
+
+    route subcutaneous: 16 agents
+          4  hydroxyurea                              hydroxycarbamide
+          2  spironolactone                           spironolactone
+          1  abatacept                                abatacept
+          1  alt-803 subcutaneous                     nogapendekin alfa inbakicept
+          1  bmn673                                   talazoparib tosylate
+          1  gsk1265744                               cabotegravir
+          1  iv abatacept                             abatacept
+          1  levodopa and carbidopa sc solution       carbidopa + levodopa
+          1  orenitram                                treprostinil
+          1  subcutaneous abatacept                   abatacept
+          1  subcutaneous decitabine                  decitabine
+          1  subcutaneous(sc) abatacept               abatacept
+
+    route sublingual: 8 agents
+          2  buprenex                                 buprenorphine
+          2  cytotec                                  misoprostol
+          1  ly170053                                 olanzapine
+          1  nicotine (pharmaceutical productions inc nicotine
+          1  tizanidine (sublingual or oral)          tizanidine
+          1  zolmitriptan                             zolmitriptan
+
+    route topical: 120 agents
+          8  topical tranexamic acid                  tranexamic acid
+          6  pilocarpine ophthalmic topical cream, do pilocarpine
+          3  ketoprofen topical patch 20%             ketoprofen
+          3  topical 30% metformin cream              metformin
+          3  topical infliximab                       infliximab
+          3  tranexamic acid (topical)                tranexamic acid
+          2  ciclosporine (csa)                       ciclosporin
+          2  ketamine topical                         ketamine
+          2  topical ibuprofen cream                  ibuprofen
+          2  topical oxygen                           oxygen
+          2  tranexamic acid (topical application in  tranexamic acid
+          1  0.5% bupivacaine                         bupivacaine
+
+    route transdermal: 13 agents
+          2  cannabidiol transdermal gel              cannabidiol
+          2  ketamine transdermal patch               ketamine
+          1  abaloparatide transdermal (100 mcg)      abaloparatide
+          1  abaloparatide transdermal (150 mcg)      abaloparatide
+          1  abaloparatide transdermal (50 mcg)       abaloparatide
+          1  lis-dexamphetamine (vyvanse)             lisdexamfetamine
+          1  sumatriptan                              sumatriptan
+          1  transdermal 17beta-estradiol, progestero estradiol + progesterone
+          1  transdermal megace                       megestrol acetate
+          1  transdermal neostigmine and glycopyrrola glycopyrronium bromide + neost
+          1  transdermal teriparatide                 teriparatide
+
+    route vaginal: 11 agents
+          3  cytotec                                  misoprostol
+          1  artesunic acid                           artesunate
+          1  chlorhexidine gluconate                  chlorhexidine
+          1  cycloset                                 bromocriptine
+          1  intravaginal 5-fluorouracil (5-fu)       fluorouracil
+          1  metrogel                                 metronidazole
+          1  mifepristone                             mifepristone
+          1  misoprostol                              misoprostol
+          1  oxytocin                                 oxytocin
+
+    salt acetate: 12 agents
+          6  triptorelin acetate                      triptorelin
+          1  abacavir acetate                         abacavir
+          1  dimethylfumarate                         dimethyl fumarate
+          1  indacaterol acetate                      indacaterol
+          1  lipitor                                  atorvastatin
+          1  sevelamer (renagel), calcium acetate (ph sevelamer
+          1  solumedrol                               methylprednisolone succinate
+
+    salt aspartate: 3 agents
+          1  arginine aspartate                       arginine
+          1  l-arginine aspartate (targifor)          arginine
+          1  tenofovir disoproxil aspartate 308.04mg  tenofovir disoproxil
+
+    salt besylate: 1 agents
+          1  levamlodipine besylate                   levamlodipine
+
+    salt bromide: 7 agents
+          4  indacaterol maleate and glycopyrronium b glycopyrronium bromide + indac
+          1  beclometasone dipropionate / formoterol  beclometasone dipropionate + f
+          1  beclometasone dipropionate /formoterol f beclometasone dipropionate + f
+          1  indacaterol and glycopyrronium bromide ( glycopyrronium bromide + indac
+
+    salt butyrate: 5 agents
+          5  arginine butyrate                        arginine
+
+    salt calcium: 1 agents
+          1  sevelamer (renagel), calcium acetate (ph sevelamer
+
+    salt citrate: 3 agents
+          1  clomipramine hcl 15mg (condencia tab)    clomipramine
+          1  remifentanil                             remifentanil
+          1  tenofovir alafenamide citrate            tenofovir alafenamide
+
+    salt dihydrochloride: 4 agents
+          3  histamine dihydrochloride                histamine
+          1  histamine dihydrochloride (hdc)          histamine
+
+    salt fumarate: 1 agents
+          1  indacaterol fumarate                     indacaterol
+
+    salt hemifumarate: 4 agents
+          2  gilteritinib fumarate                    gilteritinib
+          1  concor 5mg(bisoprolol hemifumarate 5mg)  bisoprolol
+          1  oral bisoprolol                          bisoprolol
+
+    salt hydrochloride: 17 agents
+          4  adapalene + clindamycin hydrochloride    adapalene + clindamycin
+          2  morphine hydrochloride                   morphine
+          1  citalopram hcl                           citalopram
+          1  edetate calcium disodium                 edetic acid
+          1  iv quinine hydrochloride                 quinine
+          1  morphine                                 morphine
+          1  morphine gel                             morphine
+          1  morphine hcl                             morphine
+          1  nasonex                                  mometasone furoate
+          1  norepinephrine hydrochloride             norepinephrine
+          1  opioid (morphine sulphate) in low dose   morphine
+          1  quinine hydrochloride                    quinine
+
+    salt magnesium: 5 agents
+          1  ketamine + magnesium                     ketamine
+          1  ketamine + magnesium sulfate             ketamine
+          1  magnesium sulfate                        magnesium sulfate
+          1  pantoprazole magnesium                   pantoprazole
+          1  potassium citrate extended release oral  potassium citrate
+
+    salt malate: 1 agents
+          1  brimonidine tartrate/timolol malate opht brimonidine + timolol
+
+    salt maleate: 1 agents
+          1  sunitinib maleate                        sunitinib
+
+    salt mesylate: 2 agents
+          2  triptorelin mesylate                     triptorelin
+
+    salt pamoate: 4 agents
+          3  octreotide pamoate                       octreotide
+          1  cetrorelix pamoate                       cetrorelix
+
+    salt phosphate: 3 agents
+          2  rucaparib camsylate                      rucaparib
+          1  glucophage«                              metformin
+
+    salt propionate: 5 agents
+          2  salmeterol xinafoate                     salmeterol
+          1  montelukast                              montelukast
+          1  montelukast (5mg qd)                     montelukast
+          1  salmeterol 50mcg                         salmeterol
+
+    salt sodium: 12 agents
+          2  gastrografin                             diatrizoate meglumine
+          2  sodium phenylacetate and sodium benzoate phenylacetic acid + sodium ben
+          1  arginine sodium succinate                arginine
+          1  camptosar                                irinotecan
+          1  fosfomycin sodium intravenous            fosfomycin
+          1  gadoxetate sodium                        gadoxetate
+          1  irinotecan                               irinotecan
+          1  sodium lactate                           sodium lactate
+          1  sodium lactate solution                  sodium lactate
+          1  valacyclovir 500 mg                      valaciclovir
+
+    salt succinate: 2 agents
+          1  arginine sodium succinate                arginine
+          1  erythromycin ethyl succinate             erythromycin ethyl succinate
+
+    salt sulfate: 12 agents
+          3  amantadine sulfate                       amantadine
+          2  chloroquine sulfate                      chloroquine
+          1  allegra                                  fexofenadine
+          1  amantadine sulphate                      amantadine
+          1  amantadine sulphate (in addition to stan amantadine
+          1  amitriptyline hydrochloride              amitriptyline
+          1  colistimethate sodium                    colistimethate sodium
+          1  dexmedetomidine                          dexmedetomidine
+          1  ketamine + magnesium sulfate             ketamine
+
+    salt tartrate: 2 agents
+          1  solifenacin                              solifenacin
+          1  solifenacin tartrate 10.66 mg            solifenacin
+
+    salt tosylate: 3 agents
+          3  remimazolam tosylate                     remimazolam
+
+    salt xinafoate: 2 agents
+          2  fluticasone propionate                   fluticasone propionate
+
+==============================================================================
+3. PIVOTAL resolved agents with an ACTUAL readout: approved before the readout?
+==============================================================================
+  agents 19498 in 14266 trials
+
+  all: 19498
+    approved before readout                               14567  74.7%
+    not approved before readout                            4522  23.2%
+    undeterminable: strict and loose disagree               178  0.9%
+    undeterminable: an undated product                       20  0.1%
+    undeterminable: moiety absent from Drugs@FDA (D-31)     211  1.1%
+
+  brand, pinned=False: 135
+    approved before readout                                  89  65.9%
+    not approved before readout                              45  33.3%
+    undeterminable: strict and loose disagree                 0  0.0%
+    undeterminable: an undated product                        0  0.0%
+    undeterminable: moiety absent from Drugs@FDA (D-31)       1  0.7%
+
+  brand, pinned=True: 576
+    approved before readout                                 450  78.1%
+    not approved before readout                             118  20.5%
+    undeterminable: strict and loose disagree                 3  0.5%
+    undeterminable: an undated product                        5  0.9%
+    undeterminable: moiety absent from Drugs@FDA (D-31)       0  0.0%
+
+  form stated: 3013
+    approved before readout                                2059  68.3%
+    not approved before readout                             745  24.7%
+    undeterminable: strict and loose disagree               178  5.9%
+    undeterminable: an undated product                        7  0.2%
+    undeterminable: moiety absent from Drugs@FDA (D-31)      24  0.8%
+
+  no form stated: 16485
+    approved before readout                               12508  75.9%
+    not approved before readout                            3777  22.9%
+    undeterminable: strict and loose disagree                 0  0.0%
+    undeterminable: an undated product                       13  0.1%
+    undeterminable: moiety absent from Drugs@FDA (D-31)     187  1.1%
+
+  undeterminable: strict and loose disagree: top 12 (agents | name | moiety | stated)
+        7  dactinomycin                             dactinomycin                   [iv]
+        7  dexamethasone                            dexamethasone                  [depot]
+        6  iv acetaminophen                         paracetamol                    [iv]
+        3  abilify                                  aripiprazole                   [depot]
+        3  eylea                                    aflibercept                    [intravitreal]
+        3  glycopyrronium bromide                   glycopyrronium bromide         [bromide]
+        3  risankizumab sc                          risankizumab                   [sc]
+        3  triptorelin                              triptorelin                    [depot]
+        2  ciclosporine (csa)                       ciclosporin                    [eye-drops|topical]
+        2  ct-p13 sc (infliximab)                   infliximab                     [sc]
+        2  fluticasone propionate                   fluticasone propionate         [inhaled|propionate|xinafoate]
+        2  golimumab 2 mg/kg iv                     golimumab                      [iv]
+
+  undeterminable: an undated product: top 12 (agents | name | moiety | stated)
+        4  syntocinon                               oxytocin                       [intranasal]
+        3  mitomycin c                              mitomycin                      []
+        2  dydrogesterone                           dydrogesterone                 []
+        2  dydrogesterone 30 mg                     dydrogesterone                 []
+        2  oxytocin nasal spray                     oxytocin                       [nasal]
+        1  cloxacillin                              cloxacillin                    []
+        1  dydrogesterone 10 mg                     dydrogesterone                 []
+        1  dydrogesterone oral tablet               dydrogesterone                 [oral]
+        1  dydrogesterone tablets                   dydrogesterone                 []
+        1  levomepromazine                          levomepromazine                []
+        1  phenindione                              phenindione                    []
+        1  tace                                     chlorotrianisene               []
+
+  undeterminable: moiety absent from Drugs@FDA (D-31): top 12 (agents | name | moiety | stated)
+       15  melatonin                                melatonin                      []
+        7  stannous fluoride                        stannous fluoride              []
+        5  tenofovir                                tenofovir                      []
+        4  l-selenomethionine                       selenomethionine               []
+        4  onasemnogene abeparvovec-xioi            onasemnogene abeparvovec       []
+        4  talimogene laherparepvec                 talimogene laherparepvec       []
+        3  alefacept                                alefacept                      []
+        3  alpha-lipoic acid                        thioctic acid                  []
+        3  docosahexaenoic acid                     doconexent                     []
+        3  e0302 (mecobalamin)                      mecobalamin                    []
+        3  l-citrulline                             citrulline                     []
+        3  ly3819253                                bamlanivimab                   []
+
+  not approved before readout: top 12 (agents | name | moiety | stated)
+       56  vildagliptin                             vildagliptin                   []
+       31  dapagliflozin                            dapagliflozin                  []
+       30  insulin degludec                         insulin degludec               []
+       23  bi 10773                                 empagliflozin                  []
+       22  sugammadex                               sugammadex                     []
+       22  tak-438                                  vonoprazan                     []
+       19  aliskiren                                aliskiren                      []
+       19  rimonabant                               rimonabant                     []
+       19  roxadustat                               roxadustat                     []
+       18  asenapine                                asenapine                      []
+       18  dexilant                                 dexlansoprazole                []
+       18  saxagliptin                              saxagliptin                    []
+
+==============================================================================
+4. THE OPEN DECISIONS: pivotal status under the other choice of each
+==============================================================================
+
+  set rule exact: 245 of 19498 agents change status
+       232  approved before readout  ->  not approved before readout
+         7  undeterminable: strict and loose disagree  ->  not approved before readout
+         4  approved before readout  ->  undeterminable: strict and loose disagree
+         2  approved before readout  ->  undeterminable: an undated product
+      e.g.   19  cholecalciferol                          approved before readout -> not approved before read
+      e.g.   12  lactic acid (dermacid)                   approved before readout -> not approved before read
+      e.g.   12  lactic acid(nd)                          approved before readout -> not approved before read
+      e.g.    9  vitamin e                                approved before readout -> not approved before read
+      e.g.    8  dasabuvir                                approved before readout -> not approved before read
+      e.g.    6  lactic acid                              approved before readout -> not approved before read
+      e.g.    6  vitamin d3                               approved before readout -> not approved before read
+      e.g.    5  abt-333                                  approved before readout -> not approved before read
+      e.g.    4  abt-450/r/abt-267                        approved before readout -> not approved before read
+      e.g.    4  articaine                                approved before readout -> not approved before read
+      e.g.    4  calcium carbonate                        approved before readout -> not approved before read
+      e.g.    4  cholecalciferol (vitamin d3)             approved before readout -> not approved before read
+
+  brand rule moiety: 38 of 19498 agents change status
+        37  not approved before readout  ->  approved before readout
+         1  not approved before readout  ->  undeterminable: strict and loose disagree
+      e.g.    4  lialda                                   not approved before read -> approved before readout
+      e.g.    3  caldolor                                 not approved before read -> approved before readout
+      e.g.    3  exparel                                  not approved before read -> approved before readout
+      e.g.    2  axiron                                   not approved before read -> approved before readout
+      e.g.    2  azasite                                  not approved before read -> approved before readout
+      e.g.    2  endometrin                               not approved before read -> approved before readout
+      e.g.    2  hysingla er                              not approved before read -> approved before readout
+      e.g.    1  actiq (oral transmucosal fentanyl citrat not approved before read -> approved before readout
+      e.g.    1  astagraf xl                              not approved before read -> undeterminable: strict a
+      e.g.    1  astepro nasal spray (0.1% azelastine hyd not approved before read -> approved before readout
+      e.g.    1  bethkis                                  not approved before read -> approved before readout
+      e.g.    1  buprenex                                 not approved before read -> approved before readout
+
+==============================================================================
+WRITTEN
+==============================================================================
+  data\labels\trial_drug_form_approvals.csv
+  data\labels\trial_drug_form_approvals.manifest.json

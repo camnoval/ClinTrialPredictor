@@ -1,0 +1,87 @@
+﻿snapshot 2026-10-01 | window 3y | min name key 4 | phase ranks {'EARLY_PHASE1': 0, 'PHASE1': 1, 'PHASE1/PHASE2': 2, 'PHASE2': 3, 'PHASE2/PHASE3': 4, 'PHASE3': 5, 'PHASE4': 6}
+
+==============================================================================
+INPUTS
+==============================================================================
+  drug trials 222329; focal (early phase, advancement-eligible at 3y) 62745
+
+==============================================================================
+1. FOCAL TRIALS BY KEY
+==============================================================================
+
+  name:
+    no key                                        7959  12.7%
+    floor: a higher phase registered first       27571  43.9%
+    linked, sharing a condition                   2899  4.6%
+    linked                                        3487  5.6%
+    not linked                                   20829  33.2%
+    link rate among keyed, not floor: any 23.5%; with a shared condition 10.7%
+
+  moiety:
+    no key                                       33399  53.2%
+    floor: a higher phase registered first       26785  42.7%
+    linked, sharing a condition                   1200  1.9%
+    linked                                         876  1.4%
+    not linked                                     485  0.8%
+    link rate among keyed, not floor: any 81.1%; with a shared condition 46.9%
+
+==============================================================================
+2. NAME KEY, SPLIT BY WHETHER THE TRIAL HAS A MOIETY
+==============================================================================
+  moiety resolved True: 29346 trials; floor 23518; linked 42.7%, with condition 21.2% of 5813 keyed
+  moiety resolved False: 33399 trials; floor 4053; linked 18.2%, with condition 7.8% of 21402 keyed
+
+==============================================================================
+3. AGREEMENT WHERE BOTH KEYS EXIST AND NEITHER IS FLOOR
+==============================================================================
+    name linked False moiety linked False     474
+    name linked False moiety linked True      461
+    name linked True  moiety linked False       3
+    name linked True  moiety linked True     1594
+
+==============================================================================
+4. NAME-KEY COLLISIONS AND EXAMPLES
+==============================================================================
+  name keys shared by the most drug trials, top 20:
+      2502  cyclophosphamide
+      1723  pembrolizumab
+      1714  carboplatin
+      1714  cisplatin
+      1490  paclitaxel
+      1426  dexamethasone
+      1379  bevacizumab
+      1262  rituximab
+      1204  nivolumab
+      1113  docetaxel
+      1056  gemcitabine
+       946  fludarabine
+       917  etoposide
+       911  oxaliplatin
+       910  capecitabine
+       782  cytarabine
+       780  filgrastim
+       769  prednisone
+       730  lenalidomide
+       726  methotrexate
+
+  linked by name with no moiety: most frequent keys, top 20:
+        13  perifosine
+        12  tanespimycin
+        12  tipifarnib
+        10  psilocybin
+         8  afq056
+         8  alisertib
+         8  becatecarin
+         8  bintrafuspalfa
+         8  bkm120
+         8  bms986177
+         8  cilengitide
+         8  ly900014
+         7  cart19
+         7  veliparib
+         6  ak002
+         6  ak104
+         6  cediranibmaleate
+         6  gc4419
+         6  glase
+         6  imsidolimab

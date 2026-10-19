@@ -181,3 +181,32 @@ def test_isotope_brackets_are_never_dropped_but_other_brackets_are():
     assert drop_parentheticals("[99mtc] sestamibi") == "[99mtc] sestamibi"
     assert drop_parentheticals("bevacizumab [avastin]") == "bevacizumab"
     assert "t4" not in [v.key for v in variants("[18F]T4") if v.step != STEP_COMPACT]
+
+
+# ---- D-28: hydrates and development codes (probe_form_lineup 2026-10-13) -------------------
+def test_hydrate_words_are_salt_words_that_never_distinguish_a_product():
+    from trial_pos.services.drug_names import HYDRATE_WORDS, NON_DISTINGUISHING_SALT_WORDS
+    assert HYDRATE_WORDS and HYDRATE_WORDS <= SALT_WORDS
+    assert HYDRATE_WORDS <= NON_DISTINGUISHING_SALT_WORDS
+    for w in sorted(HYDRATE_WORDS):
+        assert stated_salts(f"Doxycycline {w}") == (), w
+        assert stated_salts(f"Doxycycline hyclate {w}") == ("hyclate",), w
+
+
+def test_a_release_abbreviation_before_a_bare_number_is_a_code_not_a_form():
+    from trial_pos.services.drug_names import RELEASE_ABBREVIATIONS
+    assert RELEASE_ABBREVIATIONS
+    for a in RELEASE_ABBREVIATIONS:
+        code = a.upper()
+        assert stated_form([f"Drug ({code} 184)"]).classes == (), a
+        assert stated_form([f"{code}-184"]).classes == (), a
+        assert stated_form([f"Drug {code} 500 mg"]).classes != (), a     # a dose, kept
+        assert stated_form([f"Drug {code}"]).classes != (), a
+
+
+def test_dose_units_match_key_normalised_text_including_the_micro_sign():
+    from trial_pos.services.drug_names import DOSE_UNITS
+    assert all(u == key(u) for u in DOSE_UNITS)
+    for sign in ("\u00b5", "\u03bc"):              # micro sign and Greek mu
+        assert drop_dose_and_form(key(f"indacaterol 150 {sign}g")) == "indacaterol", sign
+        assert drop_dose_and_form(key(f"clonidine 1 {sign}g/kg")) == "clonidine", sign

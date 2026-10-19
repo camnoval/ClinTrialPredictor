@@ -1,0 +1,192 @@
+﻿window 5 | learned evidence thresholds (1, 2) | CBER words ('vaccine', 'toxoid', 'plasma', 'immune globulin', 'immunoglobulin', 'antitoxin', 'antivenom', 'antivenin', 'allergen', 'car-t', 'car t', 'cell therapy', 'cells', 'gene therapy', 'blood', 'platelet')
+
+==============================================================================
+INPUTS
+==============================================================================
+  Products.txt         rows    51866  malformed 0  utf-8
+  Applications.txt     rows    29380  malformed 0  utf-8
+  agents 283556; W=5 market trials unresolved or partly resolved 5633; labelled 2962; DrugCentral FDA dated 2172, undated 503
+
+==============================================================================
+1. MICRO SIGN: unresolved agents with a mu that resolve once it is a unit
+==============================================================================
+  not-resolved agents with a mu 1088; would resolve 162; of them in W=5 unresolved market trials 34
+      11  indacaterol 150 \u03bcg                                 -> indacaterol
+       7  indacaterol 300 \u03bcg                                 -> indacaterol
+       2  350 \u03bcg dexamethasone                               -> dexamethasone
+       2  aclidinium bromide 200 \u03bcg bid                      -> aclidinium bromide
+       2  aclidinium bromide 400 \u03bcg                          -> aclidinium bromide
+       2  aclidinium bromide 400 \u03bcg bid                      -> aclidinium bromide
+       2  dexmedetomidine 8 \u03bcg                               -> dexmedetomidine
+       2  ipratropium 500 \u03bcg                                 -> ipratropium
+       2  levothyroxine sodium tablets 300 \u03bcg                -> levothyroxine
+       2  quinagolide 1080 \u03bcg                                -> quinagolide
+       2  sage-547 90 \u03bcg/kg/h                                -> brexanolone
+       1  0.3% ropivacaine and 50 \u03bcg dexmedetomidine         -> dexmedetomidine + ropivacaine
+       1  0.5 \u03bcg/kg remifentanil                             -> remifentanil
+       1  1.0 \u03bcg/kg remifentanil                             -> remifentanil
+       1  37.5 \u03bcg indacaterol maleate (pos)                  -> indacaterol
+       1  40 \u03bcg fentanyl                                     -> fentanyl
+       1  5 ml ropivacaine 10% + clonidine 1 \u03bcg/kg           -> clonidine + ropivacaine
+       1  50 \u03bcg ethinylestradiol + 2.5 mg lynestrenol        -> ethinylestradiol + lynestrenol
+       1  75 \u03bcg indacaterol maleate (lb)                     -> indacaterol
+       1  75 \u03bcg indacaterol maleate (pos)                    -> indacaterol
+       1  80/2.25 \u03bcg symbicort pmdi                          -> budesonide + formoterol
+       1  80/4.5 \u03bcg symbicort pmdi                           -> budesonide + formoterol
+       1  aclidinium 200 \u03bcg                                  -> aclidinium bromide
+       1  aclidinium 200 \u03bcg / formoterol 12 \u03bcg               -> aclidinium bromide + formoterol
+       1  aclidinium 200 \u03bcg / formoterol 6 \u03bcg                -> aclidinium bromide + formoterol
+
+==============================================================================
+2. REGISTRY-LEARNED CODES: key -> drugs from resolved agents' own names
+==============================================================================
+  learned keys 135748; with conflicting drug sets 7877
+
+  evidence >= 1: keys 127871; not-resolved agents it would resolve 14479; in W=5 unresolved market trials 1231; such trials whose every not-resolved agent resolves 963 of 5633
+     136  anti-thymocyte globulin                      -> cyclophosphamide
+     125  psilocybin                                   -> buprenorphine
+      97  recombinant interferon alfa                  -> interferon alfa-2b
+      77  veliparib                                    -> lapatinib
+      65  cadonilimab                                  -> fluorouracil
+      59  pegylated liposomal doxorubicin hydrochlorid -> doxorubicin
+      58  entinostat                                   -> exemestane
+      56  alisertib                                    -> cyclophosphamide
+      55  tiragolumab                                  -> atezolizumab
+      51  bkm120                                       -> olaparib
+      50  platelet rich plasma                         -> ropivacaine
+      50  shr-1210                                     -> apatinib
+      47  camrelizumab                                 -> apatinib
+      47  epacadostat                                  -> retifanlimab
+      44  blood sampling                               -> ceftriaxone + meropenem + temocillin
+      41  18f-fdg                                      -> fludeoxyglucose (18F)
+      40  d-cycloserine                                -> cycloserine
+      38  tipifarnib                                   -> bortezomib
+      31  berberine                                    -> rosuvastatin
+      31  cyclosporine a                               -> ciclosporin
+      31  isavuconazole                                -> isavuconazonium
+      30  activated recombinant human factor vii       -> eptacog alfa (activated)
+      28  biphasic insulin aspart 30                   -> insulin aspart
+      28  o6-benzylguanine                             -> pegfilgrastim
+      28  probiotic                                    -> inulin
+
+  evidence >= 2: keys 77359; not-resolved agents it would resolve 7769; in W=5 unresolved market trials 816; such trials whose every not-resolved agent resolves 627 of 5633
+      97  recombinant interferon alfa                  -> interferon alfa-2b
+      59  pegylated liposomal doxorubicin hydrochlorid -> doxorubicin
+      50  shr-1210                                     -> apatinib
+      47  camrelizumab                                 -> apatinib
+      42  18f-fdg                                      -> fludeoxyglucose (18F)
+      40  d-cycloserine                                -> cycloserine
+      31  cyclosporine a                               -> ciclosporin
+      31  isavuconazole                                -> isavuconazonium
+      30  activated recombinant human factor vii       -> eptacog alfa (activated)
+      29  probiotic                                    -> inulin
+      28  biphasic insulin aspart 30                   -> insulin aspart
+      27  ly900014                                     -> insulin lispro
+      24  biphasic insulin aspart                      -> insulin aspart
+      23  enteric-coated mycophenolate sodium (ec-mps) -> mycophenolic acid
+      23  peg-rhg-csf                                  -> pegfilgrastim
+      22  onabotulinumtoxina                           -> botulinum toxin type A
+      22  rhtpo                                        -> aclarubicin
+      21  tqb2450                                      -> carboplatin
+      20  hypertonic saline                            -> sodium chloride
+      20  kn046                                        -> cisplatin + paclitaxel
+      19  dalteparin                                   -> enoxaparin sodium
+      18  18f-dcfpyl                                   -> piflufolastat F-18
+      18  fianlimab                                    -> cemiplimab
+      18  qva149                                       -> glycopyrronium bromide + indacaterol
+      17  atra                                         -> tretinoin
+
+  conflicting keys, top 25 by evidence (key | drug sets):
+    cyclophosphamide               cyclophosphamide x5846; carfilzomib x5; doxorubicin x4
+    cyclophosphamide               cyclophosphamide x5844; carfilzomib x5; doxorubicin x4
+    pembrolizumab                  pembrolizumab x3761; atezolizumab x7; arginine x7
+    pembrolizumab                  pembrolizumab x3759; atezolizumab x7; arginine x7
+    cisplatin                      cisplatin x3640; carboplatin x12; fluorouracil x7
+    cisplatin                      cisplatin x3640; carboplatin x12; fluorouracil x7
+    carboplatin                    carboplatin x3597; bevacizumab x4; cisplatin x4
+    carboplatin                    carboplatin x3596; bevacizumab x4; cisplatin x4
+    bevacizumab                    bevacizumab x3467; fluorouracil x8; arginine x7
+    bevacizumab                    bevacizumab x3467; fluorouracil x8; arginine x7
+    dexamethasone                  dexamethasone x3314; dexamethasone phosphate x61; dexamethasone acetate x31
+    dexamethasone                  dexamethasone x3314; dexamethasone phosphate x61; dexamethasone acetate x31
+    gemcitabine                    gemcitabine x3195; paclitaxel x6; fluorouracil x5
+    gemcitabine                    gemcitabine x3195; paclitaxel x6; fluorouracil x5
+    paclitaxel                     paclitaxel x3157; carboplatin x22; cisplatin x5
+    paclitaxel                     paclitaxel x3157; carboplatin x22; cisplatin x5
+    rituximab                      rituximab x3088; cyclophosphamide x13; methotrexate x3
+    rituximab                      rituximab x3088; cyclophosphamide x13; methotrexate x3
+    fludarabine                    fludarabine phosphate x2847; cyclophosphamide x40; busulfan x3
+    fludarabine                    fludarabine phosphate x2847; cyclophosphamide x40; busulfan x3
+    nivolumab                      nivolumab x2584; ipilimumab x6; atezolizumab x5
+    nivolumab                      nivolumab x2576; ipilimumab x6; atezolizumab x5
+    docetaxel                      docetaxel x2390; cisplatin x5; bevacizumab x4
+    docetaxel                      docetaxel x2390; cisplatin x5; bevacizumab x4
+    doxorubicin                    doxorubicin x2099; cyclophosphamide x24; carfilzomib x5
+
+==============================================================================
+3. CBER-TYPE PRODUCTS among W=5 unresolved market trials
+==============================================================================
+  not-resolved agents by AACT intervention type: {'DRUG': 5259, 'BIOLOGICAL': 1820}
+  by CBER word: {'vaccine': 614, 'toxoid': 34, 'plasma': 31, 'immunoglobulin': 27, 'immune globulin': 23, 'platelet': 17, 'blood': 14, 'cells': 11, 'allergen': 9, 'antivenin': 1, 'antivenom': 1, 'cell therapy': 1}
+  trials with a biological-typed or CBER-worded unresolved agent: 1383 of 5633 (24.6%). BIOLOGICAL also covers CDER antibodies: an upper bound.
+
+==============================================================================
+4. TAIL GUARDS on pivotal agents read as NOT approved before readout
+==============================================================================
+  pivotal agents not approved before readout: 4522
+
+  a. single moiety, no stated form, DrugCentral FDA date before readout: agents 26; W=5 labelled trials touched 15
+       9  gemtuzumab ozogamicin                    2000-05-17
+       7  belantamab mafodotin                     2020-05-08
+       7  daclizumab                               1997-12-10
+       2  lemborexant                              2019-12-20
+       1  ketotifen                                1999-07-02
+
+  b. every moiety DrugCentral-FDA-dated before readout (old + old): agents 566; W=5 labelled trials touched 350
+      17  elexacaftor + ivacaftor + tezacaftor     
+       9  amlodipine + valsartan                   
+       8  hydrocodone + paracetamol                
+       7  aclidinium bromide + formoterol          
+       7  amlodipine + irbesartan                  
+       7  cisplatin + gemcitabine                  
+       7  esomeprazole + naproxen                  
+       6  aripiprazole + topiramate                
+       6  fenofibrate + simvastatin                
+       6  lidocaine + tetracaine                   
+       5  carboplatin + paclitaxel                 
+       5  fluticasone propionate + formoterol      
+       5  ibuprofen + paracetamol                  
+       4  amiloride + chlortalidone                
+       4  amlodipine + indapamide + telmisartan    
+       4  azithromycin + chloroquine               
+       4  azithromycin + hydroxychloroquine        
+       4  chlortalidone + olmesartan medoxomil     
+       4  cisplatin + docetaxel                    
+       4  oxymetazoline + tetracaine               
+       4  paracetamol + tramadol                   
+       4  timolol + travoprost                     
+       3  acetylsalicylic acid + omeprazole        
+       3  acetylsalicylic acid + ticagrelor        
+       3  adapalene + benzoyl peroxide             
+
+  c. a moiety with an undated DrugCentral FDA row: agents 44; W=5 labelled trials touched 32
+      15  prasterone                               
+       4  calcium gluconate                        
+       3  amodiaquine + artesunate                 
+       2  arginine + vasopressin                   
+       2  ascorbic acid + hydrocortisone + thiamin 
+       2  diclofenac + levomenthol                 
+       2  morphine                                 
+       2  morphine + naltrexone                    
+       1  amodiaquine + pyrimethamine + sulfadoxin 
+       1  desflurane + nitrous oxide               
+       1  dydrogesterone + estradiol               
+       1  epinephrine + hydrocortisone + methylpre 
+       1  fentanyl + methadone + morphine + oxycod 
+       1  fentanyl + morphine                      
+       1  helium + oxygen                          
+       1  hydrogen peroxide                        
+       1  levomenthol                              
+       1  methenamine + methylthioninium chloride  
+       1  nitric oxide + oxygen                    
+       1  oxygen                                   
