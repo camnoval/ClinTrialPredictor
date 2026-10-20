@@ -100,6 +100,33 @@ def _record(verdict: str, reason: str, label: Optional[int]) -> dict:
     return {"verdict": verdict, "reason": reason, "label": label}
 
 
+class Links(NamedTuple):
+    floor: tuple                  # later-phase, same-disease trials registered BEFORE t
+    within: tuple                 # those registered from t's submission to readout + W
+
+
+def linked_trials(t: TrialFacts, index: AdvancementIndex, window_years: int,
+                  rule: str) -> Links:
+    """The trials behind t's label, each once, ordered by nct_id. The label reads only
+    this, so a diagnostic that asks WHICH trial made a 1 sees exactly what the label saw.
+    Needs t.phase in PHASE_RANK, t.submitted and t.readout."""
+    end = years_after(t.readout, window_years)
+    rank = PHASE_RANK[t.phase]
+    floor, within = {}, {}
+    for k in sorted(t.names):
+        for o in index.by_key.get(k, ()):
+            if o.nct_id == t.nct_id or PHASE_RANK[o.phase] <= rank:
+                continue
+            if not same_disease(t, o, rule):
+                continue
+            if o.submitted < t.submitted:
+                floor[o.nct_id] = o
+            elif o.submitted <= end:
+                within[o.nct_id] = o
+    return Links(tuple(floor[n] for n in sorted(floor)),
+                 tuple(within[n] for n in sorted(within)))
+
+
 def trial_advancement_label(eligibility: dict, t: TrialFacts, index: AdvancementIndex,
                             window_years: int, rule: str) -> dict:
     if eligibility["verdict"] != ELIGIBLE:
@@ -112,16 +139,7 @@ def trial_advancement_label(eligibility: dict, t: TrialFacts, index: Advancement
         return _record(UNDETERMINABLE, REASON_NO_CONDITION, None)
     if t.submitted is None or t.readout is None:
         return _record(UNDETERMINABLE, REASON_NO_REGISTRATION, None)
-    end = years_after(t.readout, window_years)
-    rank, linked = PHASE_RANK[t.phase], False
-    for k in sorted(t.names):
-        for o in index.by_key.get(k, ()):
-            if o.nct_id == t.nct_id or PHASE_RANK[o.phase] <= rank:
-                continue
-            if not same_disease(t, o, rule):
-                continue
-            if o.submitted < t.submitted:
-                return _record(INELIGIBLE, REASON_FLOOR, None)
-            if o.submitted <= end:
-                linked = True
-    return _record(ELIGIBLE, "", LABEL_POSITIVE if linked else LABEL_NEGATIVE)
+    links = linked_trials(t, index, window_years, rule)
+    if links.floor:
+        return _record(INELIGIBLE, REASON_FLOOR, None)
+    return _record(ELIGIBLE, "", LABEL_POSITIVE if links.within else LABEL_NEGATIVE)

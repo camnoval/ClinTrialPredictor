@@ -41,6 +41,10 @@ rev 10 figure that §3 does not list as verified.
 
 ## 1. State
 
+- **2026-10-19 (training-design delivery, `training_design.zip`):** gate **1062 passed**
+  (1049 + 9 `test_temporal_split.py` + 3 in `test_advancement_label.py`). Labels unchanged:
+  the advancement refactor reproduces the frozen label (a test, and the probe's own check).
+  Then run `audit\probe_training_design.py` (§5). Decisions D-54 to D-57 are in §2.
 - **2026-10-13 (labels delivery, `labels_all.zip`):** gate **1049 passed**. Then, in order:
   1. `resolve_trial_drugs.py --overwrite` (v10: learned codes on, D-50; Purple Book
      identity key changed, D-49);
@@ -402,6 +406,18 @@ D-32 statement; supersedes rev 7 §1.2's `market_fda_indication` as the target t
 - Computed for W = 3, 5 and 10 in one file; D-10's lag picks the headline.
 - The snapshot is a required flag and may not be later than either source's currency.
 
+**D-53 (2026-10-13, owner) LABELS FROZEN; the next work is training.**
+- After the labels-delivery runs (resolver v10, matcher v5, targets v4), `trial_targets.csv`
+  is the label set. Label work stops.
+- The last fixes each moved under 1% of labels (D-48, D-49, D-52's likely size), and the
+  goal is a trained predictor.
+- Deferred as KNOWN LIMITATIONS, revisited only if training results justify it:
+  - D-52 (new plus background drug in one intervention);
+  - the D-25 hand-check sample, and with it labelling unresolved market trials 0;
+  - market's selection bias (§4): labelled trials over-represent drugs approved somewhere.
+- Training order: endpoint met first (the cleanest label, independent of drug resolution),
+  then advancement, then market, marked EXPERIMENTAL with its selection bias stated.
+
 **D-49 (2026-10-13; amends D-46) A Purple Book identity ignores form words; a product
 keeps its own identity.**
 - The identity key is the proper name in INN spelling with dose and form words removed
@@ -423,6 +439,10 @@ keeps its own identity.**
   and are correct (BMS-734016 ipilimumab, ABT-199 venetoclax, LCZ696 Entresto with 35
   agents, CPX-351 Vyxeos, CTL019 tisagenlecleucel, many biosimilar codes); 42 conflicts
   refused. Expected effect: about 504 agents, 100 W=5 unresolved market trials.
+- **Corrected 2026-10-19:** the review read 150 of the 664 kept codes, not all of them. Among
+  the 514 not shown, resolver v10's route review has SHR-1210 -> apatinib (SHR-1210 is
+  camrelizumab; at least 67 agents in the truncated tables) and MK-8507 -> clofedanol
+  (MK-8507 is ulonivirine). Mechanism and limitation in §6.
 
 **D-51 (2026-10-13) The advancement label as built** (`services/advancement_label.py`;
 D-37, D-38; phase 3 out as proposed). `advancement_same_disease_wW_{exact,family}` for
@@ -630,6 +650,83 @@ still applies to unstated forms without a brand.
   Axiron 2, AzaSite 2, Endometrin 2, Acthar, Actiq, Astepro, Bethkis, … Every example is a
   distinct later product.
 
+Entries D-54 onwards were made 2026-10-19, at the start of training (rev 11 §7 item 5).
+They rest on the three labels-delivery run outputs (`resolve_trial_drugs_20261001_v10.txt`,
+`match_form_approvals_20261001_v5.txt`, `build_targets_20261001_v4.txt`; figures in §4) and
+on the literature named in them.
+
+**D-54 (2026-10-19, owner) Endpoint met: ANY primary met is the target; ALL is the
+sensitivity.** Closes rev 7 §1.3 item 4 and §8.4.
+- The headline is `endpoint_met_label` in `trial_targets.csv` as frozen (D-53), which is
+  `endpoint_met_strict`, read from `any_primary_met`. The gate's roll-up stays ANY
+  (`endpoint_type.DEFAULT_GATE_ROLLUP`, pinned to the label by a test).
+- `all_primary_met` (in `trial_labels.csv`) is scored on the SAME eligible trials as a
+  sensitivity. It is reported, never served, and never changes eligibility.
+- The user-facing sentence must say "met at least one of its primary endpoints", and the
+  co-primary clause (rev 9 §12.17) stays.
+
+**D-55 (2026-10-19) Headline metric: the Brier skill score, one per target.** Owner: "Brier
+skill if we can get that baseline data from the literature." **The reference forecast is
+PROPOSED by the assistant, owner to confirm.**
+- Literature checked 2026-10-19:
+  - Endpoint met has a close anchor. Of 2,823 completed phase 3/4 superiority RCTs with
+    results on ClinicalTrials.gov (searched June 2015), 60% of those posting an effect
+    estimate or p-value were significant (*literature*, Dechartres et al., BMC Medicine
+    2016, doi 10.1186/s12916-016-0740-1). The eligible endpoint-met rate here is 60.7%
+    (8,187 of 13,487, *arithmetic*).
+  - Advancement and market have only programme-level rates from Biomedtracker: phase
+    transition success I 63.2%, II 30.7%, III 58.1% (*literature*, BIO, Biomedtracker and
+    Amplion, Clinical Development Success Rates 2006-2015, 2016); likelihood of approval
+    from phase I 7.9% for 2011-2020 (*literature*, BIO, Informa and QLS, 2021). Those count
+    a programme's next phase in any indication with no window; advancement here is a
+    same-disease registry link within 3 years (16.0% at W=3 exact).
+- **Why a literature rate cannot be the reference:** a Brier skill score compares the model
+  with a reference forecast on the SAME test trials and the SAME label. A constant from a
+  different definition is miscalibrated against this label by construction, so a model
+  beats it by learning the base rate alone, and the bar stops meaning "the model works".
+- **Proposal:** the reference is the rate by phase on the training side of each target's
+  temporal split (rev 10 §14 item 8's phase-rate baseline, known before any test trial ran).
+  The literature rates are printed beside it as external plausibility anchors, each with its
+  denominator.
+- **The bar:** a model counts as working when its Brier skill score on the temporal test set
+  is above 0 and the paired-bootstrap 95% interval lies above 0. Log loss, AUROC, ECE and
+  the reliability curve are reported beneath it, never in its place.
+
+**D-56 (2026-10-19, owner) Features may use every `editable_current_value` field.** Owner's
+reason: a next question is "how can this trial improve its odds", and sites and countries
+are levers a sponsor controls.
+- `post_hoc` fields are never features for any target (they do not exist at serving).
+  `registration` and `editable_current_value` are admitted for all three targets.
+- A registration-only model is fitted beside every headline model as a pre-registered
+  sensitivity, so what the editable fields add is measured, not assumed.
+- **What would make this not good**, to be checked in the results, not assumed:
+  - editable fields updated BECAUSE of how the trial went carrying the model:
+    `has_expanded_access` (added once a drug looks promising; posts results at 73.3%,
+    rev 9 §12.23), `verification_date` (a stale date marks an abandoned record), and the
+    registered outcome counts, which are revised at results posting, the endpoint-met
+    label's own event (rev 9 §12.22);
+  - a gap between the headline and the registration-only model that those fields explain;
+  - training sees final values (completed trials) and serving sees mid-trial ones (sites
+    still opening), so a site count means less at serving than in training;
+  - an association read as a lever. "More sites, higher odds" is not "adding sites raises
+    the odds". The improve-the-odds question is a later, causal one and is not answered by
+    these models' coefficients.
+
+**D-57 (2026-10-19, owner) The registry's start is a left truncation; early data is cut in
+the split, not in the labels.** Owner: "we don't have historical data that isn't in
+ClinicalTrials.gov."
+- Evidence: advancement's positive rate at W=3 exact falls 58.8% (1998-2000), 46.9%,
+  26.3% (2004-2006), then 13.9% to 16.8% in every band from 2007-2009 to 2022-2024
+  (`build_targets_20261001_v4.txt` §4). The bands before 2007 hold 1,789 of 29,871 labels
+  (6.0%, *arithmetic*).
+- Hypothesis, tested by `probe_training_design.py` §2: the D-38 floor and the link both
+  read registration dates, so a later-phase trial already running when the focal trial
+  registered (for example one registered in the 2005 ICMJE wave) counts as advancement
+  instead of the floor.
+- The cut year is set from the probe's output, then applied by the split, so the frozen
+  labels (D-53) do not change. The same truncation applies to drug-history features
+  (prior trials of the same drug), which the probe's §3 measures by band for every target.
+
 ---
 
 ## 3. Rev 10 claims, checked
@@ -660,7 +757,19 @@ Refuted or corrected:
 
 ## 4. Measured on the owner's machine
 
-Labels delivery, `labels_all.zip`, 2026-10-13, not yet run on the owner's data:
+Labels-delivery runs (2026-10-13, resolver v10, matcher v5, targets v4; read 2026-10-19):
+- Resolver v10: resolved 152,307 (53.7%), partial 10,165, ambiguous 125, unresolved 120,959.
+  Learned codes kept 664; agents resolved through one in pass 2: 1,633.
+- Matcher v5: NDA/BLA products 14,395 (BLA 3,095). Pivotal agents with an actual readout
+  20,234 in 14,863 trials: approved before readout 15,195 (75.1%), not 4,630 (22.9%),
+  undeterminable 409 (2.0%, *arithmetic*).
+- Targets v4: endpoint met eligible 13,487 = 8,187 met / 5,300 not met (unchanged). Lag
+  H=10: 871 decisive identities, 62.2% / 61.8% approved within 10 years (loose / strict),
+  p90 5.81y. Market W=5: 2,787 labelled, 1,815 / 972 (65.1%); W=3 3,008 (52.1%); W=10 2,035
+  (72.7%). Advancement W=3 exact: 29,871 labelled, 4,773 / 25,098 (16.0%); family 27,377
+  (18.9%).
+
+Labels delivery, `labels_all.zip`, 2026-10-13, RUN (above):
 - `services/advancement_label.py` (new, D-51).
 - `services/learned_codes.py` (new, D-50).
 - `purplebook.py`: `purple_book_identity_key` (D-49).
@@ -966,6 +1075,21 @@ without its salt).
 
 ## 5. Built this session
 
+Training-design delivery, `training_design.zip`, 2026-10-19, NOT YET RUN:
+- `services/temporal_split.py` (new): rev 7 §4.3 as a function. Train = outcome determined
+  before the boundary, under two readings (`readout`; `label_known` = readout + the target's
+  label lag); test = started on or after it (actual starts only, or any recorded start);
+  straddlers dropped; inconsistent dates and missing dates undeterminable, never forced.
+- `services/advancement_label.py`: `linked_trials` returns the trials behind a label (floor
+  and within-window); the label now reads it. Behaviour unchanged, pinned by a test against
+  the original loop on random trials.
+- `audit/probe_training_design.py` (new, scratch): band rates and the phase-rate baseline
+  (D-54, D-55); advancement's early-band mechanism and floor share (D-57); drug-history
+  truncation by band; the split grid per target with events counts; coverage of every
+  fields-file column by provenance (D-56). It recomputes the W=3 exact advancement label and
+  stops if it differs from `trial_targets.csv`.
+- Tests: `tests/test_temporal_split.py` (new, 9); `tests/test_advancement_label.py` (+3).
+
 Market-fixes probe, delivered 2026-10-13, NOT YET RUN: `audit/probe_market_fixes.py`.
 It sizes each D-39 fix:
 - the micro-sign bug (agents recovered);
@@ -1092,6 +1216,20 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
   vaginal misoprostol, intravitreal bevacizumab). That is correct for "approval of the
   stated form", and worth remembering when reading the market label.
 - **(2026-10-13) 'ER' can mean emergency room** ('etomidate … ER'). Not special-cased.
+- **(2026-10-19) Learned codes can be a partner drug (D-44/D-47).** `alias_rejection`'s
+  third test fires only on INN-shaped words in the intervention's own name. An intervention
+  named only by a code ('SHR-1210') whose single resolving other name is its partner
+  ('apatinib') passes all three tests, and D-47 then learns the code from every such trial.
+  Touches market labels and drug-id features only: endpoint met does not use resolution,
+  and advancement links on registry names (D-37). At most about 100 W=5 market labels rest
+  on learned codes (D-50). Before market training: a co-occurrence probe (a code that is its
+  own intervention in a trial where its learned drug is a separate intervention cannot be
+  that drug's alias).
+- **(2026-10-19) `drug_names.compact` drops every non-ASCII letter.** 'tβ4' (thymosin
+  beta-4) compacts to 't4' and resolves to levothyroxine, D-23's T4 case by another route.
+  Market only; a handful of agents.
+- **(2026-10-19) `eligibility.DEFAULT_MARKET_WINDOW_YEARS` is still 3** against D-36's W=5.
+  `build_targets.py` passes W explicitly; training code must too, never the default.
 
 ---
 
@@ -1108,9 +1246,30 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
      problem (probe run: unresolved cannot be labelled 0; what to do with the market
      target asked 2026-10-13), the three tail-artefact guards.
 4a. Advancement label: BUILT 2026-10-13 (D-51), in `trial_targets.csv`.
-4b. Open before training: D-52 (new plus background drug), from matcher section 5's numbers.
-    Then the D-25 sample, which measures resolver precision and recall: the condition for
-    labelling unresolved market trials 0 (the selection-bias fix).
+4b. LABELS FROZEN (D-53). D-52 and the D-25 sample are deferred limitations.
+5.  NEXT: training.
+    a. ~~Sanity-check the three run outputs~~ done 2026-10-19 (D-50 corrected; §6).
+    b. Rev 10 §14 items 3 to 7 before any model:
+       - pre-model decisions: multi-endpoint reading DECIDED (D-54); headline metric
+         DECIDED as the Brier skill score, reference forecast proposed (D-55, owner to
+         confirm); editable fields DECIDED (D-56); left truncation DECIDED, cut year from
+         the probe (D-57). STILL OPEN: `TRAINING_EXCLUSION_MIN_EFFECT`. Proposal: in the
+         headline metric, excluding gate-refused trials counts as an improvement only when
+         the paired-bootstrap 95% interval of the difference lies on the improve side. Only
+         306 of 13,793 rows differ (2.2%, *arithmetic*), so "indistinguishable" is the
+         likely result, which rev 8 §12.11 already counts as a finding.
+       - RUN `audit\probe_training_design.py` (delivered 2026-10-19), then choose each
+         target's split boundary and train rule, the advancement cut year, and the
+         feature-build design from its output;
+       - the feature builder, with the leakage registry asserted in code. Features come
+         from `trial_registration_fields.csv` through its provenance file, never from
+         `trial_labels.csv` (which mixes post-hoc and label columns). Resolution and
+         approval facts enter only when dated before the trial's own registration: "the
+         tested agent resolves to DrugCentral" leaks later approval into all three targets.
+         Drug-history features use registry name keys as of the registration date;
+       - temporal splits that print each target's events count (`services/temporal_split.py`).
+    c. Endpoint met first against the phase-rate baseline, then advancement, then market
+       (experimental, its selection bias stated in its output).
    - Then the lag script, on `trial_drug_form_approvals.csv`.
 4b. Then the resolution sample per D-25.
 5. Rev 10 §14 items 3–9.
