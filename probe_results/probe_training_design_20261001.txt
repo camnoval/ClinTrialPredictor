@@ -1,0 +1,382 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  targets ['endpoint_met', 'advancement_w3_exact', 'market_w5'] | label lags [0, 3, 5] | bands 3y | boundaries 2008-2022 | left cut 2007 | min band trials 100
+  targets rows 461824; drug trials 222329; fields rows 461824; agents with a name key 179820; labelled: endpoint_met 13487, advancement_w3_exact 29871, market_w5 2787
+
+==============================================================================
+1. POSITIVE RATE BY READOUT BAND (endpoint met also by phase: the phase-rate baseline, D-55; all-met is the D-54 sensitivity)
+==============================================================================
+
+  endpoint_met: labelled 13487, positive 60.7%
+    2001-2003  labelled      8  positive 87.5%
+    2004-2006  labelled    142  positive 69.7%
+    2007-2009  labelled   1732  positive 65.9%
+    2010-2012  labelled   2218  positive 62.8%
+    2013-2015  labelled   2376  positive 62.5%
+    2016-2018  labelled   2526  positive 59.1%
+    2019-2021  labelled   2248  positive 57.9%
+    2022-2024  labelled   1934  positive 56.5%
+    2025-2027  labelled    300  positive 57.3%
+    none       labelled      3  positive 66.7%
+
+  advancement_w3_exact: labelled 29871, positive 16.0%
+    1998-2000  labelled    119  positive 58.8%
+    2001-2003  labelled    529  positive 46.9%
+    2004-2006  labelled   1141  positive 26.3%
+    2007-2009  labelled   3880  positive 16.8%
+    2010-2012  labelled   5075  positive 14.1%
+    2013-2015  labelled   5047  positive 14.6%
+    2016-2018  labelled   5204  positive 14.1%
+    2019-2021  labelled   5397  positive 15.5%
+    2022-2024  labelled   3479  positive 13.9%
+
+  market_w5: labelled 2787, positive 65.1%
+    1998-2000  labelled      4  positive 75.0%
+    2001-2003  labelled     32  positive 46.9%
+    2004-2006  labelled    248  positive 64.9%
+    2007-2009  labelled    578  positive 61.8%
+    2010-2012  labelled    583  positive 64.7%
+    2013-2015  labelled    495  positive 68.5%
+    2016-2018  labelled    467  positive 63.6%
+    2019-2021  labelled    380  positive 70.0%
+
+  endpoint_met by phase (n, any-met rate):
+    EARLY_PHASE1       67  67.2%
+    PHASE1            275  64.7%
+    PHASE1/PHASE2     389  54.5%
+    PHASE2           4137  49.2%
+    PHASE2/PHASE3     413  59.6%
+    PHASE3           5640  70.1%
+    PHASE4           1916  59.5%
+    not_applicable    650  57.8%
+  endpoint_met, all-primaries-met reading on the same trials, by band:
+    2001-2003       8  75.0%
+    2004-2006     142  64.1%
+    2007-2009    1732  61.1%
+    2010-2012    2218  57.8%
+    2013-2015    2376  56.5%
+    2016-2018    2526  52.5%
+    2019-2021    2248  50.6%
+    2022-2024    1934  49.7%
+    2025-2027     300  49.7%
+    none            3  66.7%
+
+==============================================================================
+2. ADVANCEMENT (advancement_w3_exact): recomputed label check, then the floor mechanism
+==============================================================================
+  recomputed labels differing from trial_targets.csv: 0
+  among 1s, by band: linking trials ALREADY RUNNING (started before the focal trial was registered) all / some / none / start unknown; and the floor's share
+    1998-2000  1s    70  all    5.7%  some   67.1%  none    7.1%  unknown   20.0%  | floor     15 of    134 (11.2%)
+    2001-2003  1s   248  all    7.7%  some   49.6%  none   21.0%  unknown   21.8%  | floor    220 of    749 (29.4%)
+    2004-2006  1s   300  all    8.7%  some   25.0%  none   51.3%  unknown   15.0%  | floor    589 of   1730 (34.0%)
+    2007-2009  1s   650  all    5.8%  some    9.7%  none   80.0%  unknown    4.5%  | floor   1777 of   5657 (31.4%)
+    2010-2012  1s   715  all    2.9%  some    4.5%  none   90.9%  unknown    1.7%  | floor   2450 of   7525 (32.6%)
+    2013-2015  1s   736  all    2.0%  some    2.3%  none   95.0%  unknown    0.7%  | floor   2492 of   7539 (33.1%)
+    2016-2018  1s   736  all    1.6%  some    1.5%  none   96.7%  unknown    0.1%  | floor   2552 of   7756 (32.9%)
+    2019-2021  1s   834  all    0.7%  some    1.1%  none   98.1%  unknown    0.1%  | floor   2751 of   8148 (33.8%)
+    2022-2024  1s   484  all    0.8%  some    0.6%  none   98.3%  unknown    0.2%  | floor   1754 of   5233 (33.5%)
+
+==============================================================================
+3. DRUG HISTORY: prior registered trials sharing the most-registered name key (registered before this trial), by band
+==============================================================================
+
+  endpoint_met: no name key or registration date 2814
+    2001-2003  n      6  none prior   83.3%  median     0.0
+    2004-2006  n    121  none prior   52.1%  median     0.0
+    2007-2009  n   1305  none prior   32.8%  median     2.0
+    2010-2012  n   1729  none prior   26.8%  median     4.0
+    2013-2015  n   1877  none prior   23.8%  median     6.0
+    2016-2018  n   1978  none prior   23.9%  median     5.0
+    2019-2021  n   1806  none prior   23.1%  median     5.0
+    2022-2024  n   1609  none prior   22.9%  median     5.0
+    2025-2027  n    240  none prior   17.1%  median     6.0
+    none       n      2  none prior    0.0%  median    37.0
+
+  advancement_w3_exact: no name key or registration date 0
+    1998-2000  n    119  none prior   58.8%  median     0.0
+    2001-2003  n    529  none prior   52.9%  median     0.0
+    2004-2006  n   1141  none prior   51.0%  median     0.0
+    2007-2009  n   3880  none prior   54.3%  median     0.0
+    2010-2012  n   5075  none prior   50.8%  median     0.0
+    2013-2015  n   5047  none prior   49.4%  median     1.0
+    2016-2018  n   5204  none prior   48.0%  median     1.0
+    2019-2021  n   5397  none prior   47.5%  median     1.0
+    2022-2024  n   3479  none prior   49.0%  median     1.0
+
+  market_w5: no name key or registration date 0
+    1998-2000  n      4  none prior   75.0%  median     0.0
+    2001-2003  n     32  none prior   40.6%  median     1.0
+    2004-2006  n    248  none prior   47.6%  median     1.0
+    2007-2009  n    578  none prior   28.2%  median     2.0
+    2010-2012  n    583  none prior   20.8%  median     3.0
+    2013-2015  n    495  none prior   17.0%  median     5.0
+    2016-2018  n    467  none prior   17.6%  median     4.0
+    2019-2021  n    380  none prior   18.4%  median     4.5
+
+==============================================================================
+4. TEMPORAL SPLITS (rev 7 section 4.3): train | test | dropped, events = minority class; start rule actual, '+any' = test trials gained if unconfirmed starts count
+==============================================================================
+
+  endpoint_met, outcome determined by 'readout' (label lag 0y):
+    year   train n events  pos%  |  test n events  pos%  | straddle  undet  +any
+    2008      378    104  72.5% |    7275   2922  59.8% |     1799   4035  4033
+    2009     1107    367  66.8% |    7118   2873  59.6% |     1886   3376  3374
+    2010     1882    634  66.3% |    6921   2798  59.6% |     1960   2724  2722
+    2011     2614    892  65.9% |    6722   2714  59.6% |     2033   2118  2116
+    2012     3352   1176  64.9% |    6482   2609  59.8% |     2083   1570  1567
+    2013     4100   1458  64.4% |    6179   2508  59.4% |     2092   1116  1114
+    2014     4865   1738  64.3% |    5793   2365  59.2% |     2132    697   695
+    2015     5667   2042  64.0% |    5303   2163  59.2% |     2153    364   361
+    2016     6476   2348  63.7% |    4656   1894  59.3% |     2208    147   144
+    2017     7303   2686  63.2% |    3942   1610  59.2% |     2232     10     8
+    2018     8162   3043  62.7% |    3130   1286  58.9% |     2193      2     0
+    2019     9002   3382  62.4% |    2411    998  58.6% |     2071      3     0
+    2020     9842   3723  62.2% |    1717    713  58.5% |     1925      3     0
+    2021    10580   4047  61.7% |    1116    444  60.2% |     1788      3     0
+    2022    11250   4329  61.5% |     567    214  62.3% |     1667      3     0
+    undeterminable reasons at the last boundary: starts_on_or_after_boundary_but_outcome_known_before 0, readout_not_actual 3, start_date_absent 0, start_date_not_actual 0
+
+  endpoint_met, outcome determined by 'label_known' (label lag 0y):
+    year   train n events  pos%  |  test n events  pos%  | straddle  undet  +any
+    2008      378    104  72.5% |    7275   2922  59.8% |     1799   4035  4033
+    2009     1107    367  66.8% |    7118   2873  59.6% |     1886   3376  3374
+    2010     1882    634  66.3% |    6921   2798  59.6% |     1960   2724  2722
+    2011     2614    892  65.9% |    6722   2714  59.6% |     2033   2118  2116
+    2012     3352   1176  64.9% |    6482   2609  59.8% |     2083   1570  1567
+    2013     4100   1458  64.4% |    6179   2508  59.4% |     2092   1116  1114
+    2014     4865   1738  64.3% |    5793   2365  59.2% |     2132    697   695
+    2015     5667   2042  64.0% |    5303   2163  59.2% |     2153    364   361
+    2016     6476   2348  63.7% |    4656   1894  59.3% |     2208    147   144
+    2017     7303   2686  63.2% |    3942   1610  59.2% |     2232     10     8
+    2018     8162   3043  62.7% |    3130   1286  58.9% |     2193      2     0
+    2019     9002   3382  62.4% |    2411    998  58.6% |     2071      3     0
+    2020     9842   3723  62.2% |    1717    713  58.5% |     1925      3     0
+    2021    10580   4047  61.7% |    1116    444  60.2% |     1788      3     0
+    2022    11250   4329  61.5% |     567    214  62.3% |     1667      3     0
+    undeterminable reasons at the last boundary: starts_on_or_after_boundary_but_outcome_known_before 0, readout_not_actual 3, start_date_absent 0, start_date_not_actual 0
+
+  advancement_w3_exact, outcome determined by 'readout' (label lag 3y):
+    year   train n events  pos%  |  test n events  pos%  | straddle  undet  +any  | train n events with left cut
+    2008     2798    817  29.2% |   13403   2028  15.1% |     3428  10242 10225  |    1009    199
+    2009     4169   1055  25.3% |   13125   1981  15.1% |     3778   8799  8784  |    2380    437
+    2010     5669   1268  22.4% |   12822   1933  15.1% |     4078   7302  7287  |    3880    650
+    2011     7328   1515  20.7% |   12451   1873  15.0% |     4221   5871  5857  |    5539    897
+    2012     9035   1752  19.4% |   12038   1801  15.0% |     4280   4518  4504  |    7246   1134
+    2013    10744   1983  18.5% |   11598   1737  15.0% |     4201   3328  3315  |    8955   1365
+    2014    12376   2268  18.3% |   11021   1641  14.9% |     4202   2272  2260  |   10587   1650
+    2015    14118   2494  17.7% |   10289   1500  14.6% |     4185   1279  1272  |   12329   1876
+    2016    15791   2719  17.2% |    9345   1347  14.4% |     4217    518   513  |   14002   2101
+    2017    17609   2997  17.0% |    8103   1149  14.2% |     4110     49    46  |   15820   2379
+    2018    19280   3233  16.8% |    6397    903  14.1% |     4163     31    30  |   17491   2615
+    2019    20995   3455  16.5% |    4837    683  14.1% |     4013     26    25  |   19206   2837
+    2020    22803   3734  16.4% |    3358    475  14.1% |     3687     23    23  |   21014   3116
+    2021    24493   4002  16.3% |    1943    255  13.1% |     3420     15    15  |   22704   3384
+    2022    26392   4289  16.3% |     744    108  14.5% |     2728      7     7  |   24603   3671
+    undeterminable reasons at the last boundary: starts_on_or_after_boundary_but_outcome_known_before 0, readout_not_actual 0, start_date_absent 0, start_date_not_actual 7
+
+  advancement_w3_exact, outcome determined by 'label_known' (label lag 3y):
+    year   train n events  pos%  |  test n events  pos%  | straddle  undet  +any  | train n events with left cut
+    2008      851    379  44.5% |   13403   2028  15.1% |     5362  10255 10225  |       0      0
+    2009     1174    473  40.3% |   13125   1981  15.1% |     6766   8806  8784  |       0      0
+    2010     1789    618  34.5% |   12822   1933  15.1% |     7954   7306  7287  |       0      0
+    2011     2798    817  29.2% |   12451   1873  15.0% |     8748   5874  5857  |    1009    199
+    2012     4169   1055  25.3% |   12038   1801  15.0% |     9145   4519  4504  |    2380    437
+    2013     5669   1268  22.4% |   11598   1737  15.0% |     9274   3330  3315  |    3880    650
+    2014     7328   1515  20.7% |   11021   1641  14.9% |     9248   2274  2260  |    5539    897
+    2015     9035   1752  19.4% |   10289   1500  14.6% |     9261   1286  1272  |    7246   1134
+    2016    10744   1983  18.5% |    9345   1347  14.4% |     9256    526   513  |    8955   1365
+    2017    12376   2268  18.3% |    8103   1149  14.2% |     9334     58    46  |   10587   1650
+    2018    14118   2494  17.7% |    6397    903  14.1% |     9319     37    30  |   12329   1876
+    2019    15791   2719  17.2% |    4837    683  14.1% |     9213     30    25  |   14002   2101
+    2020    17609   2997  17.0% |    3358    475  14.1% |     8878     26    23  |   15820   2379
+    2021    19280   3233  16.8% |    1943    255  13.1% |     8632     16    15  |   17491   2615
+    2022    20995   3455  16.5% |     744    108  14.5% |     8124      8     7  |   19206   2837
+    undeterminable reasons at the last boundary: starts_on_or_after_boundary_but_outcome_known_before 0, readout_not_actual 0, start_date_absent 1, start_date_not_actual 7
+
+  market_w5, outcome determined by 'readout' (label lag 5y):
+    year   train n events  pos%  |  test n events  pos%  | straddle  undet  +any
+    2008      443    162  63.4% |     992    314  68.3% |      366    986   981
+    2009      641    240  62.6% |     962    303  68.5% |      388    796   792
+    2010      862    326  62.2% |     926    288  68.9% |      353    646   642
+    2011     1069    402  62.4% |     889    271  69.5% |      343    486   482
+    2012     1259    472  62.5% |     846    248  70.7% |      348    334   330
+    2013     1445    532  63.2% |     793    226  71.5% |      332    217   215
+    2014     1631    598  63.3% |     712    211  70.4% |      308    136   134
+    2015     1794    643  64.2% |     614    175  71.5% |      308     71    69
+    2016     1940    688  64.5% |     491    143  70.9% |      330     26    24
+    2017     2100    746  64.5% |     364    104  71.4% |      319      4     2
+    2018     2255    798  64.6% |     251     79  68.5% |      281      0     0
+    2019     2407    858  64.4% |     132     44  66.7% |      248      0     0
+    2020     2535    896  64.7% |      44     22  50.0% |      208      0     0
+    2021     2698    943  65.0% |       2      0   0.0% |       87      0     0
+    2022     2787    972  65.1% |       0      0 undefined |        0      0     0
+    undeterminable reasons at the last boundary: starts_on_or_after_boundary_but_outcome_known_before 0, readout_not_actual 0, start_date_absent 0, start_date_not_actual 0
+
+  market_w5, outcome determined by 'label_known' (label lag 5y):
+    year   train n events  pos%  |  test n events  pos%  | straddle  undet  +any
+    2008       19      8  57.9% |     992    314  68.3% |      781    995   981
+    2009       36     18  50.0% |     962    303  68.5% |      984    805   792
+    2010       62     26  58.1% |     926    288  68.9% |     1148    651   642
+    2011      137     55  59.9% |     889    271  69.5% |     1274    487   482
+    2012      284    105  63.0% |     846    248  70.7% |     1322    335   330
+    2013      443    162  63.4% |     793    226  71.5% |     1331    220   215
+    2014      641    240  62.6% |     712    211  70.4% |     1296    138   134
+    2015      862    326  62.2% |     614    175  71.5% |     1238     73    69
+    2016     1069    402  62.4% |     491    143  70.9% |     1199     28    24
+    2017     1259    472  62.5% |     364    104  71.4% |     1158      6     2
+    2018     1445    532  63.2% |     251     79  68.5% |     1089      2     0
+    2019     1631    598  63.3% |     132     44  66.7% |     1022      2     0
+    2020     1794    643  64.2% |      44     22  50.0% |      947      2     0
+    2021     1940    688  64.5% |       2      0   0.0% |      843      2     0
+    2022     2100    746  64.5% |       0      0 undefined |      685      2     0
+    undeterminable reasons at the last boundary: starts_on_or_after_boundary_but_outcome_known_before 0, readout_not_actual 0, start_date_absent 2, start_date_not_actual 0
+
+==============================================================================
+5. FEATURE COVERAGE (trial_registration_fields.csv): non-blank share per target, overall [band min-max over bands with >= 100 trials]; distinct values in the endpoint_met population
+==============================================================================
+
+  provenance editable_current_value:
+    calculated_values__has_single_facility               column    94.6% [82-100]    96.4% [92-99]     90.5% [76-99]    distinct 2
+    calculated_values__has_us_facility                   column    94.6% [82-100]    96.4% [92-99]     90.5% [76-99]    distinct 2
+    calculated_values__number_of_facilities              column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 547
+    calculated_values__number_of_other_outcomes_to_measu column     9.5% [7-11]       7.1% [1-12]       7.9% [2-10]     distinct 36
+    calculated_values__number_of_primary_outcomes_to_mea column   100.0% [100-100]   97.0% [29-100]    98.0% [88-100]   distinct 46
+    calculated_values__number_of_secondary_outcomes_to_m column    90.3% [87-92]     82.2% [13-86]     88.3% [77-91]    distinct 113
+    countries__n_current                                 derived   99.4% [97-100]    99.0% [98-100]    98.1% [90-100]   distinct 53
+    countries__n_removed                                 derived   99.4% [97-100]    99.0% [98-100]    98.1% [90-100]   distinct 40
+    countries__names_current                             derived   94.6% [82-100]    96.4% [92-99]     90.5% [76-99]    distinct >=1000
+    design_outcomes__n_other                             derived  100.0% [100-100]   97.0% [29-100]    98.0% [88-100]   distinct 37
+    design_outcomes__n_primary                           derived  100.0% [100-100]   97.0% [29-100]    98.0% [88-100]   distinct 46
+    design_outcomes__n_secondary                         derived  100.0% [100-100]   97.0% [29-100]    98.0% [88-100]   distinct 114
+    facilities__n_countries                              derived   94.6% [82-100]    96.4% [92-99]     90.5% [76-99]    distinct 52
+    facilities__n_distinct                               derived   94.6% [82-100]    96.4% [92-99]     90.5% [76-99]    distinct 546
+    facilities__n_rows                                   derived   94.6% [82-100]    96.4% [92-99]     90.5% [76-99]    distinct 546
+    facilities__n_us_distinct                            derived   94.6% [82-100]    96.4% [92-99]     90.5% [76-99]    distinct 378
+    studies__expanded_access_nctid                       column     1.4% [0-3]        0.4% [0-1]        1.0% [0-2]      distinct 91
+    studies__expanded_access_status_for_nctid            column     1.4% [0-3]        0.4% [0-1]        1.0% [0-2]      distinct 4
+    studies__expanded_access_type_individual             column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__expanded_access_type_intermediate           column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__expanded_access_type_treatment              column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__has_expanded_access                         column    98.7% [95-100]    98.0% [90-100]    96.9% [79-100]   distinct 2
+    studies__ipd_url                                     column    13.1% [3-33]       4.2% [0-8]        9.7% [1-22]     distinct 195
+    studies__plan_to_share_ipd                           column    43.8% [14-84]     32.7% [5-71]      26.2% [5-72]     distinct 3
+    studies__start_date                                  column   100.0% [100-100]   99.9% [98-100]    99.5% [97-100]   distinct >=1000
+    studies__start_date_type                             column    56.4% [12-100]    47.7% [12-99]     39.1% [10-99]    distinct 1
+    studies__start_month_year                            column   100.0% [100-100]   99.9% [98-100]    99.5% [97-100]   distinct >=1000
+    studies__verification_date                           column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 270
+    studies__verification_month_year                     column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 270
+
+  provenance post_hoc:
+    calculated_values__actual_duration                   column   100.0% [100-100]   99.7% [98-100]    99.5% [97-100]   distinct 180
+    calculated_values__months_to_report_results          column   100.0% [100-100]   40.2% [3-46]      72.2% [23-83]    distinct 210
+    calculated_values__number_of_nsae_subjects           column    89.4% [87-92]     36.7% [3-42]      69.4% [22-80]    distinct >=1000
+    calculated_values__number_of_sae_subjects            column    75.5% [72-82]     28.1% [3-31]      67.2% [21-78]    distinct >=1000
+    calculated_values__were_results_reported             column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 1
+    studies__baseline_type_units_analyzed                column     0.3% [0-1]        0.1% [0-0]        0.0% [0-0]      distinct 31
+    studies__completion_date                             column    98.9% [96-100]    96.8% [77-100]    95.4% [90-100]   distinct >=1000
+    studies__completion_date_type                        column    98.9% [96-100]    96.8% [77-100]    95.3% [90-100]   distinct 2
+    studies__completion_month_year                       column    98.9% [96-100]    96.8% [77-100]    95.4% [90-100]   distinct >=1000
+    studies__created_at                                  column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__delayed_posting                             column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__disposition_first_posted_date               column    18.9% [4-23]      10.3% [1-16]      32.7% [3-42]     distinct >=1000
+    studies__disposition_first_posted_date_type          column    18.9% [4-23]      10.3% [1-16]      32.7% [3-42]     distinct 2
+    studies__disposition_first_submitted_date            column    18.9% [4-23]      10.3% [1-16]      32.7% [3-42]     distinct >=1000
+    studies__disposition_first_submitted_qc_date         column    15.9% [0-23]       9.4% [0-16]      32.0% [3-42]     distinct >=1000
+    studies__enrollment                                  column   100.0% [100-100]   98.9% [77-100]    99.0% [93-100]   distinct >=1000
+    studies__enrollment_type                             column   100.0% [100-100]   97.9% [73-100]    96.3% [70-100]   distinct 2
+    studies__fdaaa801_violation                          column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 1
+    studies__last_known_status                           column     0.1% [0-0]        1.1% [0-3]        0.4% [0-2]      distinct 1
+    studies__last_update_posted_date                     column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__last_update_posted_date_type                column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 2
+    studies__last_update_submitted_date                  column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__last_update_submitted_qc_date               column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__overall_status                              column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 5
+    studies__primary_completion_date                     column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__primary_completion_date_type                column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 2
+    studies__primary_completion_month_year               column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__results_first_posted_date                   column   100.0% [100-100]   40.2% [3-46]      72.2% [23-83]    distinct >=1000
+    studies__results_first_posted_date_type              column   100.0% [100-100]   40.2% [3-46]      72.2% [23-83]    distinct 2
+    studies__results_first_submitted_date                column   100.0% [100-100]   40.2% [3-46]      72.2% [23-83]    distinct >=1000
+    studies__results_first_submitted_qc_date             column   100.0% [100-100]   40.2% [3-46]      72.2% [23-83]    distinct >=1000
+    studies__updated_at                                  column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+
+  provenance registration:
+    browse_conditions__n_mesh_ancestor                   derived   90.2% [86-98]    100.0% [100-100]   91.1% [87-96]    distinct 46
+    browse_conditions__n_mesh_list                       derived   90.2% [86-98]    100.0% [100-100]   91.1% [87-96]    distinct 26
+    browse_interventions__n_mesh_list                    derived   86.4% [77-92]     71.7% [57-96]     93.4% [90-96]    distinct 21
+    calculated_values__maximum_age_num                   column    49.0% [44-50]     52.0% [37-55]     38.0% [34-42]    distinct 106
+    calculated_values__maximum_age_unit                  column    49.0% [44-50]     52.0% [37-55]     38.0% [34-42]    distinct 6
+    calculated_values__minimum_age_num                   column    98.2% [98-99]     97.4% [83-98]     98.4% [98-99]    distinct 56
+    calculated_values__minimum_age_unit                  column    98.2% [98-99]     97.4% [83-98]     98.4% [98-99]    distinct 6
+    calculated_values__registered_in_calendar_year       column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 27
+    conditions__n_conditions                             derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 30
+    design_groups__n_active_comparator                   derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 9
+    design_groups__n_distinct                            derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 21
+    design_groups__n_experimental                        derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 21
+    design_groups__n_no_intervention                     derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 5
+    design_groups__n_other                               derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 8
+    design_groups__n_other_type                          derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 1
+    design_groups__n_placebo_comparator                  derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 10
+    design_groups__n_sham_comparator                     derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 3
+    design_groups__n_type_absent                         derived   99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 1
+    designs__allocation                                  column    99.7% [99-100]    97.5% [49-100]    99.1% [98-100]   distinct 3
+    designs__caregiver_masked                            column    71.3% [67-73]     37.8% [2-40]      63.4% [36-71]    distinct 2
+    designs__intervention_model                          column    99.8% [99-100]    97.4% [45-100]    98.9% [97-100]   distinct 5
+    designs__investigator_masked                         column    71.3% [67-73]     37.8% [2-40]      63.4% [36-71]    distinct 2
+    designs__masking                                     column    99.7% [96-100]    97.9% [44-100]    99.2% [98-100]   distinct 5
+    designs__observational_model                         column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    designs__outcomes_assessor_masked                    column    71.3% [67-73]     37.8% [2-40]      63.4% [36-71]    distinct 2
+    designs__primary_purpose                             column    99.6% [99-100]    98.9% [98-100]    99.9% [100-100]  distinct 9
+    designs__subject_masked                              column    71.3% [67-73]     37.8% [2-40]      63.4% [36-71]    distinct 2
+    designs__time_perspective                            column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    eligibilities__adult                                 column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 2
+    eligibilities__child                                 column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 2
+    eligibilities__gender                                column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 3
+    eligibilities__gender_based                          column     1.2% [0-3]        1.1% [0-3]        0.8% [0-3]      distinct 1
+    eligibilities__healthy_volunteers                    column    99.9% [99-100]    99.9% [99-100]    98.6% [90-100]   distinct 2
+    eligibilities__maximum_age                           column    49.0% [44-50]     52.0% [37-55]     38.0% [34-42]    distinct 177
+    eligibilities__minimum_age                           column    98.2% [98-99]     97.4% [83-98]     98.4% [98-99]    distinct 103
+    eligibilities__older_adult                           column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 2
+    eligibilities__sampling_method                       column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    id_information__n_eudract_ids                        derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 3
+    id_information__n_secondary_ids                      derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 20
+    intervention_other_names__n_distinct                 derived   60.9% [57-63]     43.6% [15-50]     54.0% [29-70]    distinct 96
+    interventions__n_distinct                            derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 19
+    interventions__n_drug                                derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 19
+    interventions__n_rows                                derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 23
+    interventions__types                                 derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 71
+    keywords__n_keywords                                 derived   63.6% [57-71]     67.2% [56-99]     65.1% [54-77]    distinct 42
+    responsible_parties__affiliation                     column    16.6% [4-20]      17.0% [3-23]       2.7% [0-7]      distinct 481
+    responsible_parties__name                            column    16.6% [4-20]      17.0% [3-23]       2.7% [0-7]      distinct >=1000
+    responsible_parties__old_name_title                  column     3.4% [0-22]       5.7% [0-24]       7.6% [0-22]     distinct 213
+    responsible_parties__organization                    column     3.4% [0-23]       5.7% [0-24]       7.6% [0-22]     distinct 154
+    responsible_parties__responsible_party_type          column    96.5% [75-100]    91.9% [63-100]    89.6% [65-100]   distinct 3
+    responsible_parties__title                           column    16.6% [4-20]      17.0% [3-23]       2.7% [0-7]      distinct 956
+    sponsors__collaborator_agency_classes                derived   32.0% [15-35]     33.3% [27-62]     20.1% [11-24]    distinct 56
+    sponsors__lead_agency_class                          derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 8
+    sponsors__n_collaborators                            derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 22
+    sponsors__n_lead_rows                                derived  100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 1
+    studies__acronym                                     column    30.6% [9-42]      16.7% [0-23]      29.7% [7-44]     distinct >=1000
+    studies__biospec_retention                           column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__has_dmc                                     column    88.8% [60-94]     82.3% [40-91]     79.0% [35-95]    distinct 2
+    studies__is_fda_regulated_device                     column    39.3% [3-98]      34.2% [3-95]      21.1% [0-90]     distinct 2
+    studies__is_fda_regulated_drug                       column    39.5% [3-98]      34.3% [3-96]      21.4% [0-92]     distinct 2
+    studies__is_ppsd                                     column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__is_unapproved_device                        column     0.2% [0-1]        0.1% [0-0]        0.0% [0-0]      distinct 1
+    studies__is_us_export                                column     9.1% [1-29]       6.2% [1-18]       2.2% [0-9]      distinct 2
+    studies__number_of_arms                              column    99.6% [96-100]    92.7% [31-100]    91.8% [44-100]   distinct 21
+    studies__number_of_groups                            column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__patient_registry                            column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+    studies__phase                                       column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 8
+    studies__source                                      column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__source_class                                column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 8
+    studies__study_first_posted_date                     column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__study_first_posted_date_type                column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 2
+    studies__study_first_submitted_date                  column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__study_first_submitted_qc_date               column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct >=1000
+    studies__study_type                                  column   100.0% [100-100]  100.0% [100-100]  100.0% [100-100]  distinct 1
+    studies__target_duration                             column     0.0% [0-0]        0.0% [0-0]        0.0% [0-0]      distinct 0
+
+  column order of the three shares: endpoint_met, advancement_w3_exact, market_w5

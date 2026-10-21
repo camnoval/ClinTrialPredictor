@@ -1,0 +1,102 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  features 112 (served 99, registration-only served 87) | disease codes 26 | lookback 3y | split 2017-01-01 label_known any_recorded_start | advancement left cut 2007-01-01
+  leakage registry: no violation for endpoint_met, advancement, market
+  trials 461824; drug trials 222329; with name keys 179185; with mesh-list terms 363547; lead sponsors 461824; with sites 419823
+  D-69: trials with approval rows 97514; dated public outcomes 13487 of 13487
+
+==============================================================================
+COVERAGE BY SPLIT SIDE (labelled trials; non-missing share train | test | difference), largest differences first
+==============================================================================
+
+  endpoint_met: sides {'straddler': 2232, 'test': 3950, 'train': 7303, 'undeterminable': 2}
+    is_fda_regulated_device                     7.3% |   99.4% |  +92.1
+    is_fda_regulated_drug                       7.5% |   99.4% |  +91.9
+    plan_to_share_ipd                          23.0% |   79.8% |  +56.8
+    sponsor_track_record                       32.9% |   68.9% |  +36.1
+    is_us_export                                1.3% |   24.1% |  +22.8
+    site_prior_max                             80.2% |   99.9% |  +19.6
+    site_prior_median                          80.2% |   99.9% |  +19.6
+    drug_track_record                           9.7% |   26.9% |  +17.2
+    n_keywords                                 68.6% |   56.4% |  -12.2
+    n_intervention_mesh                        90.0% |   77.9% |  -12.1
+    multi_country                              91.0% |   99.9% |   +8.9
+    n_site_countries                           91.0% |   99.9% |   +8.9
+    n_sites                                    91.0% |   99.9% |   +8.9
+    n_us_sites                                 91.0% |   99.9% |   +8.9
+    us_site_share                              91.0% |   99.9% |   +8.9
+    responsible_party_type                     93.6% |  100.0% |   +6.4
+    caregiver_masked                           70.1% |   76.2% |   +6.1
+    investigator_masked                        70.1% |   76.2% |   +6.1
+    outcomes_assessor_masked                   70.1% |   76.2% |   +6.1
+    subject_masked                             70.1% |   76.2% |   +6.1
+    disease_C01                                92.1% |   86.6% |   -5.5
+    disease_C02                                92.1% |   86.6% |   -5.5
+    disease_C03                                92.1% |   86.6% |   -5.5
+    disease_C04                                92.1% |   86.6% |   -5.5
+    disease_C05                                92.1% |   86.6% |   -5.5
+    features present on every trial of both sides: 30 of 112
+
+  advancement: sides {'before_left_cut': 1789, 'straddler': 9334, 'test': 8149, 'train': 10587, 'undeterminable': 12}
+    is_fda_regulated_drug                       3.6% |   99.3% |  +95.7
+    is_fda_regulated_device                     3.6% |   99.3% |  +95.7
+    plan_to_share_ipd                          10.5% |   70.9% |  +60.4
+    sponsor_track_record                       15.0% |   41.0% |  +26.1
+    n_keywords                                 74.3% |   55.0% |  -19.4
+    n_intervention_mesh                        77.4% |   58.3% |  -19.1
+    is_us_export                                0.6% |   18.9% |  +18.3
+    responsible_party_type                     83.5% |  100.0% |  +16.5
+    site_prior_max                             86.2% |   99.0% |  +12.8
+    site_prior_median                          86.2% |   99.0% |  +12.8
+    drug_track_record                           1.3% |   13.0% |  +11.7
+    active_comparator_arm                      89.9% |   99.9% |   +9.9
+    arms_active_comparator                     89.9% |   99.9% |   +9.9
+    arms_experimental                          89.9% |   99.9% |   +9.9
+    arms_no_intervention                       89.9% |   99.9% |   +9.9
+    arms_other                                 89.9% |   99.9% |   +9.9
+    arms_placebo_comparator                    89.9% |   99.9% |   +9.9
+    arms_sham_comparator                       89.9% |   99.9% |   +9.9
+    no_intervention_arm                        89.9% |   99.9% |   +9.9
+    number_of_arms                             89.9% |   99.9% |   +9.9
+    placebo_arm                                89.9% |   99.9% |   +9.9
+    sham_arm                                   89.9% |   99.9% |   +9.9
+    maximum_age_years                          50.4% |   58.0% |   +7.6
+    has_dmc                                    78.9% |   86.1% |   +7.2
+    caregiver_masked                           38.8% |   44.6% |   +5.8
+    features present on every trial of both sides: 60 of 112
+
+  market: sides {'straddler': 1158, 'test': 366, 'train': 1259, 'undeterminable': 4}
+    is_fda_regulated_device                     1.3% |   98.9% |  +97.6
+    is_fda_regulated_drug                       1.6% |   98.9% |  +97.3
+    plan_to_share_ipd                           9.0% |   71.3% |  +62.3
+    sponsor_track_record                        7.1% |   54.1% |  +46.9
+    site_prior_max                             69.3% |   98.9% |  +29.6
+    site_prior_median                          69.3% |   98.9% |  +29.6
+    has_dmc                                    63.9% |   89.1% |  +25.2
+    responsible_party_type                     77.2% |  100.0% |  +22.8
+    n_keywords                                 72.4% |   50.5% |  -21.9
+    drug_track_record                           0.6% |   19.4% |  +18.8
+    n_other_names                              43.1% |   61.2% |  +18.2
+    active_comparator_arm                      81.9% |  100.0% |  +18.1
+    arms_active_comparator                     81.9% |  100.0% |  +18.1
+    arms_experimental                          81.9% |  100.0% |  +18.1
+    arms_no_intervention                       81.9% |  100.0% |  +18.1
+    arms_other                                 81.9% |  100.0% |  +18.1
+    arms_placebo_comparator                    81.9% |  100.0% |  +18.1
+    arms_sham_comparator                       81.9% |  100.0% |  +18.1
+    no_intervention_arm                        81.9% |  100.0% |  +18.1
+    number_of_arms                             81.9% |  100.0% |  +18.1
+    placebo_arm                                81.9% |  100.0% |  +18.1
+    sham_arm                                   81.9% |  100.0% |  +18.1
+    multi_country                              86.7% |   99.7% |  +13.0
+    n_site_countries                           86.7% |   99.7% |  +13.0
+    n_sites                                    86.7% |   99.7% |  +13.0
+    features present on every trial of both sides: 34 of 112
+
+==============================================================================
+WRITTEN
+==============================================================================
+  data\features\trial_features.csv (222329 rows, 112 features)
+  data\features\trial_features.manifest.json

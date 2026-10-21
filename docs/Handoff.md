@@ -41,6 +41,41 @@ rev 10 figure that §3 does not list as verified.
 
 ## 1. State
 
+- **2026-10-19 (D-69 delivery, `session_20261019_all.zip`, cumulative):** gate **1116
+  passed** (1109 + 7). `trial_features.csv` MUST be rebuilt (three new columns), then
+  endpoint met re-run (§7). Pre-registered before either run: D-69.
+- **2026-10-19 (endpoint met DONE):** the re-run (`train_endpoint_met_20261001_v2.txt`)
+  reproduced every earlier number; D-68 fired; the served endpoint-met model has 96
+  features and an expected Brier skill of +0.0821 [+0.0660, +0.0987] (§4). Next: advancement
+  (§7). Gate unchanged at 1109.
+- **2026-10-19 (D-68 delivery, `session_20261019_all.zip`, cumulative: every file changed
+  this session):** gate **1109 passed** (1108 + 1). Endpoint met RAN and PASSES D-55's bar
+  (§4). Re-run endpoint met for D-68's diagnostic, then advancement (§7).
+- **2026-10-19 (install note):** `endpoint_model.zip` was not installed, so
+  `train_target.py` failed importing `modeling`. Re-delivered as `endpoint_model_v2.zip`
+  with only the files it adds (`modeling.py`, `trial_features.py`, `test_modeling.py`,
+  `test_trial_features.py`), because the original would overwrite the later
+  `train_target.py` and this handoff. `session_20261019_all.zip` holds every file changed
+  this session at repo paths and is safe in any order. Lesson: deliveries that depend on
+  install order fail silently; prefer one cumulative zip per session.
+- **2026-10-19 (diagnostics delivery, `diagnostics.zip`, on top of `endpoint_model.zip`):**
+  gate **1108 passed** (1100 + 8 `test_grouped_split.py`). No rebuild of features needed.
+  Run `scripts\train_target.py --target endpoint_met` (§7 timeline).
+- **2026-10-19 (endpoint-model delivery, `endpoint_model.zip`, on top of
+  `feature_builder.zip`):** gate **1100 passed** (1089 + 2 in `test_trial_features.py`
+  + 9 `test_modeling.py`). `trial_features.csv` does NOT need rebuilding (column order and
+  names unchanged; D-65 moves groups, which the training script reads from the code). Run
+  `scripts\train_target.py --target endpoint_met` (§5).
+- **2026-10-19 (feature-builder delivery, `feature_builder.zip`, on top of
+  `feature_candidates.zip`):** gate **1089 passed** (1068 + 21 `test_trial_features.py`).
+  Run `scripts\build_features.py` (§5). D-62 amended, D-63 built, D-64 proposed.
+- **2026-10-19 (feature-candidates delivery, `feature_candidates.zip`, on top of
+  `reference_rates.zip`):** gate **1068 passed** (no test change). Run
+  `audit\probe_feature_candidates.py` (§5). D-58 to D-62 decided by the owner.
+- **2026-10-19 (reference-rates delivery, `reference_rates.zip`, on top of
+  `training_design.zip`):** gate **1068 passed** (1062 + 6 `test_reference_rates.py`).
+  Nothing to run: `probe_training_design_20261001.txt` (§4) decided D-57's cut; D-58 to
+  D-61 are proposals asked of the owner.
 - **2026-10-19 (training-design delivery, `training_design.zip`):** gate **1062 passed**
   (1049 + 9 `test_temporal_split.py` + 3 in `test_advancement_label.py`). Labels unchanged:
   the advancement refactor reproduces the frozen label (a test, and the probe's own check).
@@ -665,32 +700,58 @@ sensitivity.** Closes rev 7 §1.3 item 4 and §8.4.
 - The user-facing sentence must say "met at least one of its primary endpoints", and the
   co-primary clause (rev 9 §12.17) stays.
 
-**D-55 (2026-10-19) Headline metric: the Brier skill score, one per target.** Owner: "Brier
-skill if we can get that baseline data from the literature." **The reference forecast is
-PROPOSED by the assistant, owner to confirm.**
-- Literature checked 2026-10-19:
-  - Endpoint met has a close anchor. Of 2,823 completed phase 3/4 superiority RCTs with
-    results on ClinicalTrials.gov (searched June 2015), 60% of those posting an effect
-    estimate or p-value were significant (*literature*, Dechartres et al., BMC Medicine
-    2016, doi 10.1186/s12916-016-0740-1). The eligible endpoint-met rate here is 60.7%
-    (8,187 of 13,487, *arithmetic*).
-  - Advancement and market have only programme-level rates from Biomedtracker: phase
-    transition success I 63.2%, II 30.7%, III 58.1% (*literature*, BIO, Biomedtracker and
-    Amplion, Clinical Development Success Rates 2006-2015, 2016); likelihood of approval
-    from phase I 7.9% for 2011-2020 (*literature*, BIO, Informa and QLS, 2021). Those count
-    a programme's next phase in any indication with no window; advancement here is a
-    same-disease registry link within 3 years (16.0% at W=3 exact).
-- **Why a literature rate cannot be the reference:** a Brier skill score compares the model
-  with a reference forecast on the SAME test trials and the SAME label. A constant from a
-  different definition is miscalibrated against this label by construction, so a model
-  beats it by learning the base rate alone, and the bar stops meaning "the model works".
-- **Proposal:** the reference is the rate by phase on the training side of each target's
-  temporal split (rev 10 §14 item 8's phase-rate baseline, known before any test trial ran).
-  The literature rates are printed beside it as external plausibility anchors, each with its
-  denominator.
-- **The bar:** a model counts as working when its Brier skill score on the temporal test set
-  is above 0 and the paired-bootstrap 95% interval lies above 0. Log loss, AUROC, ECE and
-  the reliability curve are reported beneath it, never in its place.
+**D-55 (2026-10-19, owner, CONFIRMED the same day) Headline metric: the Brier skill score,
+one per target; the reference is the training-side phase rate; published rates are printed
+beside it, cited exactly.** Owner: "i agree with the rate by phase on the training side split
+as reference and print rates beside it we just need to cite exactly the papers it was coming
+from (because also it historically may increase approval % and change based on year)".
+- **The reference forecast:** the rate by phase on the training side of each target's
+  temporal split (rev 10 §14 item 8). It is a forecast on the same label, knowable before any
+  test trial ran.
+- **Why a published rate cannot be the reference:** a Brier skill score compares the model
+  with a reference on the SAME test trials and the SAME label. A constant from another
+  definition is miscalibrated against this label by construction, so a model beats it by
+  learning the base rate alone.
+- **The anchors**, printed beside the reference by every training script, live with their
+  citations in `services/reference_rates.py`. Each carries the period its DATA cover, what it
+  counts, its n, and whether the figure was read from the primary source or a secondary one
+  (named). Checked 2026-10-19:
+  - Endpoint met: Dechartres A, Bond EG, Scheer J, Riveros C, Atal I, Ravaud P. *BMC
+    Medicine* 2016;14:192, doi:10.1186/s12916-016-0740-1. ClinicalTrials.gov searched
+    2 June 2015; completed two-arm phase 3/4 superiority RCTs; first primary outcome;
+    significant in 844 of 1,400 posting an estimate or p-value (60%), and in 342 of 929
+    where the p-value had to be computed from per-arm results (37%). Primary.
+  - Advancement and market: Thomas DW, Burns J, Audette J, Carroll A, Dow-Hygelund C, Hay M.
+    *Clinical Development Success Rates 2006-2015*, BIO Industry Analysis, June 2016.
+    Transitions 1 Jan 2006 to 31 Dec 2015: phase I to II 63.2% (n=3,582), II to III 30.7%
+    (n=3,862), III to NDA/BLA 58.1% (n=1,491), NDA/BLA to approval 85.3% (n=1,050), LOA from
+    phase III 49.6%, from phase I 9.6%. Primary.
+  - BIO, Informa Pharma Intelligence, QLS Advisors. *Clinical Development Success Rates and
+    Contributing Factors 2011-2020*, February 2021. Transitions 1 Jan 2011 to 30 Nov 2020:
+    LOA from phase I 7.9% (primary, BIO's announcement); phase II to III 28.9%, I to II
+    52.0%, III to NDA/BLA 57.8% (SECONDARY sources, named in the module; the report PDF
+    could not be fetched; check them against it before quoting).
+  - Hay M, Thomas DW, Craighead JL, Economides C, Rosenthal J. *Nature Biotechnology*
+    2014;32(1):40-51. Transitions 2003 to 2011; LOA from phase I near 10.4% (as restated by
+    Thomas et al. 2016).
+  - Wong CH, Siah KW, Lo AW. *Biostatistics* 2019;20(2):273-286, doi:10.1093/biostatistics/
+    kxx069, with the corrigendum doi:10.1093/biostatistics/kxy072 correcting Tables 1 and 2.
+    Data 2000 to Oct 2015, rates BY YEAR. No figure quoted until read from the corrected
+    tables.
+- **Rates move with time, in both directions, which is why each anchor is printed with its
+  period.** BIO's likelihood of approval from phase I FELL across its cohorts: 10.4%
+  (2003-2011), 9.6% (2006-2015), 7.9% (2011-2020). Here, endpoint met falls from 65.9%
+  (2007-2009 readouts) to 56.5% (2022-2024) and the all-met reading from 61.1% to 49.7%;
+  market W=5 stays between 61.8% and 70.0% from 2004 (`probe_training_design_20261001.txt`
+  §1).
+- **What would make the score not good:** under a temporal split, the training-side reference
+  overstates the test-side rate when the base rate drifts (endpoint met at a 2017 boundary:
+  63.2% train, 59.2% test). A model can then earn skill by reading era proxies instead of
+  trial content. So each model is ALSO scored against the test side's own phase rate. That
+  oracle is not a bar; it shows how much of any skill survives once the drift is removed.
+- **The bar:** Brier skill score above 0 on the temporal test set with the paired-bootstrap
+  95% interval above 0. Log loss, AUROC, ECE and the reliability curve are reported beneath,
+  never in its place.
 
 **D-56 (2026-10-19, owner) Features may use every `editable_current_value` field.** Owner's
 reason: a next question is "how can this trial improve its odds", and sites and countries
@@ -726,6 +787,336 @@ ClinicalTrials.gov."
 - The cut year is set from the probe's output, then applied by the split, so the frozen
   labels (D-53) do not change. The same truncation applies to drug-history features
   (prior trials of the same drug), which the probe's §3 measures by band for every target.
+- **Probe result, 2026-10-19 (`probe_training_design_20261001.txt` §2): the hypothesis holds.**
+  Among 1s, the share whose linking trial was already running when the focal trial
+  registered (all or some links) falls 72.8% (1998-2000), 57.3%, 33.7% (2004-2006), 15.5%
+  (2007-2009), 7.4%, 4.3%, 3.1%, 1.8%, 1.4% (2022-2024); start unknown 20.0% to 0.2%. The
+  floor's share is 11.2% and 29.4% in the first two bands against 31.4% to 34.0% from 2004.
+- **DECIDED 2026-10-19 by the owner's rules (mitigate early data; log what moves under 1%):
+  advancement trains on readouts from 2007-01-01.**
+  - Removed: 1,789 labels (6.0%).
+  - Left in: about 231 of the 28,082 labels from 2007 on rest on an already-running link
+    (0.8%), about 280 (1.0%) if every unknown start is counted against them *(arithmetic,
+    from the printed shares)*. That residual is a limitation (§6).
+  - Evidence the cut works: at a 2017 boundary the training side's positive rate is 15.6%
+    with the cut (1,650 of 10,587) against 18.3% without it, and the test side's is 14.2%.
+  - Not chosen: 2010 or 2013 would leave less residual (about 0.5% or 0.4%) at a cost of a
+    further 3,880 or 8,955 labels.
+- **Drug-history features (§3 of the probe):** the share of trials with no prior registered
+  trial of the same drug falls 52.1% (2004-2006) to 22.9% to 26.8% in 2010-2024 for endpoint
+  met, and 47.6% to 17.0% to 20.8% from 2010 for market; the median prior count rises 2 to 6.
+  A lifetime count is therefore an era proxy; D-60 proposes a lookback window instead.
+
+**D-58 (2026-10-19, owner: DECIDED with D-59) An unconfirmed start date may place a
+labelled trial in the test set (`temporal_split.START_ANY`).** Settles rev 7 §6.1's
+open question for the split.
+- Every labelled trial has an actual primary completion, so its start happened. Among
+  endpoint-met trials `studies__start_date_type` takes one value, ACTUAL, or is blank (56.4%
+  non-blank, 12% to 100% by band): blank is a missing record, never a plan. (The probe
+  counted distinct values for the endpoint-met population only.)
+- At the boundaries proposed in D-59 the rule moves 8 endpoint-met trials (0.06% of its
+  labels), 46 advancement (0.15%) and 69 market (2.5%, *arithmetic*) into the test set
+  (probe §4, '+any'). Market's 2.5% is over the 1% rule, so this is asked, not assumed.
+
+**D-59 (2026-10-19, owner: DECIDED; one boundary for all three) Train = outcome known
+before 2017-01-01; test = started on or after it.** The assistant proposed 2015 for market;
+the owner asked for 2017 for all three.
+- Train rule `TRAIN_BY_LABEL_KNOWN`: rev 7 §4.3's own wording, "completed before the boundary
+  (outcome determined by then)". Under the readout reading a training label can rest on an
+  approval or a later trial that happened after the test trials started.
+- At 2017-01-01 (`probe_training_design_20261001.txt` §4, actual-start counts; D-58 adds the
+  '+any' trials):
+  - endpoint met: train 7,303 (2,686 events, 63.2% positive), test 3,942 (1,610, 59.2%),
+    2,232 straddlers dropped, +8 under D-58;
+  - advancement W=3 exact, with D-57's 2007 cut: train 10,587 (1,650, 15.6%), test 8,103
+    (1,149, 14.2%), +46;
+  - market W=5: train 1,259 (472 events, 62.5% positive), test 364 (104, 71.4%), 1,158
+    straddlers, +2. Against 2015: more training trials (1,259 against 862), fewer test
+    trials (364 against 614).
+- **Gained:** the three test sets begin at the same date, so their eras match, though their
+  populations still differ (rev 7 §1.1 point 2).
+- **What would make it not good:**
+  - market's test set has 104 events, so the paired-bootstrap interval of its Brier skill
+    score will be wide: a real but modest skill can fail D-55's bar, and that would not
+    show the model is useless. Market's test positive rate (71.4%) is also nine points above
+    its training rate (62.5%), the selection bias of §4 plus drift;
+  - the FDAAA Final Rule took effect in January 2017, so the training trials mostly predate
+    the 2017 registration fields and the test trials have them (`is_fda_regulated_drug`
+    non-blank 3% to 98% by band). A model that reads "unknown" as "old" is fitted on one
+    meaning and tested on another; D-60's sensitivities expose it.
+
+**D-60 (2026-10-19, owner: DECIDED as proposed, plus D-62's toggle) Feature-build design**
+(rev 10 §14 item 5), from `probe_training_design_20261001.txt` §5. The owner asked for more
+features computed from the data; D-63 lists them.
+- **Sources:** `trial_registration_fields.csv` through its provenance file;
+  `rows__browse_conditions.csv` for condition categories; registry name keys
+  (`trial_drug_agents.csv`) for drug history. Never `trial_labels.csv`, never resolution or
+  approval output.
+- **Admitted:** `registration` and `editable_current_value` (D-56), less the exclusions below.
+- **Excluded, each for a stated reason:**
+  - every `post_hoc` column (automatic);
+  - identifiers and free text: responsible-party names, titles, affiliations and
+    organisations, `studies__source`, `countries__names_current` (kept as a US-present flag
+    and a count), `studies__acronym` (kept as a present flag);
+  - AACT's row-count fields, superseded by the distinct counts (rev 9 §12.21):
+    `calculated_values__number_of_facilities`, `has_single_facility`, `facilities__n_rows`,
+    `interventions__n_rows`, and the `calculated_values` outcome counts (the
+    `design_outcomes__n_*` distinct counts stay);
+  - raw dates. Only derived quantities enter: start minus first submission. Every quantity
+    derived from `verification_date` measures time after readout for a completed trial, so
+    that field is out;
+  - calendar time (`registered_in_calendar_year`, any year) is out of the served model and
+    run as a sensitivity, because of the drift in D-55;
+  - any column with fewer than 2 distinct non-blank values on the training side: no
+    information, and blank-or-one-value fields like `start_date_type` only encode record age.
+- **Derived:** age bounds in years; condition-category flags from mesh-ancestor terms equal
+  to a MeSH C-branch top heading; drug history as the count of earlier registered trials
+  sharing a name key within a LOOKBACK window before this trial's registration (a lifetime
+  count is an era proxy, D-57); the window is a named constant set from the builder's own
+  coverage print.
+- **Missing values:** tri-state stays three-state (an explicit unknown level, never False or
+  0). For logistic models numeric gaps get an indicator plus the training-side median; for
+  boosting they stay missing.
+- **The per-target leakage registry, asserted in code:** `LABEL_DERIVED_FIELDS` and every
+  `post_hoc` column for all targets; `GATE_ONLY_FIELDS` for endpoint met; every column of
+  `trial_targets.csv` and every label column of `trial_labels.csv` for all; resolution and
+  approval columns for all.
+- **Sensitivities fitted beside each headline model:** registration-only (D-56) and with
+  calendar time.
+- **Size:** about 70 to 90 parameters against 2,686 training events for endpoint met at the
+  D-59 boundary (about 30 to 38 per parameter, *arithmetic*): enough for logistic with limited
+  interactions and shallow boosting (rev 10 §12.26), not for an unconstrained ensemble.
+
+**D-61 (2026-10-19, owner: DECIDED) The gate-exclusion comparison is NOT run; gate-refused
+trials stay out of endpoint-met training.** Owner: "I think we essentially tested this before
+and that's why we made the prior rules, keep it excluded."
+- The exclusion (decided 2026-10-04, `endpoint_type.training_exclusion`) stands on the serving
+  rule: a label the tool would refuse to show is not trained on. The hand labels (rev 8
+  §12.10: pharmacokinetic endpoints answerless 8 of 8, then 15 of 17) established that rule.
+- Recorded so it is not mistaken for a result: those labels tested the gate's CLASSES, not
+  the exclusion's effect on a model. `TRAINING_EXCLUSION_MIN_EFFECT` stays `None` and
+  `TRAINING_EXCLUSION_PREDICTED_DIRECTION` stays untested. 306 of 13,793 rows are affected
+  (2.2%).
+
+**D-62 (2026-10-19, owner) Entity features as a TOGGLE: sponsors, officials, sites,
+investigators.** Owner: names and IDs "1000% do affect clin trial outcome", and "years of
+experience for the clinical trial operator/site would be a good feature". Off in the served
+model until a run shows it earns its place; always fitted as a named variant beside it.
+- Two levels, switched separately:
+  - **experience** (built first): counts DERIVED from names, each as of the trial's own
+    registration date: the lead sponsor's earlier registered trials, earlier trials in the
+    same disease category, earlier trials that posted results; for sites, the median and
+    maximum earlier trials across the trial's sites; the same for overall officials and site
+    investigators. They generalise to sponsors the model has never seen;
+  - **identity**: the name itself as a category (for example the most frequent sponsors,
+    the rest pooled). It memorises names, does not transfer to new sponsors, and lets one
+    sponsor's trials carry information across the split, so it is the second switch.
+- **Outcome history** (an experience variant): a sponsor's earlier endpoint-met rate, from
+  trials whose results were public before this trial was registered. Another trial's
+  `results_first_posted_date` dates WHEN its outcome became public; it is never a feature
+  of its own trial (R7 unchanged). Small counts are shrunk toward the overall rate by a
+  named prior strength.
+- Rows: `rows__sponsors.csv` 730,497; `rows__overall_officials.csv` 416,636;
+  `rows__facilities.csv` 3,026,192; `rows__facility_investigators.csv` 176,090
+  (`pull_aact_rows_20261001.txt`).
+- **What would make it not good, measured by `probe_feature_candidates.py` first:** names
+  spelled several ways (one sponsor split into many); placeholders ('Medical Director',
+  'Clinical Trials') read as one prolific person; and the registry-start truncation of D-57
+  again, since a sponsor's experience before 2000 is invisible.
+- **Amended 2026-10-19 from `probe_feature_candidates_20261001.txt` §1 (assistant, under the
+  owner's 1% rule and D-62's own conditions):**
+  - **kept: lead sponsor and sites.** Lead sponsors are present on every labelled trial and
+    nearly one spelling per name (44,379 raw, 44,262 keys). Sites cover 87.7% of
+    endpoint-met trials; their top keys merge 6 to 14 spellings each;
+  - **dropped: overall officials.** 13 of the 15 most frequent names are placeholders or
+    company names ('gsk clinical trials', 'pfizer ct gov call center', 'medical director',
+    a Lilly phone number with 64 spellings), so for industry trials the field is the sponsor
+    again;
+  - **dropped: site investigators.** Present on 0.0% of endpoint-met, 0.1% of advancement
+    and 0.0% of market labelled trials;
+  - **counts use the lookback, never a lifetime.** Lifetime counts climb with calendar time:
+    the endpoint-met lead sponsor's median earlier trials rise 85 (2007-2009) to 278
+    (2022-2024) to 545 (2025-2027), and sites' 23 to 255.5 to 425. A lifetime count would be
+    calendar time again (D-60);
+  - **identity level and outcome history: not built yet.** The experience level comes first,
+    as D-62 says.
+
+**D-63 (2026-10-19, proposed at the owner's request; BUILT 2026-10-19 in
+`services/trial_features.py`, every item below except those marked) More features from data
+already on disk.** Each from registration-time data, as of the trial's registration.
+- **From the fields file, no new probe needed:** comparator design (placebo arm, active
+  comparator, no-intervention arm, number of experimental arms; an inactive comparator
+  had odds ratio 2.19 for a significant result in Dechartres et al. 2016); randomised;
+  crossover or single-group; masking level; healthy volunteers; age limits in years and
+  their width; paediatric; industry collaborator present; multi-country (odds ratio 1.58,
+  ibid.); US share of sites; EU registration (EudraCT id); modality (biological, genetic,
+  combination product); number of tested agents; registration-to-start gap.
+- **Needing `probe_feature_candidates.py`:**
+  - disease category: top-level MeSH C headings through `rows__mesh_terms.csv` tree
+    numbers (oncology, cardiovascular, ...), and the number of categories;
+  - eligibility text: length, number of listed criteria, and whether a patient-selection
+    biomarker is named (BIO 2016: likelihood of approval from phase I 25.9% with selection
+    biomarkers against 8.4% without, Thomas et al. 2016). The probe's biomarker shares are
+    INVALID (§6); the builder's pattern requires a word boundary after each term;
+  - entity experience (D-62).
+- **Drug and disease history, from registry name keys:** earlier trials of the same drug
+  within the lookback window (D-60); the highest phase that drug had reached in ANY disease
+  before this registration; earlier trials of the drug in the same disease (allowed: D-38
+  removes only later-phase ones); competition: trials registered in the same disease
+  category in the preceding window.
+- **Not available from AACT:** the planned enrolment (overwritten with the actual count,
+  `post_hoc`), originally planned dates, protocol amendment history, IND status.
+- **Open, for advancement and market only:** the endpoint-type classes are gate-only for
+  endpoint met (rev 7 §12.8) and not decided for the other two targets.
+
+**D-64 (2026-10-19, PROPOSED by the assistant) History lookback: 3 years
+(`training_design.HISTORY_LOOKBACK_YEARS`).** Every history count (drug, disease crowding,
+lead sponsor, sites) reads only trials registered in the 3 years before the trial's own
+registration, half-open.
+- Why a window: lifetime counts encode calendar time (D-57, D-62's amendment).
+- Why 3: registration on ClinicalTrials.gov was required by ICMJE from September 2005, so a
+  3-year window is complete for trials registered from late 2008. Earlier registrations have
+  truncated windows; the training side reaches back to 2007 readouts, so some of its trials
+  see part-empty windows.
+- What would make it not good: the builder's train-test coverage print cannot show a
+  truncation, because a truncated count is still a number. Check the history features'
+  DISTRIBUTION by registration year after the first fit; a longer window trades truncation
+  for staleness.
+
+**D-65 (2026-10-19, assistant, under R7 and D-60's 'encodes record age' rule) The post-2017
+registration fields are a TOGGLE, out of the headline.** `is_fda_regulated_drug`,
+`is_fda_regulated_device`, `is_us_export`, `plan_to_share_ipd`, `ipd_url_present`
+(`trial_features.GROUP_LATE_FIELDS`).
+- Evidence (`build_features_20261001.txt`): non-missing on the train | test side,
+  endpoint met: 7.5% | 99.4% (`is_fda_regulated_drug`), 23.0% | 79.8%
+  (`plan_to_share_ipd`), 1.3% | 24.1% (`is_us_export`); advancement 3.6% | 99.3%; market
+  1.6% | 98.9%.
+- Why it is a leak, not only drift: a trial read out before 2017 carries these fields only
+  if its record was edited after 2017. For a completed trial that edit is usually the
+  results posting, and posting timing is a label input (bad results post late, rev 8). Their
+  presence would report how the trial ended.
+- D-56 still admits them: they are fitted as the `with_post_2017_fields` variant on the same
+  test trials, so what they add is measured.
+
+**D-66 (2026-10-19, assistant, implementing rev 10 §12.26 and D-55) How each target is
+fitted and scored (`services/modeling.py`, `scripts/train_target.py`).**
+- Families: L2 logistic regression (main effects; numerics signed-log, standardised, with a
+  missing indicator; tri-states as true and unknown columns; categories one-hot with 'other'
+  and 'unknown') and shallow boosting (scikit-learn `HistGradientBoostingClassifier`, depth
+  3, 300 rounds at rate 0.05, leaves of at least 50, L2 1, no early stopping, no
+  subsampling). xgboost is declared in `pyproject.toml` but not needed.
+- Hyperparameters fixed in advance; nothing is tuned on held-out data.
+- The family is chosen on a validation slice of the TRAINING side (outcomes settled in its
+  last 2 years) by Brier score, ties to logistic; the test side is then scored once.
+- Every statistic (medians, scales, category levels with at least 20 training trials, the
+  phase-rate reference) comes from the training side.
+- Scored: Brier skill against the training-side phase rate with a paired-bootstrap 95%
+  interval (2,000 replicates, seed 20261001): the bar. Also against the test side's own phase
+  rate (the drift check), log loss, AUROC, ECE over 10 bins, a reliability table, and the
+  score by phase.
+- Variants on the same test trials, each with a paired-bootstrap interval of its Brier
+  difference from the headline: registration-only (D-56), with calendar (D-60), with entity
+  experience (D-62), with the post-2017 fields (D-65), the other family; for endpoint met
+  also the all-primaries-met label (D-54). Market prints its selection-bias caveat first.
+
+**D-67 (2026-10-19, owner) The headline stays a temporal split; a mixed-era check and extra
+cut-off dates are printed beside it; the final model is refitted on every labelled trial.**
+The owner asked whether a split mixing all eras would avoid the 2017 errors; the assistant
+recommended against it for the headline, and the owner accepted the recommendation.
+- **Why not a mixed headline:**
+  - it hides the 2017 leak rather than removing it: the post-2017 fields' presence still
+    reports late results posting, a mixed test set rewards that, and a new trial (always
+    carrying the fields) does not have the signal. D-65 removes the leak; the split cannot;
+  - sister trials (same drug, same sponsor) would sit on both sides, and for market several
+    trials of one drug share the answer;
+  - endpoint met's rate drifts down (65.9% to 56.5% by readout band), so a test set holding
+    older trials overstates performance on new ones;
+  - for advancement, the later trial that makes a 1 could sit in training.
+- **The mixed-era check** (`services/grouped_split.py`, `training_design.GROUPED_FOLDS` = 5):
+  out-of-fold predictions over every labelled trial (advancement after D-57's cut), folds
+  grouped so trials sharing a tested-agent name key or the lead sponsor stay together,
+  transitively. If the largest group exceeds one fold's share, sponsor-only grouping is used
+  (then drug sisters across sponsors can leak, so the check reads optimistic); if that also
+  fails, the check is refused. Reading: mixed far above temporal means the model leans on era.
+- **Rolling cut-off dates** (`training_design.ROLLING_BOUNDARIES`: 2015, 2017, 2019), the
+  headline's rules exactly; the 2017 run must reproduce the headline or the script stops.
+  Market's 2019 test side is small (132 trials at the probe's count).
+- **The final model** (`data/models/<target>/final_model.pkl`): the chosen family and the
+  headline features, refitted on every labelled trial. It has no held-out score of its own;
+  its expected performance is the temporal headline's.
+- Both diagnostics are printed, never served, never used to pick the family or the features.
+
+**D-68 (2026-10-19, assistant; rule fixed BEFORE its result) The registered outcome counts
+leave the served model unless they carry measurable skill.**
+- Why: registration-only is worse than the headline by 0.0039 Brier (interval 0.0018 to
+  0.0059), so the editable fields add skill. But every test trial is finished and posted,
+  like every training trial, so the temporal test sees the FINAL site counts and the outcome
+  list AS REVISED AT POSTING. A trial scored before readout shows earlier values, and the
+  test cannot see that skew. The prime suspects are `n_primary_outcomes`,
+  `n_secondary_outcomes` and `n_other_outcomes` (`trial_features.
+  REGISTERED_OUTCOME_COUNT_FEATURES`): sponsors revise them when posting results, and
+  posting is the endpoint-met label's own event (rev 9 §12.22).
+- The diagnostic: served features less the three counts, on the same test trials, with the
+  paired-bootstrap interval of its Brier minus the headline's.
+- The rule: if that interval includes 0 or lies below it, the counts leave the served model
+  and the final model is fitted without them (`train_target.py` applies it and records
+  `d68_drop_from_served`). If it lies above 0, they stay, flagged as a serving-time risk.
+- It runs for every target. Applying the rule is not tuning on the test side: the rule and
+  the only two outcomes were fixed before the result.
+- **Result, endpoint met (2026-10-19, `train_endpoint_met_20261001_v2.txt`): FIRED, by the
+  narrowest margin.** Brier minus headline +0.0017, interval [-0.0000, +0.0034]: the lower
+  end is just below 0. The counts carry at most a small signal that the test cannot confirm
+  and that may not exist at serving. The final model has 96 features. Its expected
+  performance is the variant's: Brier skill +0.0821 [+0.0660, +0.0987] (passes), against
+  the test side's phase rate +0.0700 [+0.0520, +0.0878], log loss 0.6149, AUROC 0.706, ECE
+  0.0363. Another bootstrap seed could have put the lower end just above 0; that is why the
+  rule was fixed before the result, and it is not revisited.
+
+**D-69 (2026-10-19, owner approved the bundle; logged BEFORE it runs) Attempt 2: prior
+approval and track records, with a phase x disease-area reference beside the bar.**
+- **Why these:** they are the registration-time features the literature ranks strongest and
+  attempt 1 lacked.
+  - Lo AW, Siah KW, Wong CH. *Machine learning with statistical imputation for predicting
+    drug approvals.* Harvard Data Science Review 2019;1(1), doi:10.1162/99608f92.5c5f0525:
+    among the most important features are prior approval for another indication and sponsor
+    track record (also trial outcome, status, accrual and duration, which exist only after
+    the trial runs and stay excluded). Read in its abstract.
+  - Siah KW, Kelley NW, Ballerstedt S, Holzhauer B, Lyu T, Mettler D, Sun S, Wandel S,
+    Zhong Y, Zhou B, Pan S, Zhou Y, Lo AW. *Predicting drug approvals: the Novartis data
+    science and artificial intelligence challenge.* Patterns 2021;2(8):100312,
+    doi:10.1016/j.patter.2021.100312: drugs whose past trials more often had positive
+    outcomes were more likely to succeed; prior approval and sponsor track record matter;
+    developers typically benchmark with historical approval rates by therapeutic class and
+    phase. Read in the article (MIT Open Access copy).
+  - Thomas et al. 2016 (D-55): success differs by disease area. SECONDARY for that claim
+    (a summary of BIO's disease-area results); its tables were not read here.
+  - All three are printed by every run (`reference_rates.FEATURE_LITERATURE`).
+- **The features** (`trial_features.BUNDLE_GROUPS`):
+  - `prior_fda_approval`: a tested drug had an FDA approval, any form or indication, dated
+    strictly before this trial's registration. An agent that did not resolve reads as 'not
+    known approved', like one approved later, so the flag cannot reveal resolution (which
+    leaks later approval);
+  - `drug_track_record`, `sponsor_track_record`: Laplace-smoothed share, (met + 1) /
+    (n + 2), of earlier trials (sharing a tested-agent name key; the lead sponsor) whose
+    endpoint was met, counting only outcomes whose results were public strictly before this
+    trial's registration, never its own. None without an earlier outcome. No count is a
+    feature (a lifetime count encodes calendar time, D-64).
+- **The registry, extended narrowly:** two named as-of sources (approval dates; other
+  trials' outcomes dated by their results posting), allowed ONLY for these three features,
+  refused for any other (tested). Every AACT source still goes through the old check.
+- **The rule, fixed before the run:** attempt 2 is ADOPTED only if its best validation
+  Brier (training side, the D-66 slice) is strictly below attempt 1's. Both are scored once
+  on test and both are reported; the adopted one is the headline, and D-68 then applies to
+  it. This test side has now had 2 attempts, and every later report says so.
+- **The second reference:** the training-side rate by (phase, MeSH C category), a trial's
+  categories averaged, cells under 30 training trials falling back to the phase rate
+  (`modeling.MIN_AREA_CELL`). Printed: how much it alone beats the phase rate, and the
+  headline's skill against it. D-55's bar stays against the phase rate.
+- **What would make attempt 2 not good:**
+  - adoption by a validation margin smaller than its noise (the rule has no margin);
+  - a gain that comes only from `prior_fda_approval`, which mostly separates repurposed,
+    already-approved drugs from new ones: useful, but not a judgment of the trial;
+  - skill over the phase rate that vanishes against the phase x area reference.
 
 ---
 
@@ -756,6 +1147,60 @@ Refuted or corrected:
 ---
 
 ## 4. Measured on the owner's machine
+
+Endpoint met trained (`train_endpoint_met_20261001.txt`, 2026-10-19, before D-68):
+- Sides: train 7,303 (2,686 events, 63.2% positive), test 3,950 (1,614, 59.1%), validation
+  inside train 1,636 (644). Family on validation: boosting 0.2159 Brier against logistic
+  0.2189; boosting chosen.
+- Headline, test: Brier 0.2118 against the reference's 0.2325; **Brier skill +0.0893
+  [+0.0721, +0.1062], PASSES D-55's bar**; against the test side's own phase rate +0.0773
+  [+0.0594, +0.0957]; log loss 0.6113 (reference 0.6574); AUROC 0.712 (reference 0.616);
+  ECE 0.0377. Positive skill in every phase, +0.0276 (phase NA, 65 trials) to +0.1769
+  (early phase 1, 42).
+- Reliability: predictions of 0.3 to 0.6 run 4 to 8 points above the observed rate (0.357
+  against 0.276; 0.452 against 0.411; 0.549 against 0.473); 0.6 to 1.0 within 3 points.
+- Variants, Brier minus headline: registration-only +0.0039 [+0.0018, +0.0059]; calendar
+  +0.0002 [-0.0004, +0.0009]; entity experience -0.0006 [-0.0024, +0.0012]; post-2017
+  fields -0.0001 [-0.0006, +0.0005]; logistic +0.0029 [+0.0000, +0.0057].
+- All primaries met (D-54): Brier skill +0.1055 [+0.0888, +0.1224], passes.
+- Rolling (D-67): 2015 +0.0749 [+0.0605, +0.0895], 2017 +0.0893 (reproduces the headline),
+  2019 +0.0931 [+0.0718, +0.1133]; all pass.
+- Mixed-era (D-67): drug-and-sponsor grouping chained 10,972 of 13,487 trials, so sponsor
+  grouping was used (2,172 groups, largest 450); Brier skill +0.0979 [+0.0882, +0.1080],
+  +0.0086 above the temporal headline.
+- Final model fitted on all 13,487 labelled trials.
+
+Feature build (`build_features_20261001.txt`, 2026-10-19):
+- 222,329 drug-trial rows, 109 features (served 104 at the time; 99 after D-65), 26 disease
+  codes; leakage registry clean for all three targets.
+- Split sides: endpoint met train 7,303, test 3,950, straddlers 2,232, undeterminable 2;
+  advancement train 10,587, test 8,149, before the left cut 1,789, straddlers 9,334; market
+  train 1,259, test 366, straddlers 1,158. All equal to the probe's counts plus D-58's.
+- Largest train-test coverage gaps: the post-2017 fields (D-65); MeSH indexing thinner on
+  recent trials (`n_intervention_mesh` 90.0% | 77.9%, disease flags 92.1% | 86.6%,
+  endpoint met); arm tables missing on older records (advancement 89.9% | 99.9%); site
+  experience 80.2% | 99.9% (old records list sites without names).
+
+Candidate-feature probe (`probe_feature_candidates_20261001.txt`, 2026-10-19):
+- Entities (lead sponsor / collaborator / official affiliation / overall official / site /
+  site investigator): trials covered 461,823 / 151,392 / 332,397 / 333,813 / 412,670 /
+  36,098; normalised keys 44,262 / 50,063 / 97,618 / 262,518 / 843,346 / 114,850. Uses:
+  D-62's amendment.
+- MeSH C categories: 4,818 condition terms carry a C tree number; 26 top headings. Trials
+  with a category: endpoint met 82.1%, advancement 94.0%, market 84.7%; with two or more
+  53.6%, 63.6%, 56.0%. Largest in endpoint met: C23 signs and symptoms 17.6%, C04 neoplasms
+  16.6%, C20 immune 13.5%.
+- Eligibility text: non-blank 100% for all three; median 1,800 / 2,098 / 1,402 characters
+  and 16 / 19 / 12 listed criteria. Biomarker shares invalid (§6).
+
+Training-design probe (`probe_training_design_20261001.txt`, 2026-10-19, `--left-cut-year
+2007`):
+- Recomputed advancement W=3 exact labels differing from `trial_targets.csv`: 0.
+- Positive rate by readout band and the advancement mechanism: D-55, D-57.
+- Endpoint met by phase (any-met): early phase 1 67.2% (67), phase 1 64.7% (275), phase 1/2
+  54.5% (389), phase 2 49.2% (4,137), phase 2/3 59.6% (413), phase 3 70.1% (5,640), phase 4
+  59.5% (1,916), phase NA 57.8% (650).
+- Splits: D-58, D-59. Feature coverage: D-60.
 
 Labels-delivery runs (2026-10-13, resolver v10, matcher v5, targets v4; read 2026-10-19):
 - Resolver v10: resolved 152,307 (53.7%), partial 10,165, ambiguous 125, unresolved 120,959.
@@ -1075,7 +1520,75 @@ without its salt).
 
 ## 5. Built this session
 
-Training-design delivery, `training_design.zip`, 2026-10-19, NOT YET RUN:
+D-69 delivery, 2026-10-19, NOT YET RUN:
+- `services/trial_features.py`: the as-of sources, `source_provenance`, the bundle features,
+  `prior_approval`, `laplace_share`, `OutcomeHistory`, `served(..., with_bundle)`.
+- `services/modeling.py`: `area_table`, `area_predict`, `MIN_AREA_CELL`.
+- `services/reference_rates.py`: `FEATURE_LITERATURE`, `format_support`.
+- `scripts/build_features.py`: reads `trial_drug_form_approvals.csv` and the results-posting
+  dates of labelled trials (only to date other trials' outcomes); writes the three columns;
+  any failure, including in the manifest step, now removes BOTH partial files (the previous
+  version left `trial_features.csv.partial` when the manifest step failed: a bug found in the
+  smoke run).
+- `scripts/train_target.py`: section 3 runs both attempts and applies D-69's rule; section 4
+  scores the other attempt too and the phase x area reference; the literature is printed.
+- Tests: +5 `test_trial_features.py`, +1 `test_modeling.py`, +1 `test_reference_rates.py`.
+
+Diagnostics delivery, `diagnostics.zip`, 2026-10-19, RUN (§4):
+- `services/grouped_split.py` (new): union-find groups over shared name keys and sponsors,
+  the declared fallback, balanced deterministic fold assignment, refusal when nothing fits.
+- `services/training_design.py`: `ROLLING_BOUNDARIES`, `GROUPED_FOLDS`, a `boundary`
+  argument to `split_side_for`, and `in_left_cut`.
+- `scripts/train_target.py`: section 6a (rolling dates, with the headline self-check), 6b
+  (mixed-era check), 7 (final model, pickled with the numpy, scikit-learn and Python
+  versions); `metrics.json` carries all three.
+- Tests: `tests/test_grouped_split.py` (new, 8).
+
+Endpoint-model delivery, `endpoint_model.zip`, 2026-10-19, NOT YET RUN (superseded by the
+diagnostics delivery, which includes it):
+- `services/modeling.py` (new): the encoder (training-side statistics only), the two
+  families, the phase-rate reference, Brier, Brier skill, log loss, AUROC, reliability, ECE,
+  the paired bootstrap and the D-55 bar.
+- `scripts/train_target.py` (new, thin): any target; refuses a features file that does not
+  match the code and any leakage violation; places trials by `split_side_for`; chooses the
+  family on validation; scores the headline once; fits the variants and the D-54
+  sensitivity; prints the published anchors; writes `data/models/<target>/predictions.csv`
+  and `metrics.json` via `.partial` files.
+- `services/trial_features.py`: D-65's toggle; `disease_codes_from_names` (the first
+  version read 'disease_crowding' as a code; the script's fail-closed check caught it).
+- Tests: `tests/test_modeling.py` (new, 9); `tests/test_trial_features.py` (+2).
+
+Feature-builder delivery, `feature_builder.zip`, 2026-10-19, RUN (§4):
+- `services/trial_features.py` (new): every feature as a `FeatureSpec` with its AACT
+  sources; `leakage_violations(specs, target)` refuses `post_hoc` sources, label inputs (R7)
+  and, for endpoint met, gate-only names, and an undeclared source table cannot be named at
+  all. Groups: served (design, editable, disease, eligibility text, drug history) and
+  toggles (calendar, entity). Pure computations for each group; history counts are half-open
+  lookback windows over registration dates.
+- `services/training_design.py` (new): D-57 to D-59 and D-64 as constants, and
+  `split_side_for(target, ...)`, the one split every training script uses.
+- `scripts/build_features.py` (new, thin): asserts the registry for all three targets and
+  the provenance file against the code before reading a trial; streams the fields file
+  checking nct_id order; writes `data/features/trial_features.csv` and
+  `trial_features.manifest.json` via `.partial` files removed on any failure; prints each
+  feature's non-missing share on the train and test sides per target.
+- `audit/probe_feature_candidates.py`: biomarker pattern replaced by the builder's.
+- Tests: `tests/test_trial_features.py` (new, 21).
+
+Feature-candidates delivery, `feature_candidates.zip`, 2026-10-19, RUN (§4):
+- `audit/probe_feature_candidates.py` (new, scratch): for D-62, coverage, spellings, top names
+  and earlier registered trials by band for lead sponsors, collaborators, overall officials
+  and affiliations, sites and site investigators; for D-63, top-level MeSH C categories
+  through tree numbers, and eligibility-text length, list items and named biomarkers. It
+  prints no association with any label, by design.
+
+Reference-rates delivery, `reference_rates.zip`, 2026-10-19:
+- `services/reference_rates.py` (new): the published anchors of D-55 as data, each with
+  citation, data period, what it counts, n and per-figure verification; `format_anchor`
+  never prints a bare number.
+- `tests/test_reference_rates.py` (new, 6).
+
+Training-design delivery, `training_design.zip`, 2026-10-19, RUN (§4):
 - `services/temporal_split.py` (new): rev 7 §4.3 as a function. Train = outcome determined
   before the boundary, under two readings (`readout`; `label_known` = readout + the target's
   label lag); test = started on or after it (actual starts only, or any recorded start);
@@ -1225,6 +1738,25 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
   on learned codes (D-50). Before market training: a co-occurrence probe (a code that is its
   own intervention in a trial where its learned drug is a separate intervention cannot be
   that drug's alias).
+- **(2026-10-19) Endpoint met's served probabilities run high in the middle range.** On the
+  test side, predictions of 0.3 to 0.6 were 4 to 8 points above the observed rate: the base
+  rate drifts down (63.2% train, 59.1% test) and no model can foresee it. A recency
+  recalibration would have to be decided in advance, like everything else.
+- **(2026-10-19) A temporal test cannot see serving-time skew in editable fields** (D-68):
+  test trials are finished too.
+- **(2026-10-19) Endpoint met's probability is conditional on posting:** the chance of
+  meeting at least one primary endpoint GIVEN the trial posts a headline analysis. Posting
+  is itself selective (rev 8). The user-facing sentence must say so.
+- **(2026-10-19) The candidate probe's biomarker shares are invalid (assistant's bug).** Its
+  pattern had no boundary after a term: 'alk' matched 'alkaline phosphatase', 'ret'
+  'retinopathy'. Fixed in the builder (a test pins the negatives) and in the probe.
+- **(2026-10-19) History windows are truncated for trials registered before late 2008**
+  (D-64).
+- **(2026-10-19) Advancement's residual registry-start artefact.** After D-57's 2007 cut,
+  about 0.8% to 1.0% of advancement labels rest on a linking trial already running when the
+  focal trial registered: the floor and the link read registration dates, not start dates.
+- **(2026-10-19) Three BIO 2011-2020 figures are from secondary sources** (`reference_rates`
+  marks them). Check them against the report PDF before quoting them.
 - **(2026-10-19) `drug_names.compact` drops every non-ASCII letter.** 'tβ4' (thymosin
   beta-4) compacts to 't4' and resolves to levothyroxine, D-23's T4 case by another route.
   Market only; a handful of agents.
@@ -1250,17 +1782,28 @@ Form redesign, delivered 2026-10-07 as `form_redesign.zip` (includes fix1):
 5.  NEXT: training.
     a. ~~Sanity-check the three run outputs~~ done 2026-10-19 (D-50 corrected; §6).
     b. Rev 10 §14 items 3 to 7 before any model:
-       - pre-model decisions: multi-endpoint reading DECIDED (D-54); headline metric
-         DECIDED as the Brier skill score, reference forecast proposed (D-55, owner to
-         confirm); editable fields DECIDED (D-56); left truncation DECIDED, cut year from
-         the probe (D-57). STILL OPEN: `TRAINING_EXCLUSION_MIN_EFFECT`. Proposal: in the
-         headline metric, excluding gate-refused trials counts as an improvement only when
-         the paired-bootstrap 95% interval of the difference lies on the improve side. Only
-         306 of 13,793 rows differ (2.2%, *arithmetic*), so "indistinguishable" is the
-         likely result, which rev 8 §12.11 already counts as a finding.
-       - RUN `audit\probe_training_design.py` (delivered 2026-10-19), then choose each
-         target's split boundary and train rule, the advancement cut year, and the
-         feature-build design from its output;
+       - pre-model decisions: DECIDED D-54 (multi-endpoint), D-55 (metric, reference,
+         cited anchors), D-56 (editable fields), D-57 (cut at 2007), D-58 (start rule),
+         D-59 (2017 for all three), D-60 (feature design), D-61 (no comparison; exclusion
+         stays), D-62 (entity toggle). PROPOSED: D-63 (feature list);
+       - ~~run `audit\probe_feature_candidates.py`~~ RUN 2026-10-19 (§4);
+       - ~~run `scripts\build_features.py`~~ RUN 2026-10-19 (§4);
+       - TIMELINE from 2026-10-19 (each step is one run on the owner's machine and one
+         read; a step starts only after the previous one is read):
+         1. endpoint met: DONE 2026-10-19. Passes; re-run reproduced every number; D-68
+            fired; served Brier skill +0.0821 (§4, D-68). Any change after seeing the test
+            side is a NEW pre-registered attempt, logged before it runs;
+         1b. D-69: rebuild features (`build_features.py`), then re-run endpoint met.
+             Attempt 1's test line must reproduce +0.0893 [+0.0721, +0.1062] exactly;
+         2. advancement: the same script;
+         3. market, experimental: first the learned-code co-occurrence probe (§6), then the
+            script;
+         4. a scoring entry point: one NCT id from the local AACT data to the three
+            probabilities from the final models, with the leakage registry re-asserted and
+            the market caveat printed;
+         5. only if results justify them: D-52, the D-25 hand check, D-62's identity level
+            and outcome history.
+       - ~~run `audit\probe_training_design.py`~~ RUN 2026-10-19 (§4);
        - the feature builder, with the leakage registry asserted in code. Features come
          from `trial_registration_fields.csv` through its provenance file, never from
          `trial_labels.csv` (which mixes post-hoc and label columns). Resolution and

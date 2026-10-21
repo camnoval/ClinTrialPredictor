@@ -1,0 +1,115 @@
+﻿
+==============================================================================
+SETTINGS
+==============================================================================
+  target endpoint_met | label endpoint_met_label | split 2017-01-01 label_known any_recorded_start lag 0y | headline features 99 of 109 | families ('logistic_l2', 'shallow_boosting') | validation last 2y of training | bootstrap 2000 seed 20261001
+  leakage registry: no violation
+  sides {'straddler': 2232, 'test': 3950, 'train': 7303, 'undeterminable': 2}
+  train n 7303, positive 4617 (63.2%), events 2686
+  test  n 3950, positive 2336 (59.1%), events 1614
+  validation (inside train, outcome from 2015-01-01) n 1636, positive 992 (60.6%), events 644; inner train n 5667, positive 3625 (64.0%), events 2042
+
+==============================================================================
+3. FAMILY CHOICE ON THE VALIDATION SLICE (test side untouched)
+==============================================================================
+  logistic_l2        validation Brier 0.2189  BSS vs inner phase rate +0.0622
+  shallow_boosting   validation Brier 0.2159  BSS vs inner phase rate +0.0753
+  chosen: shallow_boosting
+
+==============================================================================
+4. HEADLINE: chosen family, served features, scored once on the test side
+==============================================================================
+  reference (training-side rate by phase; overall 0.632 for an unseen phase):
+    EARLY_PHASE1     n     21  rate 0.762
+    PHASE1           n    137  rate 0.701
+    PHASE1/PHASE2    n    190  rate 0.626
+    PHASE2           n   2031  rate 0.524
+    PHASE2/PHASE3    n    181  rate 0.608
+    PHASE3           n   3104  rate 0.720
+    PHASE4           n   1182  rate 0.610
+    not_applicable   n    457  rate 0.562
+  headline                     Brier 0.2118  BSS +0.0893 [+0.0721, +0.1062]  bar PASS  | vs test phase rate +0.0773 [+0.0594, +0.0957]  | log loss 0.6113  AUROC 0.712  ECE 0.0377
+  reference itself             Brier 0.2325  BSS +0.0000 [+0.0000, +0.0000]  bar FAIL  | vs test phase rate -0.0132 [-0.0204, -0.0062]  | log loss 0.6574  AUROC 0.616  ECE 0.0361
+  reliability (test): bin | n | mean predicted | observed
+    0.1-0.2      21  0.154  0.286
+    0.2-0.3      95  0.262  0.295
+    0.3-0.4     283  0.357  0.276
+    0.4-0.5     542  0.452  0.411
+    0.5-0.6     670  0.549  0.473
+    0.6-0.7     827  0.652  0.623
+    0.7-0.8     920  0.748  0.725
+    0.8-0.9     515  0.841  0.839
+    0.9-1.0      77  0.918  0.909
+  by phase (test): n | events | BSS vs reference
+    EARLY_PHASE1         42     17  +0.1769
+    PHASE1              110     44  +0.1019
+    PHASE1/PHASE2       119     56  +0.1205
+    PHASE2             1417    656  +0.0937
+    PHASE2/PHASE3       155     61  +0.1170
+    PHASE3             1607    468  +0.0781
+    PHASE4              435    180  +0.0861
+    not_applicable       65     20  +0.0276
+
+==============================================================================
+5. VARIANTS ON THE SAME TEST TRIALS (difference = variant Brier minus headline; negative is better)
+==============================================================================
+  registration_only            Brier 0.2156  BSS +0.0726 [+0.0566, +0.0889]  bar PASS  | vs test phase rate +0.0604 [+0.0424, +0.0784]  | log loss 0.6200  AUROC 0.699  ECE 0.0394
+    87 features; Brier minus headline +0.0039 [+0.0018, +0.0059]
+  with_calendar                Brier 0.2120  BSS +0.0883 [+0.0721, +0.1046]  bar PASS  | vs test phase rate +0.0762 [+0.0589, +0.0944]  | log loss 0.6118  AUROC 0.713  ECE 0.0463
+    100 features; Brier minus headline +0.0002 [-0.0004, +0.0009]
+  with_entity_experience       Brier 0.2112  BSS +0.0917 [+0.0735, +0.1100]  bar PASS  | vs test phase rate +0.0797 [+0.0613, +0.0991]  | log loss 0.6106  AUROC 0.712  ECE 0.0274
+    103 features; Brier minus headline -0.0006 [-0.0024, +0.0012]
+  with_post_2017_fields        Brier 0.2117  BSS +0.0896 [+0.0727, +0.1072]  bar PASS  | vs test phase rate +0.0776 [+0.0598, +0.0965]  | log loss 0.6109  AUROC 0.714  ECE 0.0443
+    104 features; Brier minus headline -0.0001 [-0.0006, +0.0005]
+  other_family_logistic_l2     Brier 0.2147  BSS +0.0768 [+0.0581, +0.0943]  bar PASS  | vs test phase rate +0.0646 [+0.0450, +0.0845]  | log loss 0.6206  AUROC 0.702  ECE 0.0392
+    99 features; Brier minus headline +0.0029 [+0.0000, +0.0057]
+
+  D-54 sensitivity, all primaries met: train n 7303, positive 4217 (57.7%), events 3086; test n 3950, positive 2091 (52.9%), events 1859
+  all_primaries_met            Brier 0.2144  BSS +0.1055 [+0.0888, +0.1224]  bar PASS  | vs test phase rate +0.0889 [+0.0703, +0.1075]  | log loss 0.6175  AUROC 0.724  ECE 0.0431
+
+==============================================================================
+6a. D-67 ROLLING CUT-OFF DATES: the headline's rules at other boundaries
+==============================================================================
+  2015-01-01: train n 5667, positive 3625 (64.0%), events 2042
+              test  n 5664, positive 3350 (59.1%), events 2314
+              BSS +0.0749 [+0.0605, +0.0895]  bar PASS
+  2017-01-01: train n 7303, positive 4617 (63.2%), events 2686
+              test  n 3950, positive 2336 (59.1%), events 1614
+              BSS +0.0893 [+0.0721, +0.1062]  bar PASS
+  2019-01-01: train n 9002, positive 5620 (62.4%), events 3382
+              test  n 2411, positive 1413 (58.6%), events 998
+              BSS +0.0931 [+0.0718, +0.1133]  bar PASS
+
+==============================================================================
+6b. D-67 MIXED-ERA CHECK: 5 grouped folds over every labelled trial (sister trials kept together)
+==============================================================================
+  pool n 13487, positive 8187 (60.7%), events 5300; grouping tried (largest group): [('drug_and_sponsor', 10972), ('sponsor', 450)]; limit 2697 trials
+    fold 0: n 2698, positive 1653 (61.3%), events 1045
+    fold 1: n 2698, positive 1660 (61.5%), events 1038
+    fold 2: n 2697, positive 1649 (61.1%), events 1048
+    fold 3: n 2697, positive 1528 (56.7%), events 1169
+    fold 4: n 2697, positive 1697 (62.9%), events 1000
+  grouping used: sponsor (2172 groups, largest 450)
+  mixed-era BSS +0.0979 [+0.0882, +0.1080]; headline (temporal) +0.0893; mixed minus temporal +0.0086
+  reading: a mixed score far above the temporal one means the model leans on era; the temporal score is the one that predicts a new trial
+
+==============================================================================
+7. FINAL MODEL: chosen family, headline features, every labelled trial
+==============================================================================
+  fitted on n 13487, positive 8187 (60.7%), events 5300; no held-out score of its own: its expected performance is the headline's (section 4)
+
+==============================================================================
+PUBLISHED RATES, beside the reference, never instead of it (D-55)
+==============================================================================
+  Dechartres A, Bond EG, Scheer J, Riveros C, Atal I, Ravaud P. Reporting of statistically significant results at ClinicalTrials.gov for completed superiority randomized controlled trials. BMC Medicine 2016;14:192. [doi:10.1186/s12916-016-0740-1]
+    data: ClinicalTrials.gov searched 2 June 2015, no date limit (17,536 studies with results)
+    counts: completed, randomized, two-arm phase 3 or 4 superiority trials with results posted; the FIRST primary outcome; significant at p < 0.05
+    significant, among trials posting an effect estimate or p-value: 60.3% [844/1400] (n=1400) -- primary, the article
+    significant, p-value computed from per-arm results where none was posted: 36.8% [342/929] (n=929) -- primary, the article
+
+==============================================================================
+WRITTEN
+==============================================================================
+  data\models\endpoint_met\predictions.csv
+  data\models\endpoint_met\metrics.json
+  data\models\endpoint_met\final_model.pkl
